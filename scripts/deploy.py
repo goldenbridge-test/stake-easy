@@ -1,4 +1,4 @@
-from brownie import DappToken, TokenFarm, network, config
+from brownie import GoldenToken, TokenFarm, network, config
 from scripts.helpful_scripts import get_account, get_contract
 import shutil
 import os
@@ -9,17 +9,17 @@ from web3 import Web3
 KEPT_BALANCE = Web3.toWei(100, "ether")
 
 
-def deploy_token_farm_and_dapp_token(update_front_end_flag=False):
+def deploy_token_farm_and_golden_token(update_front_end_flag=False):
     account = get_account()
-    dapp_token = DappToken.deploy({"from": account})
+    golden_token = GoldenToken.deploy({"from": account})
     token_farm = TokenFarm.deploy(
-        dapp_token.address,
+        golden_token.address,
         {"from": account},
         publish_source=config["networks"][network.show_active()]["verify"],
     )
-    tx = dapp_token.transfer(
+    tx = golden_token.transfer(
         token_farm.address,
-        dapp_token.totalSupply() - KEPT_BALANCE,
+        golden_token.totalSupply() - KEPT_BALANCE,
         {"from": account},
     )
     tx.wait(1)
@@ -29,7 +29,7 @@ def deploy_token_farm_and_dapp_token(update_front_end_flag=False):
     add_allowed_tokens(
         token_farm,
         {
-            dapp_token: get_contract("dai_usd_price_feed"),
+            golden_token: get_contract("dai_usd_price_feed"),
             fau_token: get_contract("dai_usd_price_feed"),
             weth_token: get_contract("eth_usd_price_feed"),
         },
@@ -37,7 +37,7 @@ def deploy_token_farm_and_dapp_token(update_front_end_flag=False):
     )
     if update_front_end_flag:
         update_front_end()
-    return token_farm, dapp_token
+    return token_farm, golden_token
 
 
 def add_allowed_tokens(token_farm, dict_of_allowed_token, account):
@@ -92,4 +92,4 @@ def copy_files_to_front_end(src, dest):
 
 
 def main():
-    deploy_token_farm_and_dapp_token(update_front_end_flag=True)
+    deploy_token_farm_and_golden_token(update_front_end_flag=True)

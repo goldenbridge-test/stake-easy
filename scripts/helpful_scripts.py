@@ -142,3 +142,21 @@ def deploy_mocks(decimals=DECIMALS, initial_value=INITIAL_PRICE_FEED_VALUE):
     mock_weth = MockWETH.deploy({"from": account})
     print(f"Deployed to {mock_weth.address}")
     print("Mocks Deployed!")
+
+
+def get_publish_source():
+    if network.show_active() in LOCAL_BLOCKCHAIN_ENVIRONMENTS or not os.getenv(
+        "ETHERSCAN_API_KEY"
+    ):
+        return False
+    else:
+        return True
+
+
+def get_verify_status():
+    verify = (
+        config["networks"][network.show_active()]["verify"]
+        if config["networks"][network.show_active()].get("verify")
+        else False
+    )
+    return verify

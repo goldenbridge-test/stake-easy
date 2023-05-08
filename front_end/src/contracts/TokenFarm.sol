@@ -7,8 +7,8 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract TokenFarm is ChainlinkClient, Ownable {
-    string public name = "Dapp Token Farm";
-    IERC20 public dappToken;
+    string public name = "Golden Token Farm";
+    IERC20 public goldenToken;
 
     address[] public stakers;
     // token > address
@@ -17,8 +17,8 @@ contract TokenFarm is ChainlinkClient, Ownable {
     mapping(address => address) public tokenPriceFeedMapping;
     address[] public allowedTokens;
 
-    constructor(address _dappTokenAddress) public {
-        dappToken = IERC20(_dappTokenAddress);
+    constructor(address _goldenTokenAddress) public {
+        goldenToken = IERC20(_goldenTokenAddress);
     }
 
     function addAllowedTokens(address token) public onlyOwner {
@@ -33,6 +33,8 @@ contract TokenFarm is ChainlinkClient, Ownable {
     }
 
     function stakeTokens(uint256 _amount, address token) public {
+     // NOTE:
+     // This is vulnerable to a reentrancy attack!!!
         // Require amount greater than 0
         require(_amount > 0, "amount cannot be 0");
         require(tokenIsAllowed(token), "Token currently isn't allowed");
@@ -48,6 +50,8 @@ contract TokenFarm is ChainlinkClient, Ownable {
 
     // Unstaking Tokens (Withdraw)
     function unstakeTokens(address token) public {
+     // NOTE:
+     // This is vulnerable to a reentrancy attack!!!
         // Fetch staking balance
         uint256 balance = stakingBalance[token][msg.sender];
         require(balance > 0, "staking balance cannot be 0");
@@ -75,7 +79,7 @@ contract TokenFarm is ChainlinkClient, Ownable {
         return totalValue;
     }
 
-    function tokenIsAllowed(address token) public returns (bool) {
+    function tokenIsAllowed(address token) public view returns (bool) {
         for (
             uint256 allowedTokensIndex = 0;
             allowedTokensIndex < allowedTokens.length;
@@ -116,7 +120,7 @@ contract TokenFarm is ChainlinkClient, Ownable {
             stakersIndex++
         ) {
             address recipient = stakers[stakersIndex];
-            dappToken.transfer(recipient, getUserTotalValue(recipient));
+            goldenToken.transfer(recipient, getUserTotalValue(recipient));
         }
     }
 

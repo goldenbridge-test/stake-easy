@@ -2,13 +2,13 @@
 /// <reference types="react-scripts" />
 import React, { useEffect, useState } from "react"
 import eth from "../eth.png"
-import dapp from "../dapp.png"
+import gld from "../gld.png"
 import dai from "../dai.png"
 import { YourWallet } from "./yourWallet"
 import { TokenFarmContract } from "./tokenFarmContract"
 import { useEthers } from "@usedapp/core"
 import { constants } from "ethers"
-import DappToken from "../chain-info/DappToken.json"
+import GoldenToken from "../chain-info/GoldenToken.json"
 import { Snackbar, Typography, makeStyles } from "@material-ui/core"
 import Alert from "@material-ui/lab/Alert"
 import networkMapping from "../chain-info/map.json"
@@ -40,15 +40,15 @@ export const Main = () => {
   const networkName = chainId ? helperConfig[chainId] : "ganache"
   console.log(typeof chainId)
   // We need to pull the DAPP token address from the .json file written to by Brownie
-  const dappTokenAddress = chainId ? networkMapping[String(chainId)]["DappToken"][0] : constants.AddressZero
+  const goldenTokenAddress = chainId ? networkMapping[String(chainId)]["GoldenToken"][0] : constants.AddressZero
   const wethTokenAddress = chainId ? brownieConfig["networks"][networkName]["weth_token"] : constants.AddressZero
   const fauTokenAddress = chainId ? brownieConfig["networks"][networkName]["fau_token"] : constants.AddressZero
-  // console.log(dappTokenAddress)
+  console.log(goldenTokenAddress)
   /**
    * Our single central location to store info on support tokens.
    * This is the only place you'll need to add a new token to get it to display in the UI!
    * 
-   * Modularize the addresses like with `dappTokenAddress`
+   * Modularize the addresses like with `goldenTokenAddress`
    * To make it chain agnostic
    */
   const supportedTokens: Array<Token> = [
@@ -63,9 +63,9 @@ export const Main = () => {
       name: "FAU",
     },
     {
-      image: dapp,
-      address: dappTokenAddress,
-      name: "DAPP",
+      image: gld,
+      address: goldenTokenAddress,
+      name: "GLD",
     },
   ]
 
@@ -104,7 +104,7 @@ export const Main = () => {
           root: classes.title,
         }}
       >
-        Dapp Token Farm
+        StakeEasy Token Farm
       </Typography>
       <YourWallet supportedTokens={supportedTokens} />
       <TokenFarmContract supportedTokens={supportedTokens} />
@@ -114,7 +114,7 @@ export const Main = () => {
         onClose={handleCloseNetworkError}
       >
         <Alert onClose={handleCloseNetworkError} severity="warning">
-          You gotta connect to the Kovan or Rinkeby network!
+          You gotta connect to the Sepolia or Goerli network! Mainnet comimg soon !!!
         </Alert>
       </Snackbar>
     </>
