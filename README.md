@@ -140,3 +140,57 @@ Any questions? Join our [Discord](https://discord.gg/2YHSAey) or open an issue.
 # License
 
 This project is licensed under the [MIT license](LICENSE).
+
+
+Pushing code to github
+
+connecter et initialiser git
+
+<!-- git init -b main  --> pour initialiser de git et creation de la branche main
+<!-- git config --global user.name "Cryptoniciencom"  -->
+<!-- git config --global user.email "cryptoniciens@gmail.com" -->
+<!-- git status  --> voir le statut des fishier disponible à envoyer sur github
+
+commit -how to
+
+<!-- git add .  --> pour selectionner les fichier à envoyer sur github
+<!-- git commit -m "first commit" --> faire un commit et mettre la raison de la modification apportée
+<!-- git rm --cached <nameFile>   --> enlever un fishier accidentellement envoyer sur github eg: .env
+<!-- git log  --> voir toute les modification
+
+travailler avec les branches
+
+<!-- git branch <namebranche> --> pour ajouter une branche
+<!-- git checkout <namebranche>  --> pour transiter de brnache en brache
+<!-- git merge <namebranche>   --> pour fusionner les branches apres tous les modifications
+<!-- git branch -d <namebranche>  --> supprimer une branche
+<!-- git branch -D <namebranche>  --> confirmer la suppression d'une branche
+<!-- git diff   --> voir la difference entre le dernier commit et maintenant
+<!-- git diff main..testnet --> difference entre deux branches
+<!-- gitk --> pour afficher l'interface des commits
+
+envoyer les fichiers sur un depot distant
+
+<!-- git remote add origin https://github.com/Cryptoniciencom/easy-stake.git  --> pour ajouter notre repos local a github
+<!-- git push -u origin main  --> pour le classer dans la branche main
+
+PULL REQUESTS
+
+<!-- git pull origin main  --> rappatrier tous les depots distants vers les depots locals des collaborateurs
+
+GH-PAGES
+
+<!-- git branch gh-pages --> pour ajouter une branche
+<!-- git checkout gh-pages  --> pour transiter de brnache en brache
+<!-- git push -u origin gh-pages  --> pour le classer dans la branche gh-pages et heberger. Aller dans setting pour trouver le lien
+
+<!-- git remote -v  --> check the organization
+<!-- git remote remove origin  --> remove the organization
+git rm --cached .env
+
+
+Network Name - Sepolia Test Netwok
+RPC URL - https://eth-sepolia.g.alchemy.com/v2/[YOUR-API-KEY]
+Chain ID - 11155111
+Currency Symbol - SepoliaETH
+Block Explorer URL - https://sepolia.etherscan.io/

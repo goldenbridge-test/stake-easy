@@ -15,7 +15,7 @@ def deploy_token_farm_and_golden_token(update_front_end_flag=False):
     token_farm = TokenFarm.deploy(
         golden_token.address,
         {"from": account},
-        publish_source=config["networks"][network.show_active()]["verify"],
+        publish_source=config["networks"][network.show_active()].get("verify"),
     )
     tx = golden_token.transfer(
         token_farm.address,
@@ -25,6 +25,8 @@ def deploy_token_farm_and_golden_token(update_front_end_flag=False):
     tx.wait(1)
     fau_token = get_contract("fau_token")
     weth_token = get_contract("weth_token")
+    link_token = get_contract("link_token")
+    
 
     add_allowed_tokens(
         token_farm,
@@ -32,6 +34,7 @@ def deploy_token_farm_and_golden_token(update_front_end_flag=False):
             golden_token: get_contract("dai_usd_price_feed"),
             fau_token: get_contract("dai_usd_price_feed"),
             weth_token: get_contract("eth_usd_price_feed"),
+            link_token: get_contract("link_usd_price_feed"),
         },
         account,
     )
@@ -77,7 +80,7 @@ def update_front_end():
         ) as brownie_config_json:
             json.dump(config_dict, brownie_config_json)
     print("Front end updated!")
-
+#pip install pyyaml
 
 def copy_folders_to_front_end(src, dest):
     if os.path.exists(dest):

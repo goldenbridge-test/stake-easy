@@ -17,13 +17,14 @@ const useStyles = makeStyles((theme) => ({
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
-    gap: theme.spacing(4),
+    gap: theme.spacing(2),
   },
   box: {
     backgroundColor: "white",
     borderRadius: "25px",
     margin: `${theme.spacing(4)}px 0`,
     padding: theme.spacing(2),
+    
   },
   header: {
     color: "white"
@@ -47,7 +48,7 @@ export const TokenFarmContract = ({
 
   return (
     <Box>
-      <h1 className={classes.header}>The TokenFarm Contract</h1>
+      <h1 className={classes.header}>TokenFarm Contract</h1>
       <Box className={classes.box}>
         <div>
           {isConnected ? (

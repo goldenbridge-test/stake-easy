@@ -1,9 +1,9 @@
 /* eslint-disable spaced-comment */
 /// <reference types="react-scripts" />
 import React, { useEffect, useState } from "react"
-import eth from "../eth.png"
-import gld from "../gld.png"
-import dai from "../dai.png"
+import eth from "../assets/eth.png"
+import gld from "../assets/gld.png"
+import dai from "../assets/dai.png"
 import { YourWallet } from "./yourWallet"
 import { TokenFarmContract } from "./tokenFarmContract"
 import { useEthers } from "@usedapp/core"
@@ -14,6 +14,7 @@ import Alert from "@material-ui/lab/Alert"
 import networkMapping from "../chain-info/map.json"
 import brownieConfig from "../brownie-config-json.json"
 import helperConfig from "../helper-config.json"
+// import Projects from "./Projects"
 
 export type Token = {
   image: string
@@ -39,11 +40,13 @@ export const Main = () => {
   const classes = useStyles()
   const networkName = chainId ? helperConfig[chainId] : "ganache"
   console.log(typeof chainId)
-  // We need to pull the DAPP token address from the .json file written to by Brownie
+  console.log(networkName)
+  // We need to pull the Golden token address from the .json file written to by Brownie
   const goldenTokenAddress = chainId ? networkMapping[String(chainId)]["GoldenToken"][0] : constants.AddressZero
   const wethTokenAddress = chainId ? brownieConfig["networks"][networkName]["weth_token"] : constants.AddressZero
   const fauTokenAddress = chainId ? brownieConfig["networks"][networkName]["fau_token"] : constants.AddressZero
   console.log(goldenTokenAddress)
+  console.log(wethTokenAddress)
   /**
    * Our single central location to store info on support tokens.
    * This is the only place you'll need to add a new token to get it to display in the UI!
@@ -79,7 +82,7 @@ export const Main = () => {
       return
     }
 
-    showNetworkError && setShowNetworkError(false)
+     showNetworkError && setShowNetworkError(false)
   }
 
   /**
@@ -104,7 +107,7 @@ export const Main = () => {
           root: classes.title,
         }}
       >
-        StakeEasy Token Farm
+        Easy Token Farm
       </Typography>
       <YourWallet supportedTokens={supportedTokens} />
       <TokenFarmContract supportedTokens={supportedTokens} />
@@ -114,9 +117,20 @@ export const Main = () => {
         onClose={handleCloseNetworkError}
       >
         <Alert onClose={handleCloseNetworkError} severity="warning">
-          You gotta connect to the Sepolia or Goerli network! Mainnet comimg soon !!!
+          You gotta connect to the BSCTestnet, Ropsten or Goerli network! Mainnet comimg soon !!!
         </Alert>
       </Snackbar>
+      {/* <Projects/> */}
+      <div className='testnet'>
+         <h2> Gain Early Access to Golden Public testnet </h2>
+              <p >
+                We are excited to announce the early access Pass to the upcoming Golden Public Testnet !
+                The launch of the Golden public testnet will mark another important milestone on the road to successfully
+                launching the Golden Mainnet, and you have a chance to be one of the very first to engage with it. You can earn 
+                an Early Pass by completing all the current tasks in the golden Waitlist page. Act fast before the eligibility 
+                period is over!
+              </p>
+      </div>
     </>
   )
 }

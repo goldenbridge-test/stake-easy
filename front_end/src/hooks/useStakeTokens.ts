@@ -30,7 +30,7 @@ export const useStakeTokens = (tokenAddress: string) => {
     useContractFunction(tokenFarmContract, "stakeTokens", {
       transactionName: "Stake tokens",
     })
-
+  
   const erc20Interface = new utils.Interface(Erc20.abi)
 
   const tokenContract = new Contract(tokenAddress, erc20Interface)
@@ -39,14 +39,14 @@ export const useStakeTokens = (tokenAddress: string) => {
     useContractFunction(tokenContract, "approve", {
       transactionName: "Approve ERC20 transfer",
     })
-
+    
   const [amountToStake, setAmountToStake] = useState("0")
 
-  useEffect(() => {
+  useEffect(() => { 
     if (approveErc20State.status === "Success") {
       stakeTokensSend(amountToStake, tokenAddress)
     }
-    // the dependency arry
+    // the dependency array
     // the code inside the useEffect anytime
     // anything in this list changes
     // if you want something to run when the component first runs

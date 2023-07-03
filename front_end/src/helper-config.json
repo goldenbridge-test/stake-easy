@@ -1,7 +1,8 @@
 {
     "42": "kovan",
-    "4": "rinkeby",
-    "1": "mainnet",
     "1337": "ganache",
+    "97": "BSCTestnet",
+    "4": "Goerli",
+    "1": "mainnet",
     "11155111": "sepolia"
 }
