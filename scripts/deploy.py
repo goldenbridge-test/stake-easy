@@ -1,3 +1,4 @@
+#!/usr/bin/python3
 from brownie import GoldenToken, TokenFarm, network, config
 from scripts.helpful_scripts import get_account, get_contract
 import shutil
@@ -6,7 +7,8 @@ import yaml
 import json
 from web3 import Web3
 
-KEPT_BALANCE = Web3.toWei(100, "ether")
+# CORRECTION ICI : to_wei au lieu de toWei
+KEPT_BALANCE = Web3.to_wei(100, "ether")  # <-- CORRIGÉ
 
 
 def deploy_token_farm_and_golden_token(update_front_end_flag=False):
@@ -17,12 +19,15 @@ def deploy_token_farm_and_golden_token(update_front_end_flag=False):
         {"from": account},
         publish_source=config["networks"][network.show_active()].get("verify"),
     )
+    
+    # ICI AUSSI : Si vous utilisez Web3.toWei ailleurs, vérifiez
     tx = golden_token.transfer(
         token_farm.address,
-        golden_token.totalSupply() - KEPT_BALANCE,
+        golden_token.totalSupply() - KEPT_BALANCE,  # KEPT_BALANCE est déjà corrigé
         {"from": account},
     )
     tx.wait(1)
+    
     fau_token = get_contract("fau_token")
     weth_token = get_contract("weth_token")
     link_token = get_contract("link_token")
@@ -38,8 +43,10 @@ def deploy_token_farm_and_golden_token(update_front_end_flag=False):
         },
         account,
     )
+    
     if update_front_end_flag:
         update_front_end()
+    
     return token_farm, golden_token
 
 
@@ -80,7 +87,7 @@ def update_front_end():
         ) as brownie_config_json:
             json.dump(config_dict, brownie_config_json)
     print("Front end updated!")
-#pip install pyyaml
+
 
 def copy_folders_to_front_end(src, dest):
     if os.path.exists(dest):
