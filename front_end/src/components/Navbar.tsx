@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Globe, Menu, X } from 'lucide-react';
+import { Link } from 'react-router-dom'; 
 
 const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -14,21 +15,23 @@ const Navbar = () => {
   }, []);
 
   const navLinks = [
-    { name: 'Home', href: '#home' },
-    { name: 'Investments', href: '#investments' },
-    { name: 'Performance', href: '#performance' },
-    { name: 'Team', href: '#team' },
-    { name: 'About', href: '#about' },
+    { name: 'Home', href: '/#home' }, 
+    { name: 'Investments', href: '/#investments' },
+    { name: 'Performance', href: '/#performance' },
+    { name: 'Team', href: '/#team' },
+    { name: 'About', href: '/#about' },
   ];
 
   return (
     <nav className={`fixed w-full z-50 transition-all duration-300 ${isScrolled ? 'bg-white shadow-sm py-3' : 'bg-white py-5'}`}>
       <div className="max-w-7xl mx-auto px-6 flex justify-between items-center">
         
-        <div className="text-2xl font-heading font-bold text-gold tracking-tight">
+        {/* LOGO */}
+        <Link to="/" className="text-2xl font-heading font-bold text-gold tracking-tight">
           GoldenBridge
-        </div>
+        </Link>
 
+        {/* MENU DESKTOP */}
         <div className="hidden lg:flex items-center space-x-8">
           {navLinks.map((link) => (
             <a 
@@ -45,24 +48,28 @@ const Navbar = () => {
           </button>
         </div>
 
+        {/* BOUTONS D'ACTION */}
         <div className="hidden lg:flex items-center gap-4">
           
-          <button className="px-6 py-2 rounded-md border border-gold text-primary font-heading font-semibold hover:bg-gold/10 transition">
+          <Link 
+            to="/signin" 
+            className="px-6 py-2 rounded-md border border-gold text-primary font-heading font-semibold hover:bg-gold/10 transition"
+          >
             Sign In
-          </button>
+          </Link>
 
           <button className="bg-gold hover:bg-gold-hover text-white px-6 py-2 rounded-md font-heading font-semibold transition shadow-sm">
             Connect Wallet
           </button>
         </div>
 
-        {/* MENU MOBILE TOGGLE */}
+        {/* MOBILE MENU TOGGLE */}
         <button className="lg:hidden text-primary" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
           {isMobileMenuOpen ? <X /> : <Menu />}
         </button>
       </div>
 
-      {/* MENU MOBILE (Responsive) */}
+      {/* MENU MOBILE */}
       {isMobileMenuOpen && (
         <div className="lg:hidden bg-white border-t border-gray-100 absolute top-full left-0 w-full shadow-lg py-6 px-6 flex flex-col space-y-4">
           {navLinks.map((link) => (
@@ -71,8 +78,18 @@ const Navbar = () => {
             </a>
           ))}
           <div className="flex flex-col gap-3 mt-4">
-            <button className="w-full py-3 rounded-lg border border-gold text-primary font-bold">Sign In</button>
-            <button className="w-full py-3 rounded-lg bg-gold text-white font-bold">Connect Wallet</button>
+            
+            <Link 
+              to="/signin"
+              className="w-full py-3 rounded-lg border border-gold text-primary font-bold text-center"
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              Sign In
+            </Link>
+
+            <button className="w-full py-3 rounded-lg bg-gold text-white font-bold">
+              Connect Wallet
+            </button>
           </div>
         </div>
       )}
