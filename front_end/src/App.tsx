@@ -1,34 +1,35 @@
-import React from "react";
-import { Header } from "./features/Header"
-import { Main } from "./features/Main"
-import  Social  from "./features/Social"
-import  Footer  from "./features/Footer"
-import { DAppProvider, ChainId, useEtherBalance, useEthers, Config } from "@usedapp/core"
-import { Container } from "@material-ui/core"
-import Projects from "./features/Projects"
-import PublicTestnet from "./features/PublicTestnet"
-import Roadmap from "./features/Roadmap"
+import React from 'react';
+import Navbar from './components/Navbar';
+import Hero from './components/Hero';
+import Investments from './components/Investments';
+import Performance from './components/Performance';
 
-export const App = () => {
-  
+function App() {
   return (
-    <DAppProvider config={{
-      supportedChains: [ ChainId.Kovan, ChainId.Ropsten, ChainId.Goerli, ChainId.BSCTestnet, 1337 ],
-      notifications: {
-        expirationPeriod: 1000,
-        checkInterval: 1000
-      }
-    }}>
-      <Header/>
-      <Container maxWidth="md">
-        <Main />
-      </Container>
-      <PublicTestnet/>
-      <Projects/>
-      <Roadmap/>
-      <Social/>
-      <Footer/>
-    </DAppProvider>
-  )
+    <div className="bg-white min-h-screen font-body text-dark">
+      
+      {/* 1. Navbar */}
+      <Navbar />
+      
+      <main>
+        
+        {/* 2. Hero Section */}
+        <Hero />
+
+        {/* 3. Investments Section (NOUVEAU) */}
+        <Investments />
+        
+        {/* 4. Performance Section (NOUVEAU) */}
+        <Performance />
+
+        {/* 5. Team Section (À venir) */}
+        <section id="team" className="min-h-[50vh] bg-gray-50 flex items-center justify-center py-20">
+          <p className="text-gray-400 font-mono">Section Team (À venir...)</p>
+        </section>
+
+      </main>
+    </div>
+  );
 }
-export default App
+
+export default App;
