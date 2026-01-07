@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My AltSchool Profile</title>
+</head>
+
+<body>
+    <a id="top"></a>
+
+    <header>
+        <h1>Welcome to My AltSchool Profile</h1>
+        <p><strong>Name:</strong> MAMA MOUSSINOU </p>
+        <p><strong>AltSchool ID:</strong> ALT/SOE/0425/1234</p>
+    </header>
+
+    <section>
+        <h2>Biography</h2>
+        <p>
+            I am MAMA Moussinou. I am from Benin. I am a passionate tech enthusiast with a background in computer
+            science. My interests range from software development to AI and embedded systems.
+            I enjoy solving problems, learning new technologies, and collaborating on meaningful projects that make a
+            difference.
+        </p>
+    </section>
+
+    <section>
+        <h2>Why I Joined the AltSchool Program</h2>
+        <p>
+            I joined AltSchool to gain in-depth, hands-on experience in software engineering. I was drawn by the
+            school’s project-based curriculum, mentorship opportunities, and the vibrant learning community.
+            I believe this program will help me transition from theoretical learning to real-world application.
+        </p>
+    </section>
+
+    <section>
+        <h2>My Goals for the School of Engineering Program</h2>
+        <ul>
+            <li>Master full-stack bakend development</li>
+            <li>Build and deploy scalable applications</li>
+            <li>Develop web projects </li>
+            <li>Contribute to open-source and collaborative projects</li>
+            <li>Prepare for a successful career in tech</li>
+        </ul>
+    </section>
+
+    <a href="#top" id="back-to-top">⬆ Back to Top</a>
+
+    <script>
+        function first() {
+            var variable1 = " Voila ma première vriable ";
+            afficher(variable1);
+        }
+        function afficher(variable1) {
+            alert(variable1);
+        }
+        function adition(m1, m2) {
+            return m1 + m2;
+        }
+        function sous(m1, m2) {
+            return m1 - m2;
+        }
+
+        ad1 = Number(ad1 = prompt("Entrez ad1"));
+        ad2 = Number(ad2 = prompt("Entrez ad2"));
+        op = prompt("Entrez l'operation");
+
+        if (op == '+') {
+            alert(adition(ad1, ad2));
+        }
+
+        function voiture(propMarque, propModele, propAnnee) {
+            this.marque = propMarque;
+            this.modele = propModele;
+            this.annee = propAnnee;
+        }
+        var mavoiture = new voiture("Peugeot", "307", "2007");
+        alert("Voici les caractéristiques de mon objet voiture :" + "\r  la marque : " + mavoiture.marque + "\r le modèle : " + mavoiture.modele + "\r l’année : " + mavoiture.annee);
+    </script>
+    <input type="button" name="Submit" value="Afficher" onclick="first()"></input>
+</body>
+
+</html>
