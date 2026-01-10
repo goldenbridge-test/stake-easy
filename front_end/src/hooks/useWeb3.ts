@@ -100,5 +100,62 @@ export const useWeb3 = () => {
   }
 };
 
-  return { account, connectWallet, stakeTokens,getTokenBalance, isConnected: !!account, loading };
+const addAllowedToken = async (tokenAddress: string, priceFeedAddress: string) => {
+  if (!provider || !account) return;
+  
+  try {
+    const signer = provider.getSigner();
+    const farmContract = new ethers.Contract(TOKEN_FARM_ADDRESS, TOKEN_FARM_ABI, signer);
+    
+    // Appeler la fonction du contrat
+    const tx = await farmContract.addAllowedTokens(tokenAddress, priceFeedAddress);
+    
+    // Attendre confirmation
+    await tx.wait();
+    
+    alert("Token ajouté avec succès !");
+    
+  } catch (error) {
+    console.error("Erreur add token:", error);
+    alert("Erreur lors de l'ajout du token");
+  }
+};
+const distributeRewardsToAll = async () => {
+  if (!provider || !account) return;
+  
+  try {
+    const signer = provider.getSigner();
+    const farmContract = new ethers.Contract(TOKEN_FARM_ADDRESS, TOKEN_FARM_ABI, signer);
+    
+    // Appeler la fonction
+    const tx = await farmContract.issueTokens();
+    await tx.wait();
+    
+    alert("Rewards distribués à tous les stakers !");
+    
+  } catch (error) {
+    console.error("Erreur distribution:", error);
+  }
+};
+
+const isAdmin = async () => {
+  if (!provider || !account) return false;
+  
+  try {
+    const signer = provider.getSigner();
+    const farmContract = new ethers.Contract(TOKEN_FARM_ADDRESS, TOKEN_FARM_ABI, signer);
+    
+    // Supposons que ton contrat a une fonction owner() ou isAdmin()
+    const owner = await farmContract.owner();
+    
+    return owner.toLowerCase() === account.toLowerCase();
+    
+  } catch (error) {
+    return false;
+  }
+};
+
+
+
+  return { account, connectWallet, stakeTokens,getTokenBalance,addAllowedToken ,distributeRewardsToAll,isAdmin, isConnected: !!account, loading };
 };
