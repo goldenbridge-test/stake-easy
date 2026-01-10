@@ -11,6 +11,7 @@ import CallToAction from './components/CallToAction';
 import Footer from './components/Footer';
 import SignIn from './components/SignIn'; // Nouveau
 import SignUp from './components/SignUp'; // Nouveau
+import Staking from './components/Staking';
 
 // On crée un composant pour la Landing Page complète pour garder le code propre
 const LandingPage = () => (
@@ -40,6 +41,8 @@ function App() {
           
           {/* Route pour l'inscription */}
           <Route path="/signup" element={<SignUp />} />
+
+          <Route path="/staking" element={<Staking />} />
         </Routes>
       </div>
     </Router>
