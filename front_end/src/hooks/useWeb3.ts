@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ethers } from 'ethers';
 
 
@@ -15,20 +15,54 @@ const TOKEN_FARM_ABI = [
   "function stakeTokens(uint256 _amount, address _token) public",
   "function unstakeTokens(address _token) public",
   "function getUserSingleTokenValue(address _user, address _token) public view returns (uint256)",
-  "function stakingBalance(address _token, address _user) public view returns (uint256)"
+  "function stakingBalance(address _token, address _user) public view returns (uint256)",
+  "function issueTokens() public",
+  "function addAllowedTokens(address _token, address _priceFeed) public", 
+  "function issueReward(address _user) public",
+  "function owner() public view returns (address)"
 ];
 
 export const useWeb3 = () => {
   const [account, setAccount] = useState<string | null>(null);
   const [provider, setProvider] = useState<ethers.providers.Web3Provider | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(false)
 
-  // --- 1. CONNEXION METAMASK ---
+    useEffect(() => {
+    const init = async () => {
+      const { ethereum } = window as any;
+      if (ethereum) {
+        // 1. Vérifier si on est déjà connecté
+        const accounts = await ethereum.request({ method: 'eth_accounts' });
+        if (accounts.length > 0) {
+          const provider = new ethers.providers.Web3Provider(ethereum);
+          setProvider(provider);
+          setAccount(accounts[0]);
+        }
+
+        // 2. Écouter si l'utilisateur change de compte dans MetaMask
+        ethereum.on('accountsChanged', (newAccounts: string[]) => {
+          if (newAccounts.length > 0) {
+            setAccount(newAccounts[0]);
+            const provider = new ethers.providers.Web3Provider(ethereum);
+            setProvider(provider);
+          } else {
+            setAccount(null); // Déconnecté
+            setProvider(null);
+          }
+        });
+      }
+    };
+
+    init();
+  }, []); 
+
   const connectWallet = async () => {
-    if (window.ethereum) {
+    const { ethereum } = window as any;
+    if (ethereum) {
       try {
-        const provider = new ethers.providers.Web3Provider(window.ethereum);
-        await provider.send("eth_requestAccounts", []); // Ouvre Metamask
+        const provider = new ethers.providers.Web3Provider(ethereum);
+        // Demande la permission
+        await provider.send("eth_requestAccounts", []);
         const signer = provider.getSigner();
         const address = await signer.getAddress();
         setProvider(provider);
@@ -100,62 +134,108 @@ export const useWeb3 = () => {
   }
 };
 
+  const checkIsAdmin = async (): Promise<boolean> => {
+    if (!provider || !account) return false;
+    try {
+      const signer = provider.getSigner();
+      const farmContract = new ethers.Contract(TOKEN_FARM_ADDRESS, TOKEN_FARM_ABI, signer);
+      const owner = await farmContract.owner();
+      return owner.toLowerCase() === account.toLowerCase();
+    } catch (error) {
+      console.error("Erreur vérification admin:", error);
+      return false;
+    }
+  };
+
 const addAllowedToken = async (tokenAddress: string, priceFeedAddress: string) => {
-  if (!provider || !account) return;
-  
+  if (!provider || !account) {
+    alert("Wallet non connecté");
+    return false;
+  }
+
   try {
     const signer = provider.getSigner();
     const farmContract = new ethers.Contract(TOKEN_FARM_ADDRESS, TOKEN_FARM_ABI, signer);
     
-    // Appeler la fonction du contrat
+    console.log("Ajout du token:", tokenAddress);
+    
+    // Appeler addAllowedTokens du contrat
     const tx = await farmContract.addAllowedTokens(tokenAddress, priceFeedAddress);
+    
+    console.log("Transaction envoyée, hash:", tx.hash);
     
     // Attendre confirmation
     await tx.wait();
     
-    alert("Token ajouté avec succès !");
+    console.log("Token ajouté avec succès !");
+    return true;
     
   } catch (error) {
-    console.error("Erreur add token:", error);
-    alert("Erreur lors de l'ajout du token");
-  }
-};
-const distributeRewardsToAll = async () => {
-  if (!provider || !account) return;
-  
-  try {
-    const signer = provider.getSigner();
-    const farmContract = new ethers.Contract(TOKEN_FARM_ADDRESS, TOKEN_FARM_ABI, signer);
-    
-    // Appeler la fonction
-    const tx = await farmContract.issueTokens();
-    await tx.wait();
-    
-    alert("Rewards distribués à tous les stakers !");
-    
-  } catch (error) {
-    console.error("Erreur distribution:", error);
+    console.error("Erreur ajout token:", error);
+    alert("Erreur lors de l'ajout du token (voir console)");
+    return false;
   }
 };
 
-const isAdmin = async () => {
-  if (!provider || !account) return false;
-  
+const distributeRewardsToAll = async () => {
+  if (!provider || !account) {
+    alert("Wallet non connecté");
+    return false;
+  }
+
   try {
     const signer = provider.getSigner();
     const farmContract = new ethers.Contract(TOKEN_FARM_ADDRESS, TOKEN_FARM_ABI, signer);
     
-    // Supposons que ton contrat a une fonction owner() ou isAdmin()
-    const owner = await farmContract.owner();
+    console.log("Distribution des rewards...");
     
-    return owner.toLowerCase() === account.toLowerCase();
+    const tx = await farmContract.issueTokens();
+    
+    console.log("Transaction envoyée, hash:", tx.hash);
+    
+    await tx.wait();
+    
+    console.log("Rewards distribués !");
+    return true;
     
   } catch (error) {
+    console.error("Erreur distribution:", error);
+    alert("Erreur lors de la distribution (voir console)");
+    return false;
+  }
+};
+
+
+const issueRewardToUser = async (userAddress: string) => {
+  if (!provider || !account) {
+    alert("Wallet non connecté");
+    return false;
+  }
+
+  try {
+    const signer = provider.getSigner();
+    const farmContract = new ethers.Contract(TOKEN_FARM_ADDRESS, TOKEN_FARM_ABI, signer);
+    
+    console.log("Distribution reward à:", userAddress);
+    
+    // Appeler issueReward du contrat
+    const tx = await farmContract.issueReward(userAddress);
+    
+    console.log("Transaction envoyée, hash:", tx.hash);
+    
+    await tx.wait();
+    
+    console.log("Reward distribué !");
+    return true;
+    
+  } catch (error) {
+    console.error("Erreur issue reward:", error);
+    alert("Erreur lors de la distribution (voir console)");
     return false;
   }
 };
 
 
 
-  return { account, connectWallet, stakeTokens,getTokenBalance,addAllowedToken ,distributeRewardsToAll,isAdmin, isConnected: !!account, loading };
+  return { account, connectWallet, stakeTokens,getTokenBalance,addAllowedToken ,distributeRewardsToAll,checkIsAdmin,issueRewardToUser, isConnected: !!account, loading };
 };
