@@ -1,16 +1,20 @@
 import React, { useState, useEffect } from "react";
-import { Globe, Menu, X, Wallet } from "lucide-react"; // J'ai ajouté l'icône Wallet
+import { Globe, Menu, X, Wallet } from "lucide-react";
 import { Link } from "react-router-dom";
-import { useWeb3 } from "../hooks/useWeb3"; // 👈 Import du Hook
-
+import { useWeb3 } from "../hooks/useWeb3";
 const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  // 👇 On récupère la logique de connexion
-  const { connectWallet, account, isConnected } = useWeb3();
+    const { connectWallet, account, isConnected, chainId } = useWeb3();
 
-  // Petite fonction pour raccourcir l'adresse (ex: 0x1234...5678)
+    const getNetworkName = () => {
+      if (chainId === 11155111) return "Sepolia";
+      if (chainId === 1) return "Ethereum";
+      if (chainId === 31337) return "Ganache";
+      return chainId ? `Network ${chainId}` : "Disconnected";
+    };
+
   const formatAddress = (addr: string | null) => {
     if (!addr) return "";
     return `${addr.substring(0, 6)}...${addr.substring(addr.length - 4)}`;
@@ -73,16 +77,19 @@ const Navbar = () => {
             Sign In
           </Link>
 
-          {/* 👇 BOUTON CONNECT WALLET DYNAMIQUE */}
+          {/* BOUTON CONNECT WALLET DYNAMIQUE */}
           <button
             onClick={connectWallet}
-            disabled={isConnected} // Désactivé si déjà connecté (ou on peut mettre un menu logout)
+            disabled={isConnected}
             className="bg-gold hover:bg-gold-hover text-white px-6 py-2 rounded-md font-heading font-semibold transition shadow-sm flex items-center gap-2"
           >
             {isConnected ? (
               <>
                 <Wallet className="w-4 h-4" />
-                {formatAddress(account)}
+                <div className="text-left">
+                  <div className="text-xs opacity-80">{getNetworkName()}</div>
+                  <div>{formatAddress(account)}</div>
+                </div>
               </>
             ) : (
               "Connect Wallet"
