@@ -1,24 +1,10 @@
 import React, { useState, useEffect } from "react";
-import { Globe, Menu, X, Wallet } from "lucide-react";
+import { Globe, Menu, X } from "lucide-react";
 import { Link } from "react-router-dom";
-import { useWeb3 } from "../hooks/useWeb3";
+
 const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-
-    const { connectWallet, account, isConnected, chainId } = useWeb3();
-
-    const getNetworkName = () => {
-      if (chainId === 11155111) return "Sepolia";
-      if (chainId === 1) return "Ethereum";
-      if (chainId === 31337) return "Ganache";
-      return chainId ? `Network ${chainId}` : "Disconnected";
-    };
-
-  const formatAddress = (addr: string | null) => {
-    if (!addr) return "";
-    return `${addr.substring(0, 6)}...${addr.substring(addr.length - 4)}`;
-  };
 
   useEffect(() => {
     const handleScroll = () => {
@@ -77,23 +63,8 @@ const Navbar = () => {
             Sign In
           </Link>
 
-          {/* BOUTON CONNECT WALLET DYNAMIQUE */}
-          <button
-            onClick={connectWallet}
-            disabled={isConnected}
-            className="bg-gold hover:bg-gold-hover text-white px-6 py-2 rounded-md font-heading font-semibold transition shadow-sm flex items-center gap-2"
-          >
-            {isConnected ? (
-              <>
-                <Wallet className="w-4 h-4" />
-                <div className="text-left">
-                  <div className="text-xs opacity-80">{getNetworkName()}</div>
-                  <div>{formatAddress(account)}</div>
-                </div>
-              </>
-            ) : (
-              "Connect Wallet"
-            )}
+          <button className="bg-gold hover:bg-gold-hover text-white px-6 py-2 rounded-md font-heading font-semibold transition shadow-sm">
+            Connect Wallet
           </button>
         </div>
 
@@ -106,17 +77,18 @@ const Navbar = () => {
         </button>
       </div>
 
+      {/* MENU MOBILE */}
       {isMobileMenuOpen && (
         <div className="lg:hidden bg-white border-t border-gray-100 absolute top-full left-0 w-full shadow-lg py-6 px-6 flex flex-col space-y-4">
           {navLinks.map((link) => (
-            <Link
+            <a
               key={link.name}
-              to={link.href}
+              href={link.href}
               className="text-dark font-heading font-bold text-lg"
               onClick={() => setIsMobileMenuOpen(false)}
             >
               {link.name}
-            </Link>
+            </a>
           ))}
           <div className="flex flex-col gap-3 mt-4">
             <Link
@@ -127,21 +99,8 @@ const Navbar = () => {
               Sign In
             </Link>
 
-            <button
-              onClick={() => {
-                connectWallet();
-                setIsMobileMenuOpen(false);
-              }}
-              className="w-full py-3 rounded-lg bg-gold text-white font-bold flex justify-center items-center gap-2"
-            >
-              {isConnected ? (
-                <>
-                  <Wallet className="w-4 h-4" />
-                  {formatAddress(account)}
-                </>
-              ) : (
-                "Connect Wallet"
-              )}
+            <button className="w-full py-3 rounded-lg bg-gold text-white font-bold">
+              Connect Wallet
             </button>
           </div>
         </div>
