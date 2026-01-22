@@ -57,6 +57,33 @@ def test_set_price_feed_contract():
             golden_token.address, get_contract("eth_usd_price_feed"), {"from": non_owner}
         )
 
+def test_remove_allowed_token(random_erc20):
+    # Arrange
+    if network.show_active() not in LOCAL_BLOCKCHAIN_ENVIRONMENTS:
+        pytest.skip("Only for local testing")
+    
+    account = get_account()
+    token_farm, golden_token = deploy_token_farm_and_golden_token()
+
+    # Add the token first
+    token_farm.addAllowedTokens(golden_token.address, {"from": account})
+
+    # Assert token is allowed
+    assert token_farm.tokenIsAllowed(golden_token.address) is True
+
+    # Act: remove the token
+    token_farm.removeAllowedToken(golden_token.address, {"from": account})
+
+    # Assert token is no longer allowed
+    assert token_farm.tokenIsAllowed(golden_token.address) is False
+    # Alternatively, using your !tokenIsAllowed style
+    assert not token_farm.tokenIsAllowed(golden_token.address)
+
+    # Optional: test that non-owner cannot remove
+    non_owner = get_account(index=1)
+    token_farm.addAllowedTokens(golden_token.address, {"from": account})
+    with pytest.raises(Exception):
+        token_farm.removeAllowedToken(golden_token.address, {"from": non_owner})
 
 def test_stake_tokens(amount_staked):
     # Arrange

@@ -1,34 +1,55 @@
-import React from "react";
-import { Header } from "./features/Header"
-import { Main } from "./features/Main"
-import  Social  from "./features/Social"
-import  Footer  from "./features/Footer"
-import { DAppProvider, ChainId, useEtherBalance, useEthers, Config } from "@usedapp/core"
-import { Container } from "@material-ui/core"
-import Projects from "./features/Projects"
-import PublicTestnet from "./features/PublicTestnet"
-import Roadmap from "./features/Roadmap"
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 
-export const App = () => {
-  
+// Import des pages
+import Navbar from './components/Navbar';
+import Hero from './components/Hero';
+import Investments from './components/Investments';
+import Performance from './components/Performance';
+import Team from './components/Team';
+import CallToAction from './components/CallToAction';
+import Footer from './components/Footer';
+import SignIn from './components/SignIn'; // Nouveau
+import SignUp from './components/SignUp'; // Nouveau
+import Staking from './components/Staking';
+import AdminDashboard from './components/AdminDashboard';
+
+// On crée un composant pour la Landing Page complète pour garder le code propre
+const LandingPage = () => (
+  <>
+    <Navbar />
+    <main>
+      <Hero />
+      <Investments />
+      <Performance />
+      <Team />
+      <CallToAction />
+    </main>
+    <Footer />
+  </>
+);
+
+function App() {
   return (
-    <DAppProvider config={{
-      supportedChains: [ ChainId.Kovan, ChainId.Ropsten, ChainId.Goerli, ChainId.BSCTestnet, 1337 ],
-      notifications: {
-        expirationPeriod: 1000,
-        checkInterval: 1000
-      }
-    }}>
-      <Header/>
-      <Container maxWidth="md">
-        <Main />
-      </Container>
-      <PublicTestnet/>
-      <Projects/>
-      <Roadmap/>
-      <Social/>
-      <Footer/>
-    </DAppProvider>
-  )
+    <Router>
+      <div className="bg-white min-h-screen font-body text-dark">
+        <Routes>
+          {/* Route pour l'accueil (Landing Page) */}
+          <Route path="/" element={<LandingPage />} />
+
+          {/* Route pour la connexion */}
+          <Route path="/signin" element={<SignIn />} />
+
+          {/* Route pour l'inscription */}
+          <Route path="/signup" element={<SignUp />} />
+
+          <Route path="/staking" element={<Staking />} />
+
+          <Route path="/admin" element={<AdminDashboard />} />
+        </Routes>
+      </div>
+    </Router>
+  );
 }
-export default App
+
+export default App;

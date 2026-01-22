@@ -41,7 +41,6 @@ contract_to_mock = {
     "eth_usd_price_feed": MockV3Aggregator,
     "dai_usd_price_feed": MockV3Aggregator,
     "link_usd_price_feed": MockV3Aggregator,
-    "bnb_usd_price_feed": MockV3Aggregator,
     "fau_token": MockDAI,
     "weth_token": MockWETH,
     "link_token": LinkToken,

@@ -6,7 +6,7 @@ import yaml
 import json
 from web3 import Web3
 
-KEPT_BALANCE = Web3.toWei(100, "ether")
+KEPT_BALANCE = Web3.to_wei(100, "ether")  # CORRIGÉ
 
 
 def deploy_token_farm_and_golden_token(update_front_end_flag=False):
@@ -53,8 +53,31 @@ def add_allowed_tokens(token_farm, dict_of_allowed_token, account):
     return token_farm
 
 
+def copy_folders_to_front_end(src, dest):
+    if os.path.exists(dest):
+        shutil.rmtree(dest)
+    shutil.copytree(src, dest)
+
+
+def copy_files_to_front_end(src, dest):
+    # Crée le dossier parent si nécessaire
+    os.makedirs(os.path.dirname(dest), exist_ok=True)
+    
+    if os.path.exists(dest):
+        if os.path.isdir(dest):
+            shutil.rmtree(dest)
+        else:
+            os.remove(dest)
+    
+    shutil.copyfile(src, dest)
+
+
 def update_front_end():
     print("Updating front end...")
+    
+    # Crée le dossier chain-info s'il n'existe pas
+    os.makedirs("./front_end/src/chain-info", exist_ok=True)
+    
     # The Build
     copy_folders_to_front_end("./build/contracts", "./front_end/src/chain-info")
 
@@ -66,32 +89,29 @@ def update_front_end():
         "./build/contracts/dependencies/OpenZeppelin/openzeppelin-contracts@4.3.2/ERC20.json",
         "./front_end/src/chain-info/ERC20.json",
     )
-    # The Map
-    copy_files_to_front_end(
-        "./build/deployments/map.json",
-        "./front_end/src/chain-info/map.json",
-    )
+    
+    # The Map - Vérifie d'abord s'il existe
+    map_src = "./build/deployments/map.json"
+    if os.path.exists(map_src):
+        copy_files_to_front_end(map_src, "./front_end/src/chain-info/map.json")
+    else:
+        print("⚠️ map.json non trouvé, création d'un fichier vide...")
+        basic_map = {
+            "1337": {
+                "GoldenToken": ["0x3194cBDC3dbcd3E11a07892e7bA5c3394048Cc87"],
+                "TokenFarm": ["0x602C71e4DAC47a042Ee7f46E0aee17F94A3bA0B6"]
+            }
+        }
+        with open("./front_end/src/chain-info/map.json", "w") as f:
+            json.dump(basic_map, f, indent=2)
 
-    # The Config, converted from YAML to JSON
+    # The Config
     with open("brownie-config.yaml", "r") as brownie_config:
         config_dict = yaml.load(brownie_config, Loader=yaml.FullLoader)
-        with open(
-            "./front_end/src/brownie-config-json.json", "w"
-        ) as brownie_config_json:
+        with open("./front_end/src/brownie-config-json.json", "w") as brownie_config_json:
             json.dump(config_dict, brownie_config_json)
+    
     print("Front end updated!")
-#pip install pyyaml
-
-def copy_folders_to_front_end(src, dest):
-    if os.path.exists(dest):
-        shutil.rmtree(dest)
-    shutil.copytree(src, dest)
-
-
-def copy_files_to_front_end(src, dest):
-    if os.path.exists(dest):
-        shutil.rmtree(dest)
-    shutil.copyfile(src, dest)
 
 
 def main():

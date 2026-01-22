@@ -287,27 +287,27 @@
     "absolutePath": "contracts/test/MockERC20.sol",
     "exportedSymbols": {
       "Context": [
-        1850
+        1960
       ],
       "ERC20": [
-        1044
+        1154
       ],
       "IERC20": [
-        1226
+        1336
       ],
       "IERC20Metadata": [
-        1828
+        1938
       ],
       "MockERC20": [
-        484
+        594
       ]
     },
-    "id": 485,
+    "id": 595,
     "license": "MIT",
     "nodeType": "SourceUnit",
     "nodes": [
       {
-        "id": 466,
+        "id": 576,
         "literals": [
           "solidity",
           "^",
@@ -320,11 +320,11 @@
       {
         "absolutePath": "C:/Users/1K/.brownie/packages/OpenZeppelin/openzeppelin-contracts@4.3.2/contracts/token/ERC20/ERC20.sol",
         "file": "@openzeppelin/contracts/token/ERC20/ERC20.sol",
-        "id": 467,
+        "id": 577,
         "nameLocation": "-1:-1:-1",
         "nodeType": "ImportDirective",
-        "scope": 485,
-        "sourceUnit": 1045,
+        "scope": 595,
+        "sourceUnit": 1155,
         "src": "57:55:20",
         "symbolAliases": [],
         "unitAlias": ""
@@ -334,16 +334,16 @@
         "baseContracts": [
           {
             "baseName": {
-              "id": 468,
+              "id": 578,
               "name": "ERC20",
               "nameLocations": [
                 "136:5:20"
               ],
               "nodeType": "IdentifierPath",
-              "referencedDeclaration": 1044,
+              "referencedDeclaration": 1154,
               "src": "136:5:20"
             },
-            "id": 469,
+            "id": 579,
             "nodeType": "InheritanceSpecifier",
             "src": "136:5:20"
           }
@@ -352,13 +352,13 @@
         "contractDependencies": [],
         "contractKind": "contract",
         "fullyImplemented": true,
-        "id": 484,
+        "id": 594,
         "linearizedBaseContracts": [
-          484,
-          1044,
-          1828,
-          1226,
-          1850
+          594,
+          1154,
+          1938,
+          1336,
+          1960
         ],
         "name": "MockERC20",
         "nameLocation": "123:9:20",
@@ -366,7 +366,7 @@
         "nodes": [
           {
             "body": {
-              "id": 482,
+              "id": 592,
               "nodeType": "Block",
               "src": "196:61:20",
               "statements": [
@@ -375,7 +375,7 @@
                     "arguments": [
                       {
                         "expression": {
-                          "id": 477,
+                          "id": 587,
                           "name": "msg",
                           "nodeType": "Identifier",
                           "overloadedDeclarations": [],
@@ -386,7 +386,7 @@
                             "typeString": "msg"
                           }
                         },
-                        "id": 478,
+                        "id": 588,
                         "isConstant": false,
                         "isLValue": false,
                         "isPure": false,
@@ -402,7 +402,7 @@
                       },
                       {
                         "hexValue": "31303030303030303030303030303030303030303030303030",
-                        "id": 479,
+                        "id": 589,
                         "isConstant": false,
                         "isLValue": false,
                         "isPure": true,
@@ -428,18 +428,18 @@
                           "typeString": "int_const 1000000000000000000000000"
                         }
                       ],
-                      "id": 476,
+                      "id": 586,
                       "name": "_mint",
                       "nodeType": "Identifier",
                       "overloadedDeclarations": [],
-                      "referencedDeclaration": 904,
+                      "referencedDeclaration": 1014,
                       "src": "206:5:20",
                       "typeDescriptions": {
                         "typeIdentifier": "t_function_internal_nonpayable$_t_address_$_t_uint256_$returns$__$",
                         "typeString": "function (address,uint256)"
                       }
                     },
-                    "id": 480,
+                    "id": 590,
                     "isConstant": false,
                     "isLValue": false,
                     "isPure": false,
@@ -455,13 +455,13 @@
                       "typeString": "tuple()"
                     }
                   },
-                  "id": 481,
+                  "id": 591,
                   "nodeType": "ExpressionStatement",
                   "src": "206:44:20"
                 }
               ]
             },
-            "id": 483,
+            "id": 593,
             "implemented": true,
             "kind": "constructor",
             "modifiers": [
@@ -469,7 +469,7 @@
                 "arguments": [
                   {
                     "hexValue": "4d6f636b204552433230",
-                    "id": 472,
+                    "id": 582,
                     "isConstant": false,
                     "isLValue": false,
                     "isPure": true,
@@ -485,7 +485,7 @@
                   },
                   {
                     "hexValue": "455243",
-                    "id": 473,
+                    "id": 583,
                     "isConstant": false,
                     "isLValue": false,
                     "isPure": true,
@@ -500,16 +500,16 @@
                     "value": "ERC"
                   }
                 ],
-                "id": 474,
+                "id": 584,
                 "kind": "baseConstructorSpecifier",
                 "modifierName": {
-                  "id": 471,
+                  "id": 581,
                   "name": "ERC20",
                   "nameLocations": [
                     "169:5:20"
                   ],
                   "nodeType": "IdentifierPath",
-                  "referencedDeclaration": 1044,
+                  "referencedDeclaration": 1154,
                   "src": "169:5:20"
                 },
                 "nodeType": "ModifierInvocation",
@@ -520,25 +520,25 @@
             "nameLocation": "-1:-1:-1",
             "nodeType": "FunctionDefinition",
             "parameters": {
-              "id": 470,
+              "id": 580,
               "nodeType": "ParameterList",
               "parameters": [],
               "src": "159:2:20"
             },
             "returnParameters": {
-              "id": 475,
+              "id": 585,
               "nodeType": "ParameterList",
               "parameters": [],
               "src": "196:0:20"
             },
-            "scope": 484,
+            "scope": 594,
             "src": "148:109:20",
             "stateMutability": "nonpayable",
             "virtual": false,
             "visibility": "public"
           }
         ],
-        "scope": 485,
+        "scope": 595,
         "src": "114:145:20",
         "usedErrors": []
       }

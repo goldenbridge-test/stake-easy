@@ -287,27 +287,27 @@
     "absolutePath": "contracts/test/MockWETH.sol",
     "exportedSymbols": {
       "Context": [
-        1850
+        1960
       ],
       "ERC20": [
-        1044
+        1154
       ],
       "IERC20": [
-        1226
+        1336
       ],
       "IERC20Metadata": [
-        1828
+        1938
       ],
       "MockWETH": [
-        498
+        608
       ]
     },
-    "id": 499,
+    "id": 609,
     "license": "MIT",
     "nodeType": "SourceUnit",
     "nodes": [
       {
-        "id": 486,
+        "id": 596,
         "literals": [
           "solidity",
           "^",
@@ -320,11 +320,11 @@
       {
         "absolutePath": "C:/Users/1K/.brownie/packages/OpenZeppelin/openzeppelin-contracts@4.3.2/contracts/token/ERC20/ERC20.sol",
         "file": "@openzeppelin/contracts/token/ERC20/ERC20.sol",
-        "id": 487,
+        "id": 597,
         "nameLocation": "-1:-1:-1",
         "nodeType": "ImportDirective",
-        "scope": 499,
-        "sourceUnit": 1045,
+        "scope": 609,
+        "sourceUnit": 1155,
         "src": "58:55:21",
         "symbolAliases": [],
         "unitAlias": ""
@@ -334,16 +334,16 @@
         "baseContracts": [
           {
             "baseName": {
-              "id": 488,
+              "id": 598,
               "name": "ERC20",
               "nameLocations": [
                 "136:5:21"
               ],
               "nodeType": "IdentifierPath",
-              "referencedDeclaration": 1044,
+              "referencedDeclaration": 1154,
               "src": "136:5:21"
             },
-            "id": 489,
+            "id": 599,
             "nodeType": "InheritanceSpecifier",
             "src": "136:5:21"
           }
@@ -352,13 +352,13 @@
         "contractDependencies": [],
         "contractKind": "contract",
         "fullyImplemented": true,
-        "id": 498,
+        "id": 608,
         "linearizedBaseContracts": [
-          498,
-          1044,
-          1828,
-          1226,
-          1850
+          608,
+          1154,
+          1938,
+          1336,
+          1960
         ],
         "name": "MockWETH",
         "nameLocation": "124:8:21",
@@ -366,12 +366,12 @@
         "nodes": [
           {
             "body": {
-              "id": 496,
+              "id": 606,
               "nodeType": "Block",
               "src": "196:7:21",
               "statements": []
             },
-            "id": 497,
+            "id": 607,
             "implemented": true,
             "kind": "constructor",
             "modifiers": [
@@ -379,7 +379,7 @@
                 "arguments": [
                   {
                     "hexValue": "4d6f636b2057455448",
-                    "id": 492,
+                    "id": 602,
                     "isConstant": false,
                     "isLValue": false,
                     "isPure": true,
@@ -395,7 +395,7 @@
                   },
                   {
                     "hexValue": "57455448",
-                    "id": 493,
+                    "id": 603,
                     "isConstant": false,
                     "isLValue": false,
                     "isPure": true,
@@ -410,16 +410,16 @@
                     "value": "WETH"
                   }
                 ],
-                "id": 494,
+                "id": 604,
                 "kind": "baseConstructorSpecifier",
                 "modifierName": {
-                  "id": 491,
+                  "id": 601,
                   "name": "ERC20",
                   "nameLocations": [
                     "169:5:21"
                   ],
                   "nodeType": "IdentifierPath",
-                  "referencedDeclaration": 1044,
+                  "referencedDeclaration": 1154,
                   "src": "169:5:21"
                 },
                 "nodeType": "ModifierInvocation",
@@ -430,25 +430,25 @@
             "nameLocation": "-1:-1:-1",
             "nodeType": "FunctionDefinition",
             "parameters": {
-              "id": 490,
+              "id": 600,
               "nodeType": "ParameterList",
               "parameters": [],
               "src": "159:2:21"
             },
             "returnParameters": {
-              "id": 495,
+              "id": 605,
               "nodeType": "ParameterList",
               "parameters": [],
               "src": "196:0:21"
             },
-            "scope": 498,
+            "scope": 608,
             "src": "148:55:21",
             "stateMutability": "nonpayable",
             "virtual": false,
             "visibility": "public"
           }
         ],
-        "scope": 499,
+        "scope": 609,
         "src": "115:90:21",
         "usedErrors": []
       }

@@ -7,3 +7,4 @@ node_modules
 front_end_again
 .env
 yarn-error.log
+mon_env/
