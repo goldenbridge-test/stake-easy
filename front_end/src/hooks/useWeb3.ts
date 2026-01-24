@@ -1,14 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { ethers } from 'ethers';
 import { SUPPORTED_TOKENS, TOKEN_FARM_ADDRESS, SEPOLIA_CONFIG } from '../constants/tokens';
 
 const ERC20_ABI = [
-  "function name() view returns (string)",
-  "function symbol() view returns (string)",
-  "function decimals() view returns (uint8)",
-  "function totalSupply() view returns (uint256)",
-  "function transfer(address to, uint256 amount) returns (bool)",
-  "function transferFrom(address from, address to, uint256 amount) returns (bool)",
   "function approve(address spender, uint256 amount) public returns (bool)",
   "function allowance(address owner, address spender) public view returns (uint256)",
   "function balanceOf(address account) public view returns (uint256)"
@@ -120,8 +114,7 @@ export const useWeb3 = () => {
   };
 
   const connectWallet = async () => {
-    const { ethereum } = window as any;
-    if (ethereum) {
+    if (window.ethereum) {
       try {
         const isOnSepolia = await switchToSepolia();
         if (!isOnSepolia) {

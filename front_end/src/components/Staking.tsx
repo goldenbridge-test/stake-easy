@@ -15,7 +15,6 @@ import { useWeb3 } from "../hooks/useWeb3";
 type Token = {
   symbol: string;
   name: string;
-  address: string;
   balance: number;
   price: number;
   iconColor: string;
@@ -24,7 +23,7 @@ type Token = {
 
 const Staking = () => {
   const [isLoading, setIsLoading] = useState(true);
-  const [amount, setAmount] = useState("");
+  const [amount, setAmount] = useState('');
   const [selectedToken, setSelectedToken] = useState<Token | null>(null);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isCooldownChecked, setIsCooldownChecked] = useState(false);
@@ -175,6 +174,7 @@ const Staking = () => {
         )
       : "0.00";
 
+  // --- SKELETON LOADER COMPONENT ---
   const Skeleton = ({ className }: { className: string }) => (
     <div className={`animate-pulse bg-gray-200 rounded ${className}`}></div>
   );
@@ -185,6 +185,7 @@ const Staking = () => {
 
       <main className="flex-grow pt-32 pb-20 px-4 sm:px-6">
         <div className="max-w-7xl mx-auto space-y-8">
+          {/* Header de Page */}
           <div className="flex items-center gap-3 mb-8">
             <div className="p-3 bg-white rounded-lg shadow-sm border border-gray-100">
               <Coins className="w-6 h-6 text-gold" />
@@ -205,9 +206,12 @@ const Staking = () => {
             </div>
           </div>
 
+          {/* --- SECTION PRINCIPALE (Grid) --- */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            {/* GAUCHE : FORMULAIRE (40%) */}
             <div className="lg:col-span-5 space-y-6">
               <div className="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden relative">
+                {/* Barre décorative or */}
                 <div className="h-1 w-full bg-gradient-to-r from-primary to-gold"></div>
 
                 <div className="p-6 md:p-8">
@@ -215,6 +219,7 @@ const Staking = () => {
                     Stake Your Tokens
                   </h2>
 
+                  {/* 1. SELECT TOKEN (CUSTOM DROPDOWN) */}
                   <div className="mb-6 relative">
                     <label className="block text-sm font-bold text-gray-700 mb-2">
                       Select Token
@@ -327,6 +332,7 @@ const Staking = () => {
                     )}
                   </div>
 
+                  {/* 2. AMOUNT INPUT */}
                   <div className="mb-6">
                     <label className="block text-sm font-bold text-gray-700 mb-2">
                       Amount to Stake
@@ -359,6 +365,7 @@ const Staking = () => {
                     </div>
                   </div>
 
+                  {/* 3. INFO BOX */}
                   <div className="bg-blue-50/50 rounded-lg p-4 border border-blue-100 mb-6">
                     <h3 className="text-primary font-bold text-sm mb-3 flex items-center gap-2">
                       <Info className="w-4 h-4 text-gold" /> Staking Info
@@ -371,11 +378,11 @@ const Staking = () => {
                         </span>
                       </li>
                       <li className="flex justify-between">
-                        <span>Cooldown period:</span>
+                        <span>Cooldown period:</span>{" "}
                         <span className="font-mono font-bold">24 hours</span>
                       </li>
                       <li className="flex justify-between">
-                        <span>Current APY:</span>
+                        <span>Current APY:</span>{" "}
                         <span className="font-mono font-bold text-green-600">
                           12.5%
                         </span>
@@ -383,6 +390,7 @@ const Staking = () => {
                     </ul>
                   </div>
 
+                  {/* 4. CHECKBOX */}
                   <label className="flex items-start gap-3 mb-8 cursor-pointer group">
                     <div className="relative flex items-center">
                       <input
@@ -400,7 +408,9 @@ const Staking = () => {
                     </span>
                   </label>
 
+                  {/* 5. MAIN BUTTON */}
                   {!isConnected ? (
+                    // CAS 1 : Pas connecté -> Bouton Bleu pour connecter
                     <button
                       onClick={connectWallet}
                       className="w-full bg-primary hover:bg-blue-900 text-white font-heading font-bold py-4 rounded-xl shadow-lg transition flex items-center justify-center gap-2"
@@ -408,6 +418,7 @@ const Staking = () => {
                       Connect Wallet to Stake
                     </button>
                   ) : (
+                    // CAS 2 : Connecté -> Bouton Or pour Staker
                     <button
                       onClick={handleStake}
                       disabled={
@@ -420,6 +431,7 @@ const Staking = () => {
                     </button>
                   )}
 
+                  {/* Petit texte de confirmation sous le bouton (Optionnel) */}
                   {isConnected && (
                     <p className="text-xs text-center mt-3 text-green-600 font-mono">
                       Wallet connected: {account?.substring(0, 6)}...
@@ -430,6 +442,7 @@ const Staking = () => {
               </div>
             </div>
 
+            {/* DROITE : STAKED ASSETS (60%) */}
             <div className="lg:col-span-7 space-y-6">
               <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-6 md:p-8 min-h-[500px] flex flex-col">
                 <h2 className="text-xl font-heading font-bold text-primary mb-6 flex items-center gap-2">
@@ -523,6 +536,7 @@ const Staking = () => {
                     </table>
                   </div>
                 ) : (
+                  // EMPTY STATE
                   <div className="flex-grow flex flex-col items-center justify-center text-center py-10">
                     <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mb-4">
                       <Wallet className="w-8 h-8 text-blue-300" />
