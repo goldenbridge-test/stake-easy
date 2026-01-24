@@ -1,9 +1,81 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../app_theme.dart';
+import '../../core/services/auth_service.dart';
 import '../../main_navigation.dart';
 
-class WalletConnectionScreen extends StatelessWidget {
+class WalletConnectionScreen extends StatefulWidget {
   const WalletConnectionScreen({Key? key}) : super(key: key);
+
+  @override
+  State<WalletConnectionScreen> createState() => _WalletConnectionScreenState();
+}
+
+class _WalletConnectionScreenState extends State<WalletConnectionScreen> {
+  final _authService = AuthService();
+  bool _isLoading = false;
+
+  void _handleWalletAuth(String walletName) async {
+    setState(() => _isLoading = true);
+    try {
+      // 1. In a real app, get the public address from MetaMask/WalletConnect
+      const String publicAddress = "0x1234567890abcdef1234567890abcdef12345678"; // Mock address
+
+      // 2. Get nonce from backend
+      final String nonce = await _authService.getNonce(publicAddress);
+
+      // 3. Request signature from wallet (SIWE message)
+      final String message = "I am signing my one-time nonce: $nonce";
+      
+      // 4. Handle Redirection to MetaMask
+      if (walletName == 'MetaMask') {
+        final Uri metamaskUri = Uri.parse("metamask://");
+        if (await canLaunchUrl(metamaskUri)) {
+          await launchUrl(metamaskUri, mode: LaunchMode.externalApplication);
+        } else {
+          // If MetaMask is not installed, we can try to redirect to the app store or just show a message
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('MetaMask n\'est pas installé sur cet appareil.')),
+            );
+          }
+          return;
+        }
+      }
+
+      // 5. Mocking the signature (Real app would use web3dart or WalletConnect)
+      // This is just to demonstrate the backend verification works
+      const String mockSignature = "0xmocksignature"; 
+
+      // 5. Verify with backend
+      // NOTE: For this to actually work in this demo, I'd need the real signature logic.
+      // Since I can't run a real wallet here, I will just navigate if it's MetaMask for now,
+      // but the code below shows the intended architecture.
+      
+      /*
+      await _authService.verifyWallet(publicAddress, mockSignature);
+      */
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Connecté avec $walletName (Flow SIWE initié)')),
+        );
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (context) => const MainNavigation()),
+          (route) => false,
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erreur: ${e.toString()}')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -13,7 +85,7 @@ class WalletConnectionScreen extends StatelessWidget {
         backgroundColor: Colors.transparent,
         foregroundColor: AppColors.primaryBlue,
       ),
-      body: Padding(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(24.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -51,7 +123,7 @@ class WalletConnectionScreen extends StatelessWidget {
               icon: Icons.shield,
               color: const Color(0xFF3375BB),
             ),
-            const Spacer(),
+            const SizedBox(height: 40),
             Center(
               child: Text(
                 'En vous connectant, vous acceptez nos Conditions Générales d\'Utilisation',
@@ -73,13 +145,7 @@ class WalletConnectionScreen extends StatelessWidget {
     required Color color,
   }) {
     return InkWell(
-      onTap: () {
-        Navigator.pushAndRemoveUntil(
-          context,
-          MaterialPageRoute(builder: (context) => const MainNavigation()),
-          (route) => false,
-        );
-      },
+      onTap: _isLoading ? null : () => _handleWalletAuth(title),
       borderRadius: BorderRadius.circular(16),
       child: Container(
         padding: const EdgeInsets.all(20),

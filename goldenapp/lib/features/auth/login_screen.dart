@@ -1,11 +1,43 @@
 import 'package:flutter/material.dart';
 import '../../app_theme.dart';
+import '../../core/services/auth_service.dart';
 import '../../main_navigation.dart';
 import 'signup_screen.dart';
 import 'wallet_connection_screen.dart';
 
-class LoginScreen extends StatelessWidget {
+class LoginScreen extends StatefulWidget {
   const LoginScreen({Key? key}) : super(key: key);
+
+  @override
+  State<LoginScreen> createState() => _LoginScreenState();
+}
+
+class _LoginScreenState extends State<LoginScreen> {
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final _authService = AuthService();
+  bool _isLoading = false;
+
+  void _handleLogin() async {
+    setState(() => _isLoading = true);
+    try {
+      await _authService.login(_emailController.text, _passwordController.text);
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const MainNavigation()),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString())),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -31,16 +63,18 @@ class LoginScreen extends StatelessWidget {
                 style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: Colors.grey),
               ),
               const SizedBox(height: 40),
-              const TextField(
-                decoration: InputDecoration(
+              TextField(
+                controller: _emailController,
+                decoration: const InputDecoration(
                   hintText: 'Email',
                   prefixIcon: Icon(Icons.email_outlined),
                 ),
               ),
               const SizedBox(height: 16),
-              const TextField(
+              TextField(
+                controller: _passwordController,
                 obscureText: true,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   hintText: 'Mot de passe',
                   prefixIcon: Icon(Icons.lock_outline),
                   suffixIcon: Icon(Icons.visibility_off_outlined),
@@ -56,13 +90,10 @@ class LoginScreen extends StatelessWidget {
               ),
               const SizedBox(height: 32),
               ElevatedButton(
-                onPressed: () {
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(builder: (context) => const MainNavigation()),
-                  );
-                },
-                child: const Text('Se connecter'),
+                onPressed: _isLoading ? null : _handleLogin,
+                child: _isLoading 
+                  ? const CircularProgressIndicator(color: Colors.white) 
+                  : const Text('Se connecter'),
               ),
               const SizedBox(height: 24),
               Row(

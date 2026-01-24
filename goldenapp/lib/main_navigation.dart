@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:goldenapp/features/dashboard/dashboard_screen.dart';
 import 'package:goldenapp/features/staking/staking_screen.dart';
 import 'package:goldenapp/features/portfolio/portfolio_screen.dart';
-import 'package:goldenapp/features/profile/profile_screen.dart';
+import 'package:goldenapp/features/settings/profile_screen.dart';
+import 'package:goldenapp/features/rewards/rewards_screen.dart';
 import 'package:goldenapp/learn.dart';
 import 'app_theme.dart';
 
@@ -19,7 +20,7 @@ class _MainNavigationState extends State<MainNavigation> {
   final List<Widget> _screens = [
     const DashboardScreen(),
     const StakingScreen(),
-    const LearnPage(),
+    const RewardsScreen(),
     const PortfolioScreen(),
     const ProfileScreen(),
   ];
@@ -61,9 +62,9 @@ class _MainNavigationState extends State<MainNavigation> {
               label: 'Staking',
             ),
             BottomNavigationBarItem(
-              icon: Icon(Icons.school_outlined),
-              activeIcon: Icon(Icons.school),
-              label: 'Apprendre',
+              icon: Icon(Icons.star_outline),
+              activeIcon: Icon(Icons.star),
+              label: 'Rewards',
             ),
             BottomNavigationBarItem(
               icon: Icon(Icons.pie_chart_outline),
