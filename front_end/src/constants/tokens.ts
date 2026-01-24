@@ -1,34 +1,39 @@
+
+export const TOKEN_FARM_ADDRESS = "0x736Ee2066fd93601Cb86Ce4d8ce7109d014cbDE4"; 
+
+
 export const SUPPORTED_TOKENS = [
   {
     symbol: "GLD",
     name: "Golden Token",
-    address: "0xFD803Ded3A8516484fD058Af8683353D92F3FE00", // 🔥 Nouvelle adresse
-    balance: 0,
-    price: 2000, // Prix fictif en USD
-    iconColor: "bg-gradient-to-br from-yellow-400 to-yellow-600",
-  },
-  {
-    symbol: "WETH",
-    name: "Wrapped Ether",
-    address: "0x5Df53ce28412DfCA5F5d479818511B30A2B37f9A",
-    balance: 0,
-    price: 2250,
-    iconColor: "bg-gradient-to-br from-purple-400 to-purple-600",
-  },
-  {
-    symbol: "DAI",
-    name: "Dai Stablecoin",
-    address: "0x90d23b1df568C3E61afc6Da83eb0484Aaf875Bed",
-    balance: 0,
-    price: 1,
-    iconColor: "bg-gradient-to-br from-orange-400 to-orange-600",
-  },
-  {
-    symbol: "LINK",
-    name: "Chainlink Token",
-    address: "0xd8B7Df55cb0F2dA9229A01B8Ba3279bcF8269aA3",
-    balance: 0,
-    price: 14.5,
-    iconColor: "bg-gradient-to-br from-blue-400 to-blue-600",
+    address: "0x4d05A6430C78D66d904dc49BAa5a55137Ed53110", 
+    decimals: 18,
+    iconColor: "bg-yellow-500",
+    price: 100,
+    priceFeed: "0x694AA1769357215DE4FAC081bf1f309aDC325306" 
   }
 ];
+
+export const SEPOLIA_CONFIG = {
+  chainId: '0xaa36a7',
+  chainName: 'Sepolia Testnet',
+  nativeCurrency: {
+    name: 'Sepolia ETH',
+    symbol: 'ETH',
+    decimals: 18
+  },
+  rpcUrls: ['https://rpc.sepolia.org'],
+  blockExplorerUrls: ['https://sepolia.etherscan.io']
+};
+
+export const getTokenByAddress = (address: string) => {
+  return SUPPORTED_TOKENS.find(
+    token => token.address.toLowerCase() === address.toLowerCase()
+  );
+};
+
+export const getTokenBySymbol = (symbol: string) => {
+  return SUPPORTED_TOKENS.find(
+    token => token.symbol.toLowerCase() === symbol.toLowerCase()
+  );
+};

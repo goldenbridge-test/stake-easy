@@ -11,20 +11,24 @@ import {
   Wrench,
   ArrowLeft,
   Loader2,
+  Zap,
+  RefreshCw,
+  AlertCircle,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import Navbar from "./Navbar";
 import Footer from "./Footer";
 import { useWeb3 } from "../hooks/useWeb3";
+import { SUPPORTED_TOKENS } from "../constants/tokens";
 
-// Types pour l'affichage local (visuel)
-type AllowedToken = {
-  id: number;
-  name: string;
-  symbol: string;
+// Types pour l'affichage
+type TokenStatus = {
   address: string;
+  symbol: string;
+  name: string;
   priceFeed: string;
-  status: "Active" | "Paused";
+  isAllowed: boolean;
+  isConfigured: boolean;
 };
 
 const AdminDashboard = () => {
@@ -36,6 +40,9 @@ const AdminDashboard = () => {
     addAllowedToken,
     distributeRewardsToAll,
     issueRewardToUser,
+    getAllowedTokens,
+    checkTokenIsAllowed,
+    setPriceFeed,
   } = useWeb3();
 
   // --- 2. ÉTATS LOCAUX ---
@@ -43,35 +50,20 @@ const AdminDashboard = () => {
   const [isCheckingAdmin, setIsCheckingAdmin] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [distributeLoading, setDistributeLoading] = useState(false);
+  const [isInitializing, setIsInitializing] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Inputs Formulaires
   const [newTokenAddress, setNewTokenAddress] = useState("");
   const [newPriceFeed, setNewPriceFeed] = useState("");
   const [userAddressForReward, setUserAddressForReward] = useState("");
 
-  // Liste locale des tokens (Juste pour l'affichage visuel après ajout)
-  const [tokens, setTokens] = useState<AllowedToken[]>([
-    {
-      id: 1,
-      name: "DAPP Token",
-      symbol: "DAPP",
-      address: "0x8E29...CC50",
-      priceFeed: "0xBf34...DB1d",
-      status: "Active",
-    },
-    {
-      id: 2,
-      name: "Mock DAI",
-      symbol: "mDAI",
-      address: "0xF0F6...709",
-      priceFeed: "0x7D9a...D1b5",
-      status: "Active",
-    },
-  ]);
+  // Liste des tokens avec leur statut réel
+  const [tokenStatuses, setTokenStatuses] = useState<TokenStatus[]>([]);
 
+  // --- 3. VÉRIFICATION ADMIN ---
   useEffect(() => {
     const verify = async () => {
-      // On attend un peu que la connexion se stabilise ou on vérifie direct
       if (!isConnected || !account) {
         setIsAdmin(false);
         setIsCheckingAdmin(false);
@@ -82,70 +74,158 @@ const AdminDashboard = () => {
       const adminStatus = await checkIsAdmin();
       setIsAdmin(adminStatus);
       setIsCheckingAdmin(false);
+
+      // Si admin, charger les tokens
+      if (adminStatus) {
+        await loadTokenStatuses();
+      }
     };
 
     verify();
-  }, [account, isConnected]); // Se relance si le compte change
+  }, [account, isConnected]);
 
-  // --- 4. FONCTIONS D'ACTION ---
+  // --- 4. CHARGER LES STATUTS DES TOKENS ---
+  const loadTokenStatuses = async () => {
+    setIsRefreshing(true);
+    try {
+      const statuses: TokenStatus[] = [];
 
-  const handleAddToken = async () => {
-    if (!newTokenAddress || !newPriceFeed) {
-      alert("Remplis tous les champs");
-      return;
+      for (const token of SUPPORTED_TOKENS) {
+        const isAllowed = await checkTokenIsAllowed(token.address);
+        statuses.push({
+          address: token.address,
+          symbol: token.symbol,
+          name: token.name,
+          priceFeed: token.priceFeed || "",
+          isAllowed,
+          isConfigured: true,
+        });
+      }
+
+      setTokenStatuses(statuses);
+    } catch (error) {
+      console.error("Erreur chargement statuts:", error);
+    } finally {
+      setIsRefreshing(false);
     }
-    // Validation basique
-    if (!newTokenAddress.startsWith("0x") || newTokenAddress.length !== 42) {
-      alert("Adresse token invalide");
-      return;
-    }
-
-    setIsLoading(true);
-    // Appel au Hook Web3
-    const success = await addAllowedToken(newTokenAddress, newPriceFeed);
-
-    if (success) {
-      // Mise à jour visuelle du tableau
-      setTokens([
-        ...tokens,
-        {
-          id: Date.now(),
-          name: "New Token",
-          symbol: "NEW",
-          address: newTokenAddress,
-          priceFeed: newPriceFeed,
-          status: "Active",
-        },
-      ]);
-      setNewTokenAddress("");
-      setNewPriceFeed("");
-      alert("✅ Token ajouté avec succès sur la Blockchain !");
-    }
-    setIsLoading(false);
   };
 
-  const handleDistributeAll = async () => {
+  // --- 5. INITIALISATION AUTOMATIQUE ---
+  const handleAutoInitialize = async () => {
     if (
       !window.confirm(
-        "⚠️ ATTENTION : Distribuer les rewards à TOUS les stakers ? Cela va coûter des frais de gaz."
+        `🚀 Initialiser automatiquement ${SUPPORTED_TOKENS.length} tokens configurés ?\n\nCela va :\n1. Ajouter chaque token aux tokens autorisés\n2. Configurer leur price feed\n\n⚠️ Cela peut prendre plusieurs minutes et coûter du gas.`
       )
     ) {
       return;
     }
+
+    setIsInitializing(true);
+    let successCount = 0;
+    let errorCount = 0;
+
+    for (const token of SUPPORTED_TOKENS) {
+      try {
+        // Vérifier si déjà autorisé
+        const isAllowed = await checkTokenIsAllowed(token.address);
+
+        if (isAllowed) {
+          console.log(`✅ ${token.symbol} déjà autorisé`);
+          successCount++;
+          continue;
+        }
+
+        console.log(`🔄 Ajout de ${token.symbol}...`);
+
+        // Ajouter le token et configurer le price feed
+        const success = await addAllowedToken(
+          token.address,
+          token.priceFeed || ""
+        );
+
+        if (success) {
+          console.log(`✅ ${token.symbol} ajouté avec succès`);
+          successCount++;
+        } else {
+          console.error(`❌ Échec pour ${token.symbol}`);
+          errorCount++;
+        }
+
+        // Petit délai entre chaque transaction
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+      } catch (error) {
+        console.error(`❌ Erreur avec ${token.symbol}:`, error);
+        errorCount++;
+      }
+    }
+
+    setIsInitializing(false);
+    await loadTokenStatuses();
+
+    alert(
+      `✅ Initialisation terminée !\n\n` +
+        `Succès : ${successCount}/${SUPPORTED_TOKENS.length}\n` +
+        `Erreurs : ${errorCount}`
+    );
+  };
+
+  // --- 6. AJOUTER UN TOKEN MANUELLEMENT ---
+  const handleAddToken = async () => {
+    if (!newTokenAddress || !newPriceFeed) {
+      alert("⚠️ Remplis tous les champs");
+      return;
+    }
+
+    if (!newTokenAddress.startsWith("0x") || newTokenAddress.length !== 42) {
+      alert("❌ Adresse token invalide");
+      return;
+    }
+
+    if (!newPriceFeed.startsWith("0x") || newPriceFeed.length !== 42) {
+      alert("❌ Adresse price feed invalide");
+      return;
+    }
+
+    setIsLoading(true);
+
+    const success = await addAllowedToken(newTokenAddress, newPriceFeed);
+
+    if (success) {
+      setNewTokenAddress("");
+      setNewPriceFeed("");
+      alert("✅ Token ajouté avec succès sur la Blockchain !");
+      await loadTokenStatuses();
+    }
+
+    setIsLoading(false);
+  };
+
+  // --- 7. DISTRIBUTION REWARDS ---
+  const handleDistributeAll = async () => {
+    if (
+      !window.confirm(
+        "⚠️ ATTENTION : Distribuer les rewards à TOUS les stakers ?\n\nCela va coûter des frais de gaz."
+      )
+    ) {
+      return;
+    }
+
     setDistributeLoading(true);
-    // Appel au Hook Web3
     const success = await distributeRewardsToAll();
+
     if (success) {
       alert("✅ Rewards distribués à tous !");
     }
+
     setDistributeLoading(false);
   };
 
   const handleIssueRewardToUser = async () => {
     if (!userAddressForReward || !userAddressForReward.startsWith("0x")) {
-      alert("Adresse invalide");
+      alert("❌ Adresse invalide");
       return;
     }
+
     if (
       !window.confirm(
         `Distribuer reward manuellement à ${userAddressForReward} ?`
@@ -153,22 +233,25 @@ const AdminDashboard = () => {
     ) {
       return;
     }
-    // Appel au Hook Web3
+
     const success = await issueRewardToUser(userAddressForReward);
+
     if (success) {
       alert("✅ Reward individuel distribué !");
       setUserAddressForReward("");
     }
   };
 
+  // --- 8. HELPERS ---
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
-    alert("Copié !");
+    alert("📋 Copié !");
   };
 
   const truncateAddress = (addr: string) =>
     `${addr.slice(0, 6)}...${addr.slice(-4)}`;
 
+  // --- 9. AFFICHAGE LOADING ---
   if (isCheckingAdmin) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 font-body">
@@ -182,6 +265,7 @@ const AdminDashboard = () => {
     );
   }
 
+  // --- 10. AFFICHAGE ACCÈS REFUSÉ ---
   if (!isAdmin) {
     return (
       <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center p-4 font-body">
@@ -193,8 +277,11 @@ const AdminDashboard = () => {
             Access Denied
           </h1>
           <p className="text-gray-500 mb-8">
-            Cette zone est réservée à l'administrateur du contrat (
-            {account ? truncateAddress(account) : "Non connecté"}).
+            Cette zone est réservée à l'administrateur du contrat.
+            <br />
+            <span className="font-mono text-sm">
+              {account ? truncateAddress(account) : "Non connecté"}
+            </span>
           </p>
           <Link
             to="/"
@@ -202,17 +289,14 @@ const AdminDashboard = () => {
           >
             <ArrowLeft className="w-4 h-4" /> Retour Accueil
           </Link>
-          {/* Bouton de secours pour tester si tu n'arrives pas à te connecter en admin */}
-          <button
-            onClick={() => setIsAdmin(true)}
-            className="mt-6 text-xs text-gray-400 hover:text-gold underline"
-          >
-            [DEV] Forcer l'accès (Simulation)
-          </button>
         </div>
       </div>
     );
   }
+
+  // --- 11. STATISTIQUES ---
+  const tokensAllowed = tokenStatuses.filter((t) => t.isAllowed).length;
+  const tokensPending = tokenStatuses.filter((t) => !t.isAllowed).length;
 
   return (
     <div className="bg-gray-50 min-h-screen font-body text-dark flex flex-col">
@@ -238,7 +322,7 @@ const AdminDashboard = () => {
                 </p>
               </div>
             </div>
-            <div className="text-right hidden md:block">
+            <div className="text-right">
               <p className="text-xs text-gray-400 font-mono">
                 Connecté en tant que:
               </p>
@@ -248,94 +332,177 @@ const AdminDashboard = () => {
             </div>
           </div>
 
+          {/* BOUTON INITIALISATION RAPIDE */}
+          <div className="bg-gradient-to-r from-gold to-orange-500 p-6 rounded-xl shadow-lg border border-orange-300">
+            <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-white/20 rounded-lg">
+                  <Zap className="w-8 h-8 text-white" />
+                </div>
+                <div className="text-white">
+                  <h3 className="text-xl font-heading font-bold">
+                    Initialisation Automatique
+                  </h3>
+                  <p className="text-sm text-white/80">
+                    Ajouter automatiquement tous les tokens configurés (
+                    {SUPPORTED_TOKENS.length} tokens)
+                  </p>
+                  <p className="text-xs text-white/60 mt-1">
+                    {tokensAllowed} déjà autorisés • {tokensPending} en attente
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={handleAutoInitialize}
+                disabled={isInitializing || tokensPending === 0}
+                className="bg-white text-gold hover:bg-gray-100 font-bold px-8 py-4 rounded-xl shadow-lg transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+              >
+                {isInitializing ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    Initialisation...
+                  </>
+                ) : (
+                  <>
+                    <Zap className="w-5 h-5" />
+                    {tokensPending === 0
+                      ? "Tous les tokens sont autorisés"
+                      : `Initialiser ${tokensPending} token(s)`}
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+
           {/* STATS */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <StatCard
-              title="Total Value Locked"
-              value="$1.2M"
-              sub="Simulation"
-              icon={<Coins />}
-              color="border-gold"
-              iconColor="text-gold bg-gold/10"
+              title="Tokens Autorisés"
+              value={tokensAllowed.toString()}
+              sub={`Sur ${SUPPORTED_TOKENS.length} configurés`}
+              icon={<CheckCircle />}
+              color="border-green-500"
+              iconColor="text-green-500 bg-green-50"
+            />
+            <StatCard
+              title="Tokens en Attente"
+              value={tokensPending.toString()}
+              sub="À initialiser"
+              icon={<AlertCircle />}
+              color="border-orange-500"
+              iconColor="text-orange-500 bg-orange-50"
             />
             <StatCard
               title="Active Stakers"
-              value="156"
-              sub="Simulation"
+              value="--"
+              sub="Coming soon"
               icon={<Users />}
               color="border-blue-500"
               iconColor="text-blue-500 bg-blue-50"
-            />
-            <StatCard
-              title="Pending Rewards"
-              value="12,450"
-              sub="Simulation"
-              icon={<Gift />}
-              color="border-green-500"
-              iconColor="text-green-500 bg-green-50"
             />
           </div>
 
           {/* MANAGE TOKENS */}
           <div className="bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden">
-            <div className="p-6 border-b border-gray-100 bg-gray-50">
+            <div className="p-6 border-b border-gray-100 bg-gray-50 flex items-center justify-between">
               <h2 className="text-lg font-heading font-bold text-primary">
-                🪙 Gérer les Tokens Autorisés
+                🪙 Tokens Configurés
               </h2>
+              <button
+                onClick={loadTokenStatuses}
+                disabled={isRefreshing}
+                className="text-gray-500 hover:text-primary transition flex items-center gap-2 text-sm"
+              >
+                <RefreshCw
+                  className={`w-4 h-4 ${isRefreshing ? "animate-spin" : ""}`}
+                />
+                Actualiser
+              </button>
             </div>
 
             {/* Table Responsive */}
             <div className="w-full overflow-x-auto">
-              <table className="w-full text-left min-w-[600px]">
+              <table className="w-full text-left min-w-[700px]">
                 <thead className="bg-gray-50 text-gray-500 text-xs uppercase font-bold">
                   <tr>
                     <th className="px-6 py-4">Token</th>
                     <th className="px-6 py-4">Adresse</th>
                     <th className="px-6 py-4">Price Feed</th>
-                    <th className="px-6 py-4">Status</th>
-                    <th className="px-6 py-4 text-right">Actions</th>
+                    <th className="px-6 py-4">Statut Blockchain</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                  {tokens.map((token) => (
-                    <tr key={token.id}>
-                      <td className="px-6 py-4 font-bold text-primary">
-                        {token.name}
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-2 font-mono text-xs text-gray-600">
-                          {truncateAddress(token.address)}
-                          <button
-                            onClick={() => copyToClipboard(token.address)}
-                            className="text-gray-400 hover:text-gold"
-                          >
-                            <Copy className="w-3 h-3" />
-                          </button>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 font-mono text-xs text-gray-500">
-                        {truncateAddress(token.priceFeed)}
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className="inline-flex items-center gap-1 bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-bold">
-                          <CheckCircle className="w-3 h-3" /> Active
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <button className="text-red-500 hover:bg-red-50 p-2 rounded transition">
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                  {tokenStatuses.length === 0 ? (
+                    <tr>
+                      <td colSpan={4} className="px-6 py-8 text-center">
+                        <Loader2 className="w-6 h-6 text-gray-400 animate-spin mx-auto mb-2" />
+                        <p className="text-gray-500 text-sm">
+                          Chargement des tokens...
+                        </p>
                       </td>
                     </tr>
-                  ))}
+                  ) : (
+                    tokenStatuses.map((token) => (
+                      <tr key={token.address} className="hover:bg-gray-50">
+                        <td className="px-6 py-4">
+                          <div>
+                            <p className="font-bold text-primary">
+                              {token.symbol}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              {token.name}
+                            </p>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-2 font-mono text-xs text-gray-600">
+                            {truncateAddress(token.address)}
+                            <button
+                              onClick={() => copyToClipboard(token.address)}
+                              className="text-gray-400 hover:text-gold"
+                            >
+                              <Copy className="w-3 h-3" />
+                            </button>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-2 font-mono text-xs text-gray-500">
+                            {token.priceFeed
+                              ? truncateAddress(token.priceFeed)
+                              : "Non configuré"}
+                            {token.priceFeed && (
+                              <button
+                                onClick={() => copyToClipboard(token.priceFeed)}
+                                className="text-gray-400 hover:text-gold"
+                              >
+                                <Copy className="w-3 h-3" />
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          {token.isAllowed ? (
+                            <span className="inline-flex items-center gap-1 bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-bold">
+                              <CheckCircle className="w-3 h-3" /> Autorisé
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 bg-orange-100 text-orange-700 px-3 py-1 rounded-full text-xs font-bold">
+                              <AlertCircle className="w-3 h-3" /> En attente
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
 
-            {/* Formulaire Ajout Token */}
+            {/* Formulaire Ajout Token Manuel */}
             <div className="p-6 bg-gray-50 border-t border-gray-100">
-              <h3 className="text-sm font-bold text-gray-700 mb-4">
-                Ajouter un Token & Price Feed
+              <h3 className="text-sm font-bold text-gray-700 mb-4 flex items-center gap-2">
+                <Plus className="w-4 h-4" />
+                Ajouter un Token Manuellement
               </h3>
               <div className="flex flex-col md:flex-row gap-4">
                 <input
@@ -355,7 +522,7 @@ const AdminDashboard = () => {
                 <button
                   onClick={handleAddToken}
                   disabled={isLoading}
-                  className="bg-gold hover:bg-gold-hover text-white font-bold px-6 py-2 rounded-lg transition flex items-center justify-center gap-2 disabled:opacity-50"
+                  className="bg-gold hover:bg-gold-hover text-white font-bold px-6 py-2 rounded-lg transition flex items-center justify-center gap-2 disabled:opacity-50 whitespace-nowrap"
                 >
                   {isLoading ? (
                     <Loader2 className="w-4 h-4 animate-spin" />

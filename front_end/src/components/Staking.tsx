@@ -1,23 +1,17 @@
-import React, { useState, useEffect } from "react";
-import { ethers } from "ethers";
-import { SUPPORTED_TOKENS } from "../constants/tokens";
+import { useState, useEffect } from "react";
 import {
   Wallet,
   Info,
   Check,
   ChevronDown,
   Coins,
-  ArrowRight,
-  ExternalLink,
-  AlertCircle,
   History,
-  TrendingUp,
 } from "lucide-react";
 import Navbar from "./Navbar";
 import Footer from "./Footer";
 import { useWeb3 } from "../hooks/useWeb3";
-import { ERC20_ABI } from "../constants/abis";
 
+// 🔥 MODIFIER LE TYPE POUR CORRESPONDRE À CE QUE RETOURNE getAllTokensWithInfo
 type Token = {
   symbol: string;
   name: string;
@@ -25,6 +19,7 @@ type Token = {
   balance: number;
   price: number;
   iconColor: string;
+  decimals?: number;
 };
 
 const Staking = () => {
@@ -33,96 +28,151 @@ const Staking = () => {
   const [selectedToken, setSelectedToken] = useState<Token | null>(null);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isCooldownChecked, setIsCooldownChecked] = useState(false);
-  const { connectWallet, stakeTokens, getTokenBalance, account, isConnected } =
-    useWeb3();
+  const {
+    connectWallet,
+    stakeTokens,
+    unstakeTokens,
+    getTokenBalance,
+    getStakingBalance,
+    getUserStakingValueEth,
+    getUserTotalStakingValue,
+    getAllTokensWithInfo,
+    account,
+    isConnected,
+  } = useWeb3();
 
-  const [tokens, setTokens] = useState(SUPPORTED_TOKENS);
+  // 🔥 INITIALISER AVEC UN TABLEAU VIDE - les tokens viendront de la blockchain
+  const [tokens, setTokens] = useState<Token[]>([]);
   const [tokenBalances, setTokenBalances] = useState<{ [key: string]: string }>(
     {}
   );
+  const [stakedBalances, setStakedBalances] = useState<{
+    [key: string]: string;
+  }>({});
+  const [stakingValues, setStakingValues] = useState<{ [key: string]: string }>(
+    {}
+  );
+  const [totalStakingValue, setTotalStakingValue] = useState<string>("0");
 
-  // 🔥 FONCTION POUR CHARGER LES BALANCES
-  const loadBalances = async () => {
-    if (!isConnected) return;
+  // 🔥 FONCTION UNIQUE POUR CHARGER TOUTES LES DONNÉES
+  const loadAllData = async () => {
+    if (!isConnected) {
+      setIsLoading(false);
+      return;
+    }
 
     setIsLoading(true);
-    const balances: { [key: string]: string } = {};
 
-    for (const token of SUPPORTED_TOKENS) {
-      const balance = await getTokenBalance(token.address);
-      balances[token.symbol] = balance;
-    }
+    try {
+      // 1. Récupérer tous les tokens configurés ET autorisés
+      const tokensFromBlockchain = await getAllTokensWithInfo();
 
-    setTokenBalances(balances);
+      const balances: { [key: string]: string } = {};
+      const tokensWithData: Token[] = [];
 
-    // Mettre à jour les tokens avec les vraies balances
-    const updatedTokens = SUPPORTED_TOKENS.map((token) => ({
-      ...token,
-      balance: parseFloat(balances[token.symbol] || "0"),
-    }));
+      // 2. Seulement récupérer les balances du wallet
+      for (const token of tokensFromBlockchain) {
+        try {
+          const walletBalance = await getTokenBalance(token.address);
+          balances[token.symbol] = walletBalance;
 
-    setTokens(updatedTokens);
-    setSelectedToken(updatedTokens[0]); // Sélectionne le premier token
-    setIsLoading(false);
-  };
+          tokensWithData.push({
+            ...token,
+            balance: parseFloat(walletBalance || "0"),
+          });
+        } catch (error) {
+          console.error(`Erreur avec ${token.symbol}:`, error);
+          tokensWithData.push({
+            ...token,
+            balance: 0,
+          });
+        }
+      }
 
-  // 🔥 USEEFFECT POUR CHARGER LES BALANCES QUAND ON SE CONNECTE
-  useEffect(() => {
-    if (isConnected) {
-      loadBalances();
-    } else {
+      setTokens(tokensWithData);
+      setTokenBalances(balances);
+
+      // 3. Sélectionner le premier token
+      if (tokensWithData.length > 0 && !selectedToken) {
+        setSelectedToken(tokensWithData[0]);
+      }
+    } catch (error) {
+      console.error("Erreur chargement données:", error);
+      setTokens([]);
+    } finally {
       setIsLoading(false);
     }
-  }, [isConnected, account]); // Se déclenche quand le wallet se connecte
-
-  const handleStake = async () => {
-    if (!amount) return;
-    await stakeTokens(amount);
-    // Recharger les balances après le stake
-    await loadBalances();
   };
 
-  const stakedAssets = [
-    { symbol: "ETH", amount: 2.5, value: 5625, status: "Ready", cooldown: 0 },
-    {
-      symbol: "USDT",
-      amount: 500,
-      value: 500,
-      status: "Cooldown",
-      cooldown: 12,
-    },
-  ];
+  // 🔥 SUPPRIMER loadBalances - utiliser uniquement loadAllData
+  useEffect(() => {
+    loadAllData();
+  }, [isConnected, account]);
 
-  const history = [
-    {
-      id: 1,
-      action: "Staked",
-      token: "ETH",
-      amount: "2.5 ETH",
-      date: "2h ago",
-      hash: "0x123...abc",
-    },
-    {
-      id: 2,
-      action: "Unstaked",
-      token: "USDT",
-      amount: "100 USDT",
-      date: "1 day ago",
-      hash: "0x456...def",
-    },
-    {
-      id: 3,
-      action: "Claimed",
-      token: "GB",
-      amount: "50 GB",
-      date: "3 days ago",
-      hash: "0x789...ghi",
-    },
-  ];
+  const handleStake = async () => {
+    if (!amount || !selectedToken) {
+      alert("Veuillez sélectionner un token et entrer un montant");
+      return;
+    }
+
+    const amountNum = parseFloat(amount);
+    if (isNaN(amountNum) || amountNum <= 0) {
+      alert("Montant invalide");
+      return;
+    }
+
+    const success = await stakeTokens(amount, selectedToken.address);
+    if (success) {
+      // Recharger toutes les données après un stake réussi
+      await loadAllData();
+      setAmount(""); // Réinitialiser le champ
+    }
+  };
+
+  const handleUnstake = async (tokenAddress: string, tokenSymbol: string) => {
+    if (!confirm(`Voulez-vous vraiment retirer vos ${tokenSymbol} stakés ?`)) {
+      return;
+    }
+
+    const success = await unstakeTokens(tokenAddress);
+    if (success) {
+      // Recharger toutes les données après un unstake réussi
+      await loadAllData();
+    }
+  };
+
+  // 🔥 CALCUL DES ACTIFS STAKÉS
+  const stakedAssets = tokens
+    .filter((token) => {
+      const staked = parseFloat(stakedBalances[token.symbol] || "0");
+      return staked > 0;
+    })
+    .map((token) => {
+      const stakedAmount = parseFloat(stakedBalances[token.symbol] || "0");
+      const stakingValue = parseFloat(stakingValues[token.symbol] || "0");
+
+      return {
+        symbol: token.symbol,
+        amount: stakedAmount.toFixed(4),
+        value: (stakingValue * 1800).toFixed(2), // Ex: 1 ETH = $1800
+        status: "Ready", // À implémenter avec une logique de cooldown
+        cooldown: 0,
+        address: token.address,
+      };
+    });
+
+  // 🔥 HISTORIQUE VIDE POUR L'INSTANT (À IMPLÉMENTER)
+  const history: any[] = [];
 
   const usdValue =
     amount && selectedToken
-      ? (parseFloat(amount) * selectedToken.price).toLocaleString()
+      ? (parseFloat(amount) * (selectedToken.price || 0)).toLocaleString(
+          undefined,
+          {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          }
+        )
       : "0.00";
 
   const Skeleton = ({ className }: { className: string }) => (
@@ -146,6 +196,12 @@ const Staking = () => {
               <p className="text-gray-500">
                 Manage your assets and earn rewards
               </p>
+              {isConnected && totalStakingValue !== "0" && (
+                <p className="text-sm text-gold font-bold mt-1">
+                  Total Value Staked: {parseFloat(totalStakingValue).toFixed(4)}{" "}
+                  ETH
+                </p>
+              )}
             </div>
           </div>
 
@@ -166,6 +222,33 @@ const Staking = () => {
 
                     {isLoading ? (
                       <Skeleton className="h-16 w-full" />
+                    ) : tokens.length === 0 ? (
+                      <div className="w-full bg-gray-50 border border-gray-200 rounded-xl p-6 text-center">
+                        {isConnected ? (
+                          <>
+                            <p className="text-gray-500 mb-2">
+                              Aucun token disponible pour le staking
+                            </p>
+                            <p className="text-sm text-gray-400">
+                              Connectez-vous à Sepolia et assurez-vous que les
+                              tokens sont configurés
+                            </p>
+                          </>
+                        ) : (
+                          <>
+                            <p className="text-gray-500 mb-4">
+                              Connectez votre wallet pour voir les tokens
+                              disponibles
+                            </p>
+                            <button
+                              onClick={connectWallet}
+                              className="text-gold font-bold hover:underline"
+                            >
+                              Connecter Wallet
+                            </button>
+                          </>
+                        )}
+                      </div>
                     ) : (
                       <>
                         <button
@@ -174,18 +257,22 @@ const Staking = () => {
                         >
                           <div className="flex items-center gap-3">
                             <div
-                              className={`w-8 h-8 rounded-full ${selectedToken?.iconColor} flex items-center justify-center text-white font-bold text-xs`}
+                              className={`w-8 h-8 rounded-full ${
+                                selectedToken?.iconColor || "bg-gray-400"
+                              } flex items-center justify-center text-white font-bold text-xs`}
                             >
-                              {selectedToken?.symbol[0]}
+                              {selectedToken?.symbol?.[0] || "?"}
                             </div>
                             <div>
                               <div className="font-bold text-primary">
-                                {selectedToken?.symbol}
+                                {selectedToken?.symbol || "Select Token"}
                               </div>
                               <div className="text-xs text-gray-500">
                                 Balance:{" "}
-                                {tokenBalances[selectedToken?.symbol || ""] ||
-                                  "0.00"}{" "}
+                                {selectedToken
+                                  ? tokenBalances[selectedToken.symbol] ||
+                                    "0.00"
+                                  : "0.00"}{" "}
                                 {selectedToken?.symbol}
                               </div>
                             </div>
@@ -197,11 +284,11 @@ const Staking = () => {
                           />
                         </button>
 
-                        {isDropdownOpen && (
-                          <div className="absolute top-full left-0 w-full mt-2 bg-white border border-gray-100 rounded-xl shadow-xl z-20 overflow-hidden">
+                        {isDropdownOpen && tokens.length > 0 && (
+                          <div className="absolute top-full left-0 w-full mt-2 bg-white border border-gray-100 rounded-xl shadow-xl z-20 overflow-y-auto max-h-60">
                             {tokens.map((token) => (
                               <div
-                                key={token.symbol}
+                                key={token.address}
                                 onClick={() => {
                                   setSelectedToken(token);
                                   setIsDropdownOpen(false);
@@ -209,17 +296,29 @@ const Staking = () => {
                                 className="p-4 flex items-center gap-3 hover:bg-blue-50 cursor-pointer transition"
                               >
                                 <div
-                                  className={`w-6 h-6 rounded-full ${token.iconColor} flex items-center justify-center text-white text-[10px]`}
+                                  className={`w-6 h-6 rounded-full ${
+                                    token.iconColor || "bg-gray-400"
+                                  } flex items-center justify-center text-white text-[10px]`}
                                 >
                                   {token.symbol[0]}
                                 </div>
-                                <span className="font-bold text-gray-700">
-                                  {token.symbol}
-                                </span>
-                                <span className="ml-auto text-sm text-gray-400">
-                                  {tokenBalances[token.symbol] || "0.00"}{" "}
-                                  available
-                                </span>
+                                <div className="flex-1">
+                                  <span className="font-bold text-gray-700">
+                                    {token.symbol}
+                                  </span>
+                                  <div className="text-xs text-gray-400">
+                                    {token.name}
+                                  </div>
+                                </div>
+                                <div className="text-right">
+                                  <div className="text-sm text-gray-400">
+                                    {tokenBalances[token.symbol] || "0.00"}
+                                  </div>
+                                  <div className="text-xs text-gray-300">
+                                    Staked:{" "}
+                                    {stakedBalances[token.symbol] || "0.00"}
+                                  </div>
+                                </div>
                               </div>
                             ))}
                           </div>
@@ -238,14 +337,18 @@ const Staking = () => {
                         value={amount}
                         onChange={(e) => setAmount(e.target.value)}
                         placeholder="0.00"
+                        step="0.0001"
+                        min="0"
                         className="w-full pl-4 pr-20 py-4 rounded-xl border border-gray-200 bg-gray-50 text-xl font-mono font-bold text-primary focus:outline-none focus:border-gold focus:ring-1 focus:ring-gold transition"
                       />
                       <button
-                        onClick={() =>
-                          setAmount(
-                            tokenBalances[selectedToken?.symbol || ""] || "0"
-                          )
-                        }
+                        onClick={() => {
+                          if (selectedToken) {
+                            setAmount(
+                              tokenBalances[selectedToken.symbol] || "0"
+                            );
+                          }
+                        }}
                         className="absolute right-2 top-1/2 -translate-y-1/2 bg-white border border-gray-200 text-xs font-bold text-primary px-3 py-1.5 rounded-lg hover:bg-gold hover:text-white hover:border-gold transition"
                       >
                         MAX
@@ -263,7 +366,9 @@ const Staking = () => {
                     <ul className="text-sm text-gray-600 space-y-2">
                       <li className="flex justify-between">
                         <span>Minimum stake:</span>
-                        <span className="font-mono font-bold">0.01 ETH</span>
+                        <span className="font-mono font-bold">
+                          0.01 {selectedToken?.symbol || "Token"}
+                        </span>
                       </li>
                       <li className="flex justify-between">
                         <span>Cooldown period:</span>
@@ -310,7 +415,8 @@ const Staking = () => {
                       }
                       className="w-full bg-gold hover:bg-gold-hover text-white font-heading font-bold py-4 rounded-xl shadow-lg hover:shadow-xl transition transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-2"
                     >
-                      Stake {amount ? amount : ""} Tokens
+                      Stake {amount ? amount : ""}{" "}
+                      {selectedToken?.symbol || "Tokens"}
                     </button>
                   )}
 
@@ -328,6 +434,18 @@ const Staking = () => {
               <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-6 md:p-8 min-h-[500px] flex flex-col">
                 <h2 className="text-xl font-heading font-bold text-primary mb-6 flex items-center gap-2">
                   Your Staked Assets
+                  {stakedAssets.length > 0 && (
+                    <span className="text-sm text-gold font-normal">
+                      (Total: $
+                      {stakedAssets
+                        .reduce(
+                          (sum, asset) => sum + parseFloat(asset.value),
+                          0
+                        )
+                        .toFixed(2)}{" "}
+                      USD)
+                    </span>
+                  )}
                 </h2>
 
                 {isLoading ? (
@@ -353,7 +471,7 @@ const Staking = () => {
                       <tbody className="divide-y divide-gray-50">
                         {stakedAssets.map((asset, idx) => (
                           <tr
-                            key={idx}
+                            key={`${asset.symbol}-${idx}`}
                             className="group hover:bg-gray-50 transition"
                           >
                             <td className="py-4 pl-2">
@@ -368,7 +486,14 @@ const Staking = () => {
                             </td>
                             <td className="py-4 font-mono">{asset.amount}</td>
                             <td className="py-4 font-mono text-gray-500">
-                              ${asset.value.toLocaleString()}
+                              $
+                              {parseFloat(asset.value).toLocaleString(
+                                undefined,
+                                {
+                                  minimumFractionDigits: 2,
+                                  maximumFractionDigits: 2,
+                                }
+                              )}
                             </td>
                             <td className="py-4">
                               {asset.status === "Ready" ? (
@@ -384,8 +509,10 @@ const Staking = () => {
                             </td>
                             <td className="py-4 text-right pr-2">
                               <button
-                                disabled={asset.status !== "Ready"}
-                                className="text-sm font-bold text-primary border border-gray-200 px-4 py-2 rounded-lg hover:bg-white hover:border-gold hover:text-gold transition disabled:opacity-40 disabled:cursor-not-allowed"
+                                onClick={() =>
+                                  handleUnstake(asset.address, asset.symbol)
+                                }
+                                className="text-sm font-bold text-primary border border-gray-200 px-4 py-2 rounded-lg hover:bg-white hover:border-red-500 hover:text-red-500 transition"
                               >
                                 Unstake
                               </button>
@@ -412,85 +539,25 @@ const Staking = () => {
             </div>
           </div>
 
+          {/* Section Historique - À IMPLÉMENTER VRAIMENT */}
           <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-6 md:p-8">
             <h2 className="text-xl font-heading font-bold text-primary mb-6 flex items-center gap-2">
               Staking History
+              <span className="text-sm text-gray-400 font-normal">
+                (Coming Soon)
+              </span>
             </h2>
 
-            <div className="overflow-x-auto">
-              <table className="w-full text-left">
-                <thead>
-                  <tr className="bg-gray-50 text-gray-500 text-sm uppercase tracking-wider">
-                    <th className="p-4 rounded-l-lg">Action</th>
-                    <th className="p-4">Token</th>
-                    <th className="p-4">Amount</th>
-                    <th className="p-4">Date</th>
-                    <th className="p-4 rounded-r-lg text-right">Explore</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-50">
-                  {isLoading
-                    ? [1, 2, 3].map((i) => (
-                        <tr key={i}>
-                          <td colSpan={5} className="p-4">
-                            <Skeleton className="h-6 w-full" />
-                          </td>
-                        </tr>
-                      ))
-                    : history.map((item) => (
-                        <tr
-                          key={item.id}
-                          className="hover:bg-blue-50/30 transition"
-                        >
-                          <td className="p-4">
-                            <span
-                              className={`px-3 py-1 rounded-full text-xs font-bold ${
-                                item.action === "Staked"
-                                  ? "bg-blue-100 text-blue-700"
-                                  : item.action === "Unstaked"
-                                  ? "bg-orange-100 text-orange-700"
-                                  : "bg-green-100 text-green-700"
-                              }`}
-                            >
-                              {item.action}
-                            </span>
-                          </td>
-                          <td className="p-4 font-bold text-primary">
-                            {item.token}
-                          </td>
-                          <td className="p-4 font-mono text-gray-600">
-                            {item.amount}
-                          </td>
-                          <td className="p-4 text-gray-500 text-sm">
-                            {item.date}
-                          </td>
-                          <td className="p-4 text-right">
-                            <a
-                              href="#"
-                              className="inline-flex items-center text-gold hover:text-gold-hover transition"
-                            >
-                              <ExternalLink className="w-4 h-4" />
-                            </a>
-                          </td>
-                        </tr>
-                      ))}
-                </tbody>
-              </table>
-            </div>
-
-            <div className="flex justify-center mt-6">
-              <div className="flex gap-2">
-                <button className="w-8 h-8 flex items-center justify-center rounded border border-gray-200 text-gray-400 hover:border-gold hover:text-gold transition">
-                  1
-                </button>
-                <button className="w-8 h-8 flex items-center justify-center rounded bg-primary text-white font-bold">
-                  2
-                </button>
-                <button className="w-8 h-8 flex items-center justify-center rounded border border-gray-200 text-gray-400 hover:border-gold hover:text-gold transition">
-                  3
-                </button>
+            {history.length === 0 ? (
+              <div className="text-center py-10 text-gray-400">
+                <p>No staking history yet</p>
+                <p className="text-sm mt-2">
+                  Your staking activities will appear here
+                </p>
               </div>
-            </div>
+            ) : (
+              <div className="overflow-x-auto">{/* ... historique ... */}</div>
+            )}
           </div>
         </div>
       </main>
