@@ -1,4 +1,4 @@
-from brownie import GoldenToken, TokenFarm, network, config
+from brownie import GoldenToken, TokenFarm, LoanFactory, network, config
 from scripts.helpful_scripts import get_account, get_contract
 import shutil
 import os
@@ -11,23 +11,33 @@ KEPT_BALANCE = Web3.to_wei(100, "ether")  # CORRIGÉ
 
 def deploy_token_farm_and_golden_token(update_front_end_flag=False):
     account = get_account()
+
+    # ===== Deploy GoldenToken =====
     golden_token = GoldenToken.deploy({"from": account})
+
+
+    # ===== Deploy TokenFarm =====
     token_farm = TokenFarm.deploy(
         golden_token.address,
+        "0x0000000000000000000000000000000000000000",
         {"from": account},
         publish_source=config["networks"][network.show_active()].get("verify"),
     )
+
+    # ===== Fund TokenFarm =====
     tx = golden_token.transfer(
         token_farm.address,
         golden_token.totalSupply() - KEPT_BALANCE,
         {"from": account},
     )
     tx.wait(1)
+
+    # ===== Get mock tokens =====
     fau_token = get_contract("fau_token")
     weth_token = get_contract("weth_token")
     link_token = get_contract("link_token")
-    
 
+    # ===== Add allowed tokens + price feeds =====
     add_allowed_tokens(
         token_farm,
         {
@@ -38,9 +48,27 @@ def deploy_token_farm_and_golden_token(update_front_end_flag=False):
         },
         account,
     )
+
+    # ===== Deploy LoanFactory =====
+    loan_factory = LoanFactory.deploy(
+        token_farm.address,
+        {"from": account},
+        publish_source=config["networks"][network.show_active()].get("verify"),
+    )
+
+    # ===== Link TokenFarm ↔ LoanFactory =====
+    tx = token_farm.setLoanFactory(
+        loan_factory.address,
+        {"from": account},
+    )
+    tx.wait(1)
+
+    # ===== Update Frontend =====
     if update_front_end_flag:
         update_front_end()
-    return token_farm, golden_token
+
+    return token_farm, golden_token, loan_factory
+
 
 
 def add_allowed_tokens(token_farm, dict_of_allowed_token, account):
@@ -51,6 +79,7 @@ def add_allowed_tokens(token_farm, dict_of_allowed_token, account):
         )
         tx.wait(1)
     return token_farm
+
 
 
 def copy_folders_to_front_end(src, dest):

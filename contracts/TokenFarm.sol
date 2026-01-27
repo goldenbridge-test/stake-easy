@@ -6,6 +6,7 @@ import "@chainlink/contracts/src/v0.8/ChainlinkClient.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "./LoanFactory.sol";
 
 contract TokenFarm is ChainlinkClient, Ownable, ReentrancyGuard {
   string public name = "Golden Token Farm";
@@ -17,6 +18,11 @@ contract TokenFarm is ChainlinkClient, Ownable, ReentrancyGuard {
   mapping(address => uint256) public uniqueTokensStaked;
   mapping(address => address) public tokenPriceFeedMapping;
   address[] public allowedTokens;
+  LoanFactory public loanFactory;
+  
+  // Pull-over-push : stocke les retours de chaque StateMachine
+  mapping(address => uint256) public pendingReturns;
+  mapping(address => bool) public authorizedLoans;
 
   event TokenStaked(
     address indexed user,
@@ -30,8 +36,15 @@ contract TokenFarm is ChainlinkClient, Ownable, ReentrancyGuard {
     uint256 amount
   );
 
-  constructor(address _goldenTokenAddress) public {
+  event LoanInvestment(uint256 loanId, uint256 amount);
+  event LoanReturnsReceived(address indexed sender, uint256 amount);
+  event AllowedTokenRemoved(address token);
+  // 🔔 Événement pour tracer la distribution
+  event LoanReturnsDistributed(uint256 totalAmount);
+
+  constructor(address _goldenTokenAddress, address _loanFactory) {
     goldenToken = IERC20(_goldenTokenAddress);
+    loanFactory = LoanFactory(_loanFactory);
   }
 
   function addAllowedTokens(address token) public onlyOwner {
@@ -124,8 +137,6 @@ contract TokenFarm is ChainlinkClient, Ownable, ReentrancyGuard {
 
   // Event pour tracer la suppression
 
-  event AllowedTokenRemoved(address token);
-
   function removeAllowedToken(address token) public onlyOwner {
     for (
       uint256 allowedTokensIndex = 0;
@@ -177,6 +188,7 @@ contract TokenFarm is ChainlinkClient, Ownable, ReentrancyGuard {
     }
   }
 
+
   function getTokenEthPrice(
     address token
   ) public view returns (uint256, uint8) {
@@ -191,4 +203,101 @@ contract TokenFarm is ChainlinkClient, Ownable, ReentrancyGuard {
     ) = priceFeed.latestRoundData();
     return (uint256(price), priceFeed.decimals());
   }
+
+  function setLoanFactory(address _loanFactory) external onlyOwner {
+    loanFactory = LoanFactory(_loanFactory);
+  }
+
+
+  function createProjectLoan(
+    address borrower,
+    uint256 amount,
+    uint256 interest,
+    uint256 duration
+  ) external onlyOwner {
+    loanFactory.createLoan(amount, interest, duration, payable(borrower));
+  }
+
+  function investInLoan(
+    uint256 loanId,
+    uint256 amount
+  ) external onlyOwner nonReentrant{
+    require(address(this).balance >= amount, "Insufficient funds");
+
+    loanFactory.fundLoan{ value: amount }(loanId);
+    emit LoanInvestment(loanId, amount);
+  }
+
+  
+  modifier onlyLoanFactory() {
+    require(msg.sender == address(loanFactory), "Not LoanFactory");
+    _;
+  }
+
+
+  // =====================================
+  // Recevoir les retours d’un loan (pull-over-push)
+  // =====================================
+  function receiveLoanReturns() external payable onlyOwner {
+    require(authorizedLoans[msg.sender], "Unauthorized loan");
+    require(msg.value > 0, "No funds sent");
+    pendingReturns[msg.sender] += msg.value;
+    emit LoanReturnsReceived(msg.sender, msg.value);
+  }
+
+  function withdrawLoanReturns() external onlyOwner nonReentrant {
+    uint256 amount = pendingReturns[address(this)];
+    require(amount > 0, "No returns to withdraw");
+
+    pendingReturns[address(this)] = 0;
+
+    (bool success, ) = payable(owner()).call{ value: amount }("");
+    require(success, "Withdraw failed");
+  }
+
+
+  function authorizeLoan(address loan) external onlyOwner {
+    authorizedLoans[loan] = true;
+  }
+
+
+  // Redistribuer les retours des loans
+  // =====================================
+  function distributeLoanReturns() external onlyOwner {
+    uint256 totalReturns = 0;
+
+    // 1️⃣ Calculer le total des retours disponibles
+    for (uint256 stakersIndex = 0; stakersIndex < stakers.length; stakersIndex++) {
+      totalReturns += pendingReturns[stakers[stakersIndex]];
+    }
+
+    require(totalReturns > 0, "No loan returns to distribute");
+
+    // 2️⃣ Calculer la valeur totale de tous les stakers pour le ratio
+    uint256 totalStakedValue = 0;
+    for (uint256 stakersIndex = 0; stakersIndex < stakers.length; stakersIndex++) {
+      totalStakedValue += getUserTotalValue(stakers[stakersIndex]);
+    }
+
+    require(totalStakedValue > 0, "No staking value to distribute against");
+
+    // 3️⃣ Redistribuer les retours proportionnellement
+    for (uint256 stakersIndex = 0; stakersIndex < stakers.length; stakersIndex++) {
+      address recipient = stakers[stakersIndex];
+        uint256 userValue = getUserTotalValue(recipient);
+
+        // Part proportionnelle
+        uint256 userShare = (totalReturns * userValue) / totalStakedValue;
+
+        if (userShare > 0) {
+          goldenToken.transfer(recipient, userShare);
+        }
+
+      // Reset pendingReturns pour cet utilisateur
+      pendingReturns[recipient] = 0;
+    }
+
+    emit LoanReturnsDistributed(totalReturns);
+  }
+
 }
