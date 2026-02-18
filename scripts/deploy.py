@@ -6,7 +6,8 @@ import yaml
 import json
 from web3 import Web3
 
-KEPT_BALANCE = Web3.to_wei(100, "ether") 
+KEPT_BALANCE = Web3.to_wei(100, "ether")  # CORRIGÉ
+
 
 def deploy_token_farm_and_golden_token(update_front_end_flag=False):
     account = get_account()
