@@ -13,6 +13,9 @@ import SignIn from './components/SignIn'; // Nouveau
 import SignUp from './components/SignUp'; // Nouveau
 import Staking from './components/Staking';
 import AdminDashboard from './components/AdminDashboard';
+import AcademyHome from './components/academy/AcademyHome';
+import AcademyCatalog from './components/academy/AcademyCatalog';
+import MyLearning from './components/academy/MyLearning';
 
 // On crée un composant pour la Landing Page complète pour garder le code propre
 const LandingPage = () => (
@@ -46,6 +49,10 @@ function App() {
           <Route path="/staking" element={<Staking />} />
 
           <Route path="/admin" element={<AdminDashboard />} />
+
+          <Route path="/academy" element={<AcademyHome />} />
+          <Route path="/academy/catalog" element={<AcademyCatalog />} />
+          <Route path="/academy/my-learning" element={<MyLearning />} />
         </Routes>
       </div>
     </Router>
