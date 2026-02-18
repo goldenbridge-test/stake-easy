@@ -1,25 +1,45 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ethers } from 'ethers';
 
-// 🔥 NOUVELLES ADRESSES APRÈS DÉPLOIEMENT
-const TOKEN_FARM_ADDRESS = "0x4eBF913470E62204e4b1cdf121d6Ed50d85Ba62A"; 
-const TOKEN_ADDRESS = "0xFD803Ded3A8516484fD058Af8683353D92F3FE00";
+// Adresses des contrats déployés sur Sepolia (chainId 11155111)
+const TOKEN_FARM_ADDRESS = "0x736Ee2066fd93601Cb86Ce4d8ce7109d014cbDE4";
+const DEFAULT_TOKEN_ADDRESS = "0x92e474EcD778406C8A101175E32cA9149C2c1499";
 
+// ABI standard ERC20 (pour lire balances, faire des approve, etc.)
 const ERC20_ABI = [
   "function approve(address spender, uint256 amount) public returns (bool)",
   "function allowance(address owner, address spender) public view returns (uint256)",
-  "function balanceOf(address account) public view returns (uint256)"
+  "function balanceOf(address account) public view returns (uint256)",
+  "function decimals() public view returns (uint8)",
+  "function symbol() public view returns (string)",
+  "function name() public view returns (string)"
 ];
 
+// ABI exacte du contrat TokenFarm.sol (correspondance 1:1 avec le Solidity)
 const TOKEN_FARM_ABI = [
-  "function stakeTokens(uint256 _amount, address _token) public",
-  "function unstakeTokens(address _token) public",
-  "function getUserSingleTokenValue(address _user, address _token) public view returns (uint256)",
-  "function stakingBalance(address _token, address _user) public view returns (uint256)",
+  // --- Fonctions d'écriture (transactions) ---
+  "function stakeTokens(uint256 _amount, address token) public",
+  "function unstakeTokens(address token) public",
+  "function addAllowedTokens(address token) public",
+  "function setPriceFeedContract(address token, address priceFeed) public",
+  "function removeAllowedToken(address token) public",
   "function issueTokens() public",
-  "function addAllowedTokens(address _token, address _priceFeed) public", 
-  "function issueReward(address _user) public",
-  "function owner() public view returns (address)"
+
+  // --- Fonctions de lecture (gratuit, pas de gas) ---
+  "function owner() public view returns (address)",
+  "function stakingBalance(address token, address user) public view returns (uint256)",
+  "function tokenIsAllowed(address token) public view returns (bool)",
+  "function getUserTotalValue(address user) public view returns (uint256)",
+  "function getUserTokenStakingBalanceEthValue(address user, address token) public view returns (uint256)",
+  "function getTokenEthPrice(address token) public view returns (uint256, uint8)",
+  "function uniqueTokensStaked(address user) public view returns (uint256)",
+  "function goldenToken() public view returns (address)",
+  "function name() public view returns (string)",
+
+  // --- Événements (logs enregistrés sur la blockchain) ---
+  "event TokenStaked(address indexed user, address indexed token, uint256 amount)",
+  "event TokenUnstaked(address indexed user, address indexed token, uint256 amount)",
+  "event AllowedTokenRemoved(address token)"
 ];
 
 export const useWeb3 = () => {
@@ -28,49 +48,55 @@ export const useWeb3 = () => {
   const [loading, setLoading] = useState(false);
   const [chainId, setChainId] = useState<number | null>(null);
 
-    useEffect(() => {
+  // Auto-connexion au chargement si MetaMask est déjà connecté
+  useEffect(() => {
     const init = async () => {
       const { ethereum } = window as any;
-      if (ethereum) {
+      if (!ethereum) return;
+
+      try {
         const accounts = await ethereum.request({ method: 'eth_accounts' });
         if (accounts.length > 0) {
-          const provider = new ethers.providers.Web3Provider(ethereum);
-          const network = await provider.getNetwork();
-          setProvider(provider);
+          const web3Provider = new ethers.providers.Web3Provider(ethereum);
+          const network = await web3Provider.getNetwork();
+          setProvider(web3Provider);
           setAccount(accounts[0]);
           setChainId(network.chainId);
         }
-
-        ethereum.on('accountsChanged', async (newAccounts: string[]) => {
-          if (newAccounts.length > 0) {
-            const provider = new ethers.providers.Web3Provider(ethereum);
-            const network = await provider.getNetwork();
-            setAccount(newAccounts[0]);
-            setProvider(provider);
-            setChainId(network.chainId);
-          } else {
-            setAccount(null);
-            setProvider(null);
-            setChainId(null);
-          }
-        });
-
-        ethereum.on('chainChanged', async (newChainId: string) => {
-          setChainId(parseInt(newChainId, 16));
-          window.location.reload(); 
-        });
+      } catch (error) {
+        console.error("Erreur initialisation wallet:", error);
       }
+
+      // Écouter les changements de compte ou de réseau
+      ethereum.on('accountsChanged', async (newAccounts: string[]) => {
+        if (newAccounts.length > 0) {
+          const web3Provider = new ethers.providers.Web3Provider(ethereum);
+          const network = await web3Provider.getNetwork();
+          setAccount(newAccounts[0]);
+          setProvider(web3Provider);
+          setChainId(network.chainId);
+        } else {
+          setAccount(null);
+          setProvider(null);
+          setChainId(null);
+        }
+      });
+
+      ethereum.on('chainChanged', () => {
+        window.location.reload();
+      });
     };
 
     init();
   }, []);
 
+  // Basculer MetaMask sur le réseau Sepolia
   const switchToSepolia = async () => {
     const { ethereum } = window as any;
     if (!ethereum) return false;
 
-    const SEPOLIA_CHAIN_ID = '0xaa36a7'; // 11155111 en hex
-    
+    const SEPOLIA_CHAIN_ID = '0xaa36a7'; // 11155111
+
     try {
       await ethereum.request({
         method: 'wallet_switchEthereumChain',
@@ -78,24 +104,17 @@ export const useWeb3 = () => {
       });
       return true;
     } catch (switchError: any) {
-      // Si le réseau n'existe pas dans MetaMask, on l'ajoute
       if (switchError.code === 4902) {
         try {
           await ethereum.request({
             method: 'wallet_addEthereumChain',
-            params: [
-              {
-                chainId: SEPOLIA_CHAIN_ID,
-                chainName: 'Sepolia Testnet',
-                nativeCurrency: {
-                  name: 'Sepolia ETH',
-                  symbol: 'ETH',
-                  decimals: 18
-                },
-                rpcUrls: ['https://rpc.sepolia.org'],
-                blockExplorerUrls: ['https://sepolia.etherscan.io']
-              }
-            ]
+            params: [{
+              chainId: SEPOLIA_CHAIN_ID,
+              chainName: 'Sepolia Testnet',
+              nativeCurrency: { name: 'Sepolia ETH', symbol: 'ETH', decimals: 18 },
+              rpcUrls: ['https://rpc.sepolia.org'],
+              blockExplorerUrls: ['https://sepolia.etherscan.io']
+            }]
           });
           return true;
         } catch (addError) {
@@ -108,90 +127,229 @@ export const useWeb3 = () => {
     }
   };
 
+  // Connecter MetaMask (demande l'autorisation à l'utilisateur)
   const connectWallet = async () => {
-    if (window.ethereum) {
-      try {
-        // Vérifier/changer vers Sepolia
-        const isOnSepolia = await switchToSepolia();
-        if (!isOnSepolia) {
-          alert("Veuillez vous connecter au réseau Sepolia");
-          return false;
-        }
-
-        const provider = new ethers.providers.Web3Provider(ethereum);
-        await provider.send("eth_requestAccounts", []);
-        const signer = provider.getSigner();
-        const address = await signer.getAddress();
-        
-        // Récupérer le chainId
-        const network = await provider.getNetwork();
-        setChainId(network.chainId);
-        
-        setProvider(provider);
-        setAccount(address);
-        return true;
-      } catch (error) {
-        console.error("Erreur connexion:", error);
-        return false;
-      }
-    } else {
+    const { ethereum } = window as any;
+    if (!ethereum) {
       alert("Installez MetaMask !");
       return false;
     }
+
+    try {
+      const isOnSepolia = await switchToSepolia();
+      if (!isOnSepolia) {
+        alert("Veuillez vous connecter au réseau Sepolia");
+        return false;
+      }
+
+      const web3Provider = new ethers.providers.Web3Provider(ethereum);
+      await web3Provider.send("eth_requestAccounts", []);
+      const signer = web3Provider.getSigner();
+      const address = await signer.getAddress();
+
+      const network = await web3Provider.getNetwork();
+      setChainId(network.chainId);
+      setProvider(web3Provider);
+      setAccount(address);
+      return true;
+    } catch (error) {
+      console.error("Erreur connexion:", error);
+      return false;
+    }
   };
-  const stakeTokens = async (amount: string) => {
-    if (!provider || !account) return;
+
+  // ==========================================
+  // FONCTIONS STAKING (utilisateur)
+  // ==========================================
+
+  // Staker des tokens : approve puis stakeTokens
+  const stakeTokens = async (amount: string, tokenAddress?: string) => {
+    if (!provider || !account) return false;
     setLoading(true);
+
+    const targetToken = tokenAddress || DEFAULT_TOKEN_ADDRESS;
 
     try {
       const signer = provider.getSigner();
       const formattedAmount = ethers.utils.parseEther(amount);
 
-      const tokenContract = new ethers.Contract(TOKEN_ADDRESS, ERC20_ABI, signer);
+      const tokenContract = new ethers.Contract(targetToken, ERC20_ABI, signer);
       const farmContract = new ethers.Contract(TOKEN_FARM_ADDRESS, TOKEN_FARM_ABI, signer);
 
-      console.log("Étape 1 : Approbation en cours...");
+      console.log("Étape 1 : Approbation en cours pour", targetToken);
       const txApprove = await tokenContract.approve(TOKEN_FARM_ADDRESS, formattedAmount);
       await txApprove.wait();
       console.log("Approbation réussie !");
 
       console.log("Étape 2 : Staking en cours...");
-      const txStake = await farmContract.stakeTokens(formattedAmount, TOKEN_ADDRESS);
+      const txStake = await farmContract.stakeTokens(formattedAmount, targetToken);
       await txStake.wait();
-      
-      console.log("Staking réussi !");
-      alert("Félicitations ! Tokens stakés avec succès.");
 
-    } catch (error) {
+      console.log("Staking réussi !");
+      return true;
+    } catch (error: any) {
       console.error("Erreur durant le staking:", error);
-      alert("Erreur transaction (voir console)");
+      const reason = error?.reason || error?.message || "Erreur inconnue";
+      alert(`Erreur staking: ${reason}`);
+      return false;
     } finally {
       setLoading(false);
     }
   };
 
-  const getTokenBalance = async (tokenAddress: string) => {
+  // Unstaker : retire TOUS les tokens stakés pour un token donné
+  const unstakeTokens = async (tokenAddress?: string) => {
+    if (!provider || !account) return false;
+    setLoading(true);
+
+    const targetToken = tokenAddress || DEFAULT_TOKEN_ADDRESS;
+
+    try {
+      const signer = provider.getSigner();
+      const farmContract = new ethers.Contract(TOKEN_FARM_ADDRESS, TOKEN_FARM_ABI, signer);
+
+      console.log("Unstaking en cours pour", targetToken);
+      const tx = await farmContract.unstakeTokens(targetToken);
+      await tx.wait();
+
+      console.log("Unstake réussi !");
+      return true;
+    } catch (error: any) {
+      console.error("Erreur unstake:", error);
+      const reason = error?.reason || error?.message || "Erreur inconnue";
+      alert(`Erreur unstake: ${reason}`);
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ==========================================
+  // FONCTIONS DE LECTURE (pas de gas, gratuit)
+  // ==========================================
+
+  // Lire le solde d'un token ERC20 dans le wallet
+  const getTokenBalance = async (tokenAddress: string): Promise<string> => {
     if (!provider || !account) return '0';
 
     try {
       const tokenContract = new ethers.Contract(tokenAddress, ERC20_ABI, provider);
-      
       const balance = await tokenContract.balanceOf(account);
-      const decimals = await tokenContract.decimals();
-      
+
+      let decimals = 18;
+      try {
+        decimals = await tokenContract.decimals();
+      } catch {
+        console.warn(`decimals() non disponible pour ${tokenAddress}, fallback à 18`);
+      }
+
       return ethers.utils.formatUnits(balance, decimals);
-      
     } catch (error) {
-      console.error('Erreur lecture balance:', error);
+      console.error(`Erreur lecture balance pour ${tokenAddress}:`, error);
       return '0';
     }
   };
 
+  // Lire le solde staké d'un utilisateur dans le TokenFarm
+  const getStakingBalance = async (tokenAddress?: string): Promise<string> => {
+    if (!provider || !account) return '0';
+
+    const targetToken = tokenAddress || DEFAULT_TOKEN_ADDRESS;
+
+    try {
+      const farmContract = new ethers.Contract(TOKEN_FARM_ADDRESS, TOKEN_FARM_ABI, provider);
+      const balance = await farmContract.stakingBalance(targetToken, account);
+      return ethers.utils.formatEther(balance);
+    } catch (error) {
+      console.error("Erreur lecture staking balance:", error);
+      return '0';
+    }
+  };
+
+  // Lire la valeur totale stakée d'un utilisateur (en ETH, via les price feeds)
+  const getUserTotalValue = async (userAddress?: string): Promise<string> => {
+    if (!provider) return '0';
+
+    const user = userAddress || account;
+    if (!user) return '0';
+
+    try {
+      const farmContract = new ethers.Contract(TOKEN_FARM_ADDRESS, TOKEN_FARM_ABI, provider);
+      const totalValue = await farmContract.getUserTotalValue(user);
+      return ethers.utils.formatEther(totalValue);
+    } catch (error) {
+      console.error("Erreur lecture valeur totale:", error);
+      return '0';
+    }
+  };
+
+  // Vérifier si un token est autorisé dans le TokenFarm
+  const checkTokenIsAllowed = async (tokenAddress: string): Promise<boolean> => {
+    if (!provider) return false;
+
+    try {
+      const farmContract = new ethers.Contract(TOKEN_FARM_ADDRESS, TOKEN_FARM_ABI, provider);
+      return await farmContract.tokenIsAllowed(tokenAddress);
+    } catch (error) {
+      console.error("Erreur vérification token autorisé:", error);
+      return false;
+    }
+  };
+
+  // Récupérer l'historique des événements Stake/Unstake
+  const getStakingEvents = async () => {
+    if (!provider || !account) return [];
+
+    try {
+      const farmContract = new ethers.Contract(TOKEN_FARM_ADDRESS, TOKEN_FARM_ABI, provider);
+
+      const currentBlock = await provider.getBlockNumber();
+      const fromBlock = Math.max(0, currentBlock - 5000);
+
+      const [stakeEvents, unstakeEvents] = await Promise.all([
+        farmContract.queryFilter(
+          farmContract.filters.TokenStaked(account),
+          fromBlock
+        ).catch(() => []),
+        farmContract.queryFilter(
+          farmContract.filters.TokenUnstaked(account),
+          fromBlock
+        ).catch(() => []),
+      ]);
+
+      const allEvents = [
+        ...stakeEvents.map((e) => ({
+          action: "Staked" as const,
+          token: e.args?.token || "",
+          amount: e.args?.amount ? ethers.utils.formatEther(e.args.amount) : "0",
+          blockNumber: e.blockNumber,
+          hash: e.transactionHash,
+        })),
+        ...unstakeEvents.map((e) => ({
+          action: "Unstaked" as const,
+          token: e.args?.token || "",
+          amount: e.args?.amount ? ethers.utils.formatEther(e.args.amount) : "0",
+          blockNumber: e.blockNumber,
+          hash: e.transactionHash,
+        })),
+      ].sort((a, b) => b.blockNumber - a.blockNumber);
+
+      return allEvents;
+    } catch (error) {
+      console.error("Erreur lecture événements:", error);
+      return [];
+    }
+  };
+
+  // ==========================================
+  // FONCTIONS ADMIN (onlyOwner)
+  // ==========================================
+
+  // Vérifier si le wallet connecté est le propriétaire du contrat
   const checkIsAdmin = async (): Promise<boolean> => {
     if (!provider || !account) return false;
     try {
-      const signer = provider.getSigner();
-      const farmContract = new ethers.Contract(TOKEN_FARM_ADDRESS, TOKEN_FARM_ABI, signer);
+      const farmContract = new ethers.Contract(TOKEN_FARM_ADDRESS, TOKEN_FARM_ABI, provider);
       const owner = await farmContract.owner();
       return owner.toLowerCase() === account.toLowerCase();
     } catch (error) {
@@ -200,7 +358,8 @@ export const useWeb3 = () => {
     }
   };
 
-  const addAllowedToken = async (tokenAddress: string, priceFeedAddress: string) => {
+  // Ajouter un token à la liste des tokens autorisés (étape 1)
+  const addAllowedToken = async (tokenAddress: string) => {
     if (!provider || !account) {
       alert("Wallet non connecté");
       return false;
@@ -209,25 +368,72 @@ export const useWeb3 = () => {
     try {
       const signer = provider.getSigner();
       const farmContract = new ethers.Contract(TOKEN_FARM_ADDRESS, TOKEN_FARM_ABI, signer);
-      
-      console.log("Ajout du token:", tokenAddress);
-      
-      const tx = await farmContract.addAllowedTokens(tokenAddress, priceFeedAddress);
-      
+
+      console.log("Ajout du token autorisé:", tokenAddress);
+      const tx = await farmContract.addAllowedTokens(tokenAddress);
       console.log("Transaction envoyée, hash:", tx.hash);
-      
       await tx.wait();
-      
-      console.log("Token ajouté avec succès !");
+
+      console.log("Token ajouté !");
       return true;
-      
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erreur ajout token:", error);
-      alert("Erreur lors de l'ajout du token (voir console)");
+      alert(`Erreur ajout token: ${error?.reason || error?.message}`);
       return false;
     }
   };
 
+  // Configurer le price feed Chainlink pour un token (étape 2)
+  const setPriceFeed = async (tokenAddress: string, priceFeedAddress: string) => {
+    if (!provider || !account) {
+      alert("Wallet non connecté");
+      return false;
+    }
+
+    try {
+      const signer = provider.getSigner();
+      const farmContract = new ethers.Contract(TOKEN_FARM_ADDRESS, TOKEN_FARM_ABI, signer);
+
+      console.log("Configuration price feed:", tokenAddress, "->", priceFeedAddress);
+      const tx = await farmContract.setPriceFeedContract(tokenAddress, priceFeedAddress);
+      console.log("Transaction envoyée, hash:", tx.hash);
+      await tx.wait();
+
+      console.log("Price feed configuré !");
+      return true;
+    } catch (error: any) {
+      console.error("Erreur config price feed:", error);
+      alert(`Erreur price feed: ${error?.reason || error?.message}`);
+      return false;
+    }
+  };
+
+  // Retirer un token de la liste autorisée
+  const removeAllowedToken = async (tokenAddress: string) => {
+    if (!provider || !account) {
+      alert("Wallet non connecté");
+      return false;
+    }
+
+    try {
+      const signer = provider.getSigner();
+      const farmContract = new ethers.Contract(TOKEN_FARM_ADDRESS, TOKEN_FARM_ABI, signer);
+
+      console.log("Suppression du token:", tokenAddress);
+      const tx = await farmContract.removeAllowedToken(tokenAddress);
+      console.log("Transaction envoyée, hash:", tx.hash);
+      await tx.wait();
+
+      console.log("Token supprimé !");
+      return true;
+    } catch (error: any) {
+      console.error("Erreur suppression token:", error);
+      alert(`Erreur suppression: ${error?.reason || error?.message}`);
+      return false;
+    }
+  };
+
+  // Distribuer les récompenses à TOUS les stakers (issueTokens)
   const distributeRewardsToAll = async () => {
     if (!provider || !account) {
       alert("Wallet non connecté");
@@ -237,65 +443,44 @@ export const useWeb3 = () => {
     try {
       const signer = provider.getSigner();
       const farmContract = new ethers.Contract(TOKEN_FARM_ADDRESS, TOKEN_FARM_ABI, signer);
-      
-      console.log("Distribution des rewards...");
-      
+
+      console.log("Distribution des rewards à tous les stakers...");
       const tx = await farmContract.issueTokens();
-      
       console.log("Transaction envoyée, hash:", tx.hash);
-      
       await tx.wait();
-      
+
       console.log("Rewards distribués !");
       return true;
-      
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erreur distribution:", error);
-      alert("Erreur lors de la distribution (voir console)");
+      alert(`Erreur distribution: ${error?.reason || error?.message}`);
       return false;
     }
   };
 
-  const issueRewardToUser = async (userAddress: string) => {
-    if (!provider || !account) {
-      alert("Wallet non connecté");
-      return false;
-    }
-
-    try {
-      const signer = provider.getSigner();
-      const farmContract = new ethers.Contract(TOKEN_FARM_ADDRESS, TOKEN_FARM_ABI, signer);
-      
-      console.log("Distribution reward à:", userAddress);
-      
-      const tx = await farmContract.issueReward(userAddress);
-      
-      console.log("Transaction envoyée, hash:", tx.hash);
-      
-      await tx.wait();
-      
-      console.log("Reward distribué !");
-      return true;
-      
-    } catch (error) {
-      console.error("Erreur issue reward:", error);
-      alert("Erreur lors de la distribution (voir console)");
-      return false;
-    }
+  return {
+    // État
+    account,
+    isConnected: !!account,
+    loading,
+    chainId,
+    provider,
+    // Connexion
+    connectWallet,
+    // Staking utilisateur
+    stakeTokens,
+    unstakeTokens,
+    // Lecture
+    getTokenBalance,
+    getStakingBalance,
+    getUserTotalValue,
+    checkTokenIsAllowed,
+    getStakingEvents,
+    // Admin
+    checkIsAdmin,
+    addAllowedToken,
+    setPriceFeed,
+    removeAllowedToken,
+    distributeRewardsToAll,
   };
-
-return { 
-  account, 
-  connectWallet, 
-  stakeTokens,
-  getTokenBalance,
-  addAllowedToken,
-  distributeRewardsToAll,
-  checkIsAdmin,
-  issueRewardToUser, 
-  isConnected: !!account, 
-  loading,
-  chainId ,
-  provider
-};
 };

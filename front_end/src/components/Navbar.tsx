@@ -1,10 +1,12 @@
-import React, { useState, useEffect } from "react";
-import { Globe, Menu, X } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Globe, Menu, X, Wallet } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useWeb3 } from "../hooks/useWeb3";
 
 const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const { connectWallet, account, isConnected } = useWeb3();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -21,6 +23,9 @@ const Navbar = () => {
     { name: "Team", href: "/#team" },
     { name: "About", href: "/#about" },
   ];
+
+  const truncateAddress = (addr: string) =>
+    `${addr.slice(0, 6)}...${addr.slice(-4)}`;
 
   return (
     <nav
@@ -63,9 +68,19 @@ const Navbar = () => {
             Sign In
           </Link>
 
-          <button className="bg-gold hover:bg-gold-hover text-white px-6 py-2 rounded-md font-heading font-semibold transition shadow-sm">
-            Connect Wallet
-          </button>
+          {isConnected ? (
+            <div className="flex items-center gap-2 bg-green-50 border border-green-200 text-green-700 px-4 py-2 rounded-md font-mono text-sm">
+              <Wallet className="w-4 h-4" />
+              {truncateAddress(account!)}
+            </div>
+          ) : (
+            <button
+              onClick={connectWallet}
+              className="bg-gold hover:bg-gold-hover text-white px-6 py-2 rounded-md font-heading font-semibold transition shadow-sm"
+            >
+              Connect Wallet
+            </button>
+          )}
         </div>
 
         {/* MOBILE MENU TOGGLE */}
@@ -81,14 +96,14 @@ const Navbar = () => {
       {isMobileMenuOpen && (
         <div className="lg:hidden bg-white border-t border-gray-100 absolute top-full left-0 w-full shadow-lg py-6 px-6 flex flex-col space-y-4">
           {navLinks.map((link) => (
-            <a
+            <Link
               key={link.name}
-              href={link.href}
+              to={link.href}
               className="text-dark font-heading font-bold text-lg"
               onClick={() => setIsMobileMenuOpen(false)}
             >
               {link.name}
-            </a>
+            </Link>
           ))}
           <div className="flex flex-col gap-3 mt-4">
             <Link
@@ -99,9 +114,19 @@ const Navbar = () => {
               Sign In
             </Link>
 
-            <button className="w-full py-3 rounded-lg bg-gold text-white font-bold">
-              Connect Wallet
-            </button>
+            {isConnected ? (
+              <div className="w-full py-3 rounded-lg bg-green-50 border border-green-200 text-green-700 font-mono text-sm text-center">
+                <Wallet className="w-4 h-4 inline mr-2" />
+                {truncateAddress(account!)}
+              </div>
+            ) : (
+              <button
+                onClick={connectWallet}
+                className="w-full py-3 rounded-lg bg-gold text-white font-bold"
+              >
+                Connect Wallet
+              </button>
+            )}
           </div>
         </div>
       )}

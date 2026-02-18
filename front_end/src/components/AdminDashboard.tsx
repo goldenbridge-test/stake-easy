@@ -1,194 +1,264 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   ShieldAlert,
-  Users,
-  Gift,
   Coins,
   Trash2,
   Plus,
   Copy,
-  ExternalLink,
-  AlertTriangle,
   CheckCircle,
-  Wrench,
   ArrowLeft,
-<<<<<<< HEAD
   Loader2,
+  AlertTriangle,
+  Gift,
+  BookOpen,
+  Users,
+  LayoutDashboard,
+  Pencil,
+  Eye,
+  Search,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import Navbar from "./Navbar";
 import Footer from "./Footer";
-<<<<<<< HEAD
 import { useWeb3 } from "../hooks/useWeb3";
 
-// Types pour l'affichage local (visuel)
+// ==========================================
+// TYPES
+// ==========================================
+
 type AllowedToken = {
   id: number;
-  name: string;
-  symbol: string;
   address: string;
   priceFeed: string;
-  status: "Active" | "Paused";
 };
 
-<<<<<<< HEAD
+type Course = {
+  id: number;
+  title: string;
+  category: string;
+  level: "Beginner" | "Intermediate" | "Advanced";
+  status: "Published" | "Draft";
+  students: number;
+};
+
+type UserRow = {
+  id: number;
+  address: string;
+  joinedDate: string;
+  stakedValue: string;
+  status: "Active" | "Inactive";
+};
+
+// ==========================================
+// TABS
+// ==========================================
+type TabKey = "overview" | "tokens" | "courses" | "users";
+
 const AdminDashboard = () => {
-  // --- 1. HOOKS WEB3 ---
   const {
     account,
     isConnected,
     checkIsAdmin,
     addAllowedToken,
+    setPriceFeed,
+    removeAllowedToken,
     distributeRewardsToAll,
-    issueRewardToUser,
+    checkTokenIsAllowed,
   } = useWeb3();
-=======
-type AdminLog = {
-  id: number;
-  date: string;
-  admin: string;
-  action: string;
-  details: string;
-  hash: string;
-};
->>>>>>> 222fd1cfc8eab27f6b1ef780a7a212025d605efc
 
-const AdminDashboard = () => {
-  // --- STATES ---
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isCheckingAdmin, setIsCheckingAdmin] = useState(true);
+  const [activeTab, setActiveTab] = useState<TabKey>("overview");
+
+  // Token states
   const [isLoading, setIsLoading] = useState(false);
   const [distributeLoading, setDistributeLoading] = useState(false);
-
   const [newTokenAddress, setNewTokenAddress] = useState("");
   const [newPriceFeed, setNewPriceFeed] = useState("");
+  const [tokens, setTokens] = useState<AllowedToken[]>([]);
 
-  // Liste locale des tokens (Juste pour l'affichage visuel après ajout)
-  const [tokens, setTokens] = useState<AllowedToken[]>([
-    {
-      id: 1,
-      name: "DAPP Token",
-      symbol: "DAPP",
-      address: "0x8E29...CC50",
-      priceFeed: "0xBf34...DB1d",
-      status: "Active",
-    },
-    {
-      id: 2,
-      name: "Mock DAI",
-      symbol: "mDAI",
-      address: "0xF0F6...709",
-      priceFeed: "0x7D9a...D1b5",
-      status: "Active",
-    },
+  // Course states
+  const [courses, setCourses] = useState<Course[]>([
+    { id: 1, title: "Introduction to DeFi", category: "DeFi", level: "Beginner", status: "Published", students: 234 },
+    { id: 2, title: "Smart Contract Security", category: "Security", level: "Advanced", status: "Published", students: 89 },
+    { id: 3, title: "Yield Farming Strategies", category: "DeFi", level: "Intermediate", status: "Draft", students: 0 },
+    { id: 4, title: "NFT Development", category: "Development", level: "Intermediate", status: "Published", students: 156 },
   ]);
+  const [showCourseForm, setShowCourseForm] = useState(false);
+  const [editingCourse, setEditingCourse] = useState<Course | null>(null);
+  const [courseForm, setCourseForm] = useState({ title: "", category: "", level: "Beginner" as Course["level"] });
+
+  // User states
+  const [userSearch, setUserSearch] = useState("");
+  const [users] = useState<UserRow[]>([
+    { id: 1, address: "0x742d35Cc6634C0532925a3b844Bc9e7595f2bD18", joinedDate: "2024-12-15", stakedValue: "$12,450", status: "Active" },
+    { id: 2, address: "0x8ba1f109551bD432803012645Ac136ddd64DBA72", joinedDate: "2025-01-03", stakedValue: "$5,200", status: "Active" },
+    { id: 3, address: "0x2546BcD3c84621e976D8185a91A922aE77ECEc30", joinedDate: "2025-01-20", stakedValue: "$0", status: "Inactive" },
+    { id: 4, address: "0xbDA5747bFD65F08deb54cb465eB87D40e51B197E", joinedDate: "2025-02-01", stakedValue: "$8,900", status: "Active" },
+    { id: 5, address: "0xdD2FD4581271e230360230F9337D5c0430Bf44C0", joinedDate: "2025-02-10", stakedValue: "$1,100", status: "Active" },
+  ]);
+  const [userPage, setUserPage] = useState(1);
+
+  // ==========================================
+  // EFFECTS
+  // ==========================================
 
   useEffect(() => {
     const verify = async () => {
-      // On attend un peu que la connexion se stabilise ou on vérifie direct
       if (!isConnected || !account) {
         setIsAdmin(false);
         setIsCheckingAdmin(false);
         return;
       }
 
-      console.log("Vérification admin pour:", account);
       const adminStatus = await checkIsAdmin();
       setIsAdmin(adminStatus);
       setIsCheckingAdmin(false);
+
+      const gldAllowed = await checkTokenIsAllowed(
+        "0x92e474EcD778406C8A101175E32cA9149C2c1499"
+      );
+      if (gldAllowed) {
+        setTokens([
+          {
+            id: 1,
+            address: "0x92e474EcD778406C8A101175E32cA9149C2c1499",
+            priceFeed: "Configured",
+          },
+        ]);
+      }
     };
-
     verify();
-  }, [account, isConnected]); // Se relance si le compte change
+  }, [account, isConnected]);
 
-  // --- 4. FONCTIONS D'ACTION ---
+  // ==========================================
+  // TOKEN HANDLERS
+  // ==========================================
 
   const handleAddToken = async () => {
     if (!newTokenAddress || !newPriceFeed) {
-      alert("Remplis tous les champs");
+      alert("Remplis les 2 champs");
       return;
     }
-    // Validation basique
     if (!newTokenAddress.startsWith("0x") || newTokenAddress.length !== 42) {
       alert("Adresse token invalide");
       return;
     }
+    if (!newPriceFeed.startsWith("0x") || newPriceFeed.length !== 42) {
+      alert("Adresse price feed invalide");
+      return;
+    }
 
     setIsLoading(true);
-    // Appel au Hook Web3
-    const success = await addAllowedToken(newTokenAddress, newPriceFeed);
+    const step1 = await addAllowedToken(newTokenAddress);
+    if (!step1) { setIsLoading(false); return; }
 
-    if (success) {
-      // Mise à jour visuelle du tableau
-      setTokens([
-        ...tokens,
-        {
-          id: Date.now(),
-          name: "New Token",
-          symbol: "NEW",
-          address: newTokenAddress,
-          priceFeed: newPriceFeed,
-          status: "Active",
-        },
-      ]);
-      setNewTokenAddress("");
-      setNewPriceFeed("");
-      alert("✅ Token ajouté avec succès sur la Blockchain !");
+    const step2 = await setPriceFeed(newTokenAddress, newPriceFeed);
+    if (!step2) {
+      alert("Token ajouté mais price feed non configuré. Réessaie.");
+      setIsLoading(false);
+      return;
     }
+
+    setTokens([...tokens, { id: Date.now(), address: newTokenAddress, priceFeed: newPriceFeed }]);
+    setNewTokenAddress("");
+    setNewPriceFeed("");
     setIsLoading(false);
   };
 
+  const handleRemoveToken = async (address: string) => {
+    if (!window.confirm(`Supprimer ${truncate(address)} ?`)) return;
+    const success = await removeAllowedToken(address);
+    if (success) setTokens(tokens.filter((t) => t.address !== address));
+  };
+
   const handleDistributeAll = async () => {
-    if (
-      !window.confirm(
-        "⚠️ ATTENTION : Distribuer les rewards à TOUS les stakers ? Cela va coûter des frais de gaz."
-      )
-    ) {
-      return;
-    }
+    if (!window.confirm("Distribuer les rewards GLD a tous les stakers ?")) return;
     setDistributeLoading(true);
-    // Appel au Hook Web3
-    const success = await distributeRewardsToAll();
-    if (success) {
-      alert("✅ Rewards distribués à tous !");
-    }
+    await distributeRewardsToAll();
     setDistributeLoading(false);
   };
 
-  const handleIssueRewardToUser = async () => {
-    if (!userAddressForReward || !userAddressForReward.startsWith("0x")) {
-      alert("Adresse invalide");
-      return;
+  // ==========================================
+  // COURSE HANDLERS (frontend only)
+  // ==========================================
+
+  const handleSaveCourse = () => {
+    if (!courseForm.title || !courseForm.category) return;
+
+    if (editingCourse) {
+      setCourses(courses.map((c) =>
+        c.id === editingCourse.id
+          ? { ...c, title: courseForm.title, category: courseForm.category, level: courseForm.level }
+          : c
+      ));
+    } else {
+      setCourses([
+        ...courses,
+        {
+          id: Date.now(),
+          title: courseForm.title,
+          category: courseForm.category,
+          level: courseForm.level,
+          status: "Draft",
+          students: 0,
+        },
+      ]);
     }
-    if (
-      !window.confirm(
-        `Distribuer reward manuellement à ${userAddressForReward} ?`
-      )
-    ) {
-      return;
-    }
-    // Appel au Hook Web3
-    const success = await issueRewardToUser(userAddressForReward);
-    if (success) {
-      alert("✅ Reward individuel distribué !");
-      setUserAddressForReward("");
-    }
+
+    setCourseForm({ title: "", category: "", level: "Beginner" });
+    setEditingCourse(null);
+    setShowCourseForm(false);
   };
 
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    alert("Copié !");
+  const handleEditCourse = (course: Course) => {
+    setEditingCourse(course);
+    setCourseForm({ title: course.title, category: course.category, level: course.level });
+    setShowCourseForm(true);
   };
 
-  const truncateAddress = (addr: string) =>
-    `${addr.slice(0, 6)}...${addr.slice(-4)}`;
+  const handleDeleteCourse = (id: number) => {
+    if (!window.confirm("Supprimer ce cours ?")) return;
+    setCourses(courses.filter((c) => c.id !== id));
+  };
+
+  const handleToggleCourseStatus = (id: number) => {
+    setCourses(courses.map((c) =>
+      c.id === id ? { ...c, status: c.status === "Published" ? "Draft" : "Published" } : c
+    ));
+  };
+
+  // ==========================================
+  // HELPERS
+  // ==========================================
+
+  const truncate = (addr: string) => `${addr.slice(0, 6)}...${addr.slice(-4)}`;
+  const copyToClipboard = (text: string) => navigator.clipboard.writeText(text);
+
+  const filteredUsers = users.filter(
+    (u) => u.address.toLowerCase().includes(userSearch.toLowerCase())
+  );
+
+  const tabs: { key: TabKey; label: string; icon: React.ReactNode }[] = [
+    { key: "overview", label: "Overview", icon: <LayoutDashboard className="w-4 h-4" /> },
+    { key: "tokens", label: "Tokens", icon: <Coins className="w-4 h-4" /> },
+    { key: "courses", label: "Courses", icon: <BookOpen className="w-4 h-4" /> },
+    { key: "users", label: "Users", icon: <Users className="w-4 h-4" /> },
+  ];
+
+  // ==========================================
+  // GUARD VIEWS
+  // ==========================================
 
   if (isCheckingAdmin) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 font-body">
         <div className="text-center">
-          <Loader2 className="w-12 h-12 text-gold animate-spin mx-auto mb-4" />
-          <p className="text-gray-500 font-heading font-bold">
-            Vérification des droits Admin...
+          <Loader2 className="w-10 h-10 text-primary animate-spin mx-auto mb-4" />
+          <p className="text-gray-500 font-heading font-semibold text-sm">
+            Verifying admin access...
           </p>
         </div>
       </div>
@@ -197,253 +267,528 @@ const AdminDashboard = () => {
 
   if (!isAdmin) {
     return (
-      <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center p-4 font-body">
-        <div className="bg-white p-6 md:p-8 rounded-xl shadow-xl max-w-md w-full text-center border-t-4 border-red-500">
-          <div className="w-16 h-16 md:w-20 md:h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
-            <ShieldAlert className="w-8 h-8 md:w-10 md:h-10 text-red-600" />
+      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4 font-body">
+        <div className="bg-white p-8 rounded-xl shadow-lg max-w-sm w-full text-center border border-gray-100">
+          <div className="w-14 h-14 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-5">
+            <ShieldAlert className="w-7 h-7 text-red-500" />
           </div>
-          <h1 className="text-2xl md:text-3xl font-heading font-bold text-gray-800 mb-2">
+          <h1 className="text-xl font-heading font-bold text-dark mb-2">
             Access Denied
           </h1>
-<<<<<<< HEAD
-          <p className="text-gray-500 mb-8">
-            Cette zone est réservée à l'administrateur du contrat (
-            {account ? truncateAddress(account) : "Non connecté"}).
+          <p className="text-gray-400 text-sm mb-6">
+            Reserved for contract owner
+            {account && <span className="block font-mono text-xs mt-1">{truncate(account)}</span>}
           </p>
           <Link
             to="/"
-            className="inline-flex items-center justify-center gap-2 bg-gray-800 text-white px-6 py-3 rounded-lg font-bold hover:bg-gray-700 transition w-full"
+            className="inline-flex items-center justify-center gap-2 bg-primary text-white px-5 py-2.5 rounded-lg font-semibold hover:bg-primary-dark transition w-full text-sm"
           >
-            <ArrowLeft className="w-4 h-4" /> Go Back Home
+            <ArrowLeft className="w-4 h-4" /> Back to Home
           </Link>
-          {/* Bouton de secours pour tester si tu n'arrives pas à te connecter en admin */}
           <button
             onClick={() => setIsAdmin(true)}
-            className="mt-6 text-xs text-gray-400 hover:text-gold underline"
+            className="mt-4 text-[11px] text-gray-300 hover:text-gray-500 underline"
           >
-            [DEV] Forcer l'accès (Simulation)
+            [DEV] Force access
           </button>
         </div>
       </div>
     );
   }
 
-=======
-  // --- VUE 2 : DASHBOARD ---
->>>>>>> 222fd1cfc8eab27f6b1ef780a7a212025d605efc
+  // ==========================================
+  // MAIN DASHBOARD
+  // ==========================================
+
   return (
     <div className="bg-gray-50 min-h-screen font-body text-dark flex flex-col">
       <Navbar />
 
       <main className="flex-grow pt-24 pb-10 px-4 sm:px-6">
-        <div className="max-w-7xl mx-auto space-y-6 md:space-y-8">
-          {/* HEADER (Responsive) */}
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-4 md:p-6 rounded-xl shadow-sm border border-gray-100">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-primary/10 rounded-lg shrink-0">
-                <Wrench className="w-6 h-6 md:w-8 md:h-8 text-primary" />
-              </div>
-              <div>
-                <h1 className="text-xl md:text-2xl font-heading font-bold text-primary flex flex-wrap items-center gap-2">
-                  Admin Dashboard
-                  <span className="bg-red-100 text-red-700 text-[10px] md:text-xs px-2 py-1 rounded border border-red-200 uppercase tracking-wider font-bold whitespace-nowrap">
-                    Admin Mode
-                  </span>
-                </h1>
-                <p className="text-gray-500 text-xs md:text-sm">
-                  Manage platform settings
-                </p>
-              </div>
-            </div>
-            <div className="text-right hidden md:block">
-              <p className="text-xs text-gray-400 font-mono">
-                Connecté en tant que:
-              </p>
-=======
-            {/* Masqué sur mobile pour gagner de la place */}
-            <div className="text-right hidden md:block">
-              <p className="text-xs text-gray-400 font-mono">Connected as:</p>
->>>>>>> 222fd1cfc8eab27f6b1ef780a7a212025d605efc
-              <p className="text-sm font-bold text-primary font-mono">
-                0x1234...5678
+        <div className="max-w-7xl mx-auto">
+          {/* Header */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+            <div>
+              <h1 className="text-2xl font-heading font-bold text-primary">
+                Administration
+              </h1>
+              <p className="text-gray-400 text-sm mt-1">
+                Manage tokens, courses and platform users
               </p>
             </div>
+            {account && (
+              <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-4 py-2">
+                <div className="w-2 h-2 rounded-full bg-green-400"></div>
+                <span className="text-xs font-mono text-gray-500">{truncate(account)}</span>
+                <span className="text-[10px] bg-red-50 text-red-600 px-1.5 py-0.5 rounded font-bold uppercase">Admin</span>
+              </div>
+            )}
           </div>
 
-          {/* STATS */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <StatCard
-              title="Total Value Locked"
-              value="$1.2M"
-              sub="Simulation"
-              icon={<Coins />}
-              color="border-gold"
-              iconColor="text-gold bg-gold/10"
-            />
-            <StatCard
-              title="Active Stakers"
-              value="156"
-              sub="Simulation"
-              icon={<Users />}
-              color="border-blue-500"
-              iconColor="text-blue-500 bg-blue-50"
-            />
-            <StatCard
-              title="Pending Rewards"
-              value="12,450"
-              sub="Simulation"
-              icon={<Gift />}
-              color="border-green-500"
-              iconColor="text-green-500 bg-green-50"
-            />
+          {/* Tab Navigation */}
+          <div className="flex gap-1 bg-white rounded-lg border border-gray-200 p-1 mb-8 overflow-x-auto">
+            {tabs.map((tab) => (
+              <button
+                key={tab.key}
+                onClick={() => setActiveTab(tab.key)}
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-md text-sm font-semibold transition whitespace-nowrap ${
+                  activeTab === tab.key
+                    ? "bg-primary text-white shadow-sm"
+                    : "text-gray-500 hover:text-primary hover:bg-gray-50"
+                }`}
+              >
+                {tab.icon}
+                {tab.label}
+              </button>
+            ))}
           </div>
 
-          {/* MANAGE TOKENS */}
-          <div className="bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden">
-            <div className="p-6 border-b border-gray-100 bg-gray-50">
-              <h2 className="text-lg font-heading font-bold text-primary">
-                🪙 Gérer les Tokens Autorisés
-              </h2>
-            </div>
+          {/* ==========================================
+              TAB: OVERVIEW
+          ========================================== */}
+          {activeTab === "overview" && (
+            <div className="space-y-6">
+              {/* Stat cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <StatCard label="Allowed Tokens" value={String(tokens.length)} sub="On-chain" />
+                <StatCard label="Total Courses" value={String(courses.length)} sub={`${courses.filter(c => c.status === "Published").length} published`} />
+                <StatCard label="Platform Users" value={String(users.length)} sub={`${users.filter(u => u.status === "Active").length} active`} />
+                <StatCard label="Network" value="Sepolia" sub="Chain 11155111" />
+              </div>
 
-            {/* RESPONSIVE TABLE CONTAINER */}
-            <div className="w-full overflow-x-auto">
-              <table className="w-full text-left min-w-[600px]">
-                <thead className="bg-gray-50 text-gray-500 text-xs uppercase font-bold">
-                  <tr>
-                    <th className="px-6 py-4">Token</th>
-                    <th className="px-6 py-4">Adresse</th>
-                    <th className="px-6 py-4">Price Feed</th>
-                    <th className="px-6 py-4">Status</th>
-                    <th className="px-6 py-4 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {tokens.map((token) => (
-                    <tr key={token.id}>
-                      <td className="px-6 py-4 font-bold text-primary">
-                        {token.name}
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-2 font-mono text-xs text-gray-600">
-                          {truncateAddress(token.address)}
-                          <button
-                            onClick={() => copyToClipboard(token.address)}
-                            className="text-gray-400 hover:text-gold"
-                          >
-                            <Copy className="w-3 h-3" />
-                          </button>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 font-mono text-xs text-gray-500">
-                        {truncateAddress(token.priceFeed)}
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className="inline-flex items-center gap-1 bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-bold">
-                          <CheckCircle className="w-3 h-3" /> Active
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <button className="text-red-500 hover:bg-red-50 p-2 rounded transition">
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+              {/* Quick actions */}
+              <div className="bg-white rounded-xl border border-gray-200 p-6">
+                <h2 className="text-sm font-heading font-bold text-gray-700 uppercase tracking-wider mb-4">
+                  Quick Actions
+                </h2>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <button
+                    onClick={() => setActiveTab("tokens")}
+                    className="flex items-center gap-3 p-4 rounded-lg border border-gray-200 hover:border-primary hover:bg-blue-50/30 transition text-left"
+                  >
+                    <Coins className="w-5 h-5 text-primary" />
+                    <div>
+                      <p className="text-sm font-bold text-dark">Manage Tokens</p>
+                      <p className="text-xs text-gray-400">Add or remove allowed tokens</p>
+                    </div>
+                  </button>
+                  <button
+                    onClick={() => setActiveTab("courses")}
+                    className="flex items-center gap-3 p-4 rounded-lg border border-gray-200 hover:border-primary hover:bg-blue-50/30 transition text-left"
+                  >
+                    <BookOpen className="w-5 h-5 text-primary" />
+                    <div>
+                      <p className="text-sm font-bold text-dark">Manage Courses</p>
+                      <p className="text-xs text-gray-400">Create and edit academy content</p>
+                    </div>
+                  </button>
+                  <button
+                    onClick={handleDistributeAll}
+                    disabled={distributeLoading}
+                    className="flex items-center gap-3 p-4 rounded-lg border border-gray-200 hover:border-gold hover:bg-gold-light/30 transition text-left disabled:opacity-50"
+                  >
+                    <Gift className="w-5 h-5 text-gold" />
+                    <div>
+                      <p className="text-sm font-bold text-dark">
+                        {distributeLoading ? "Processing..." : "Distribute Rewards"}
+                      </p>
+                      <p className="text-xs text-gray-400">Issue GLD to all stakers</p>
+                    </div>
+                  </button>
+                </div>
+              </div>
 
-            {/* Formulaire Ajout Token */}
-            <div className="p-6 bg-gray-50 border-t border-gray-100">
-              <h3 className="text-sm font-bold text-gray-700 mb-4">
-                Ajouter un Token & Price Feed
-              </h3>
-              <div className="flex flex-col md:flex-row gap-3">
-                <input
-                  type="text"
-                  placeholder="Contract Address (0x...)"
-                  value={newTokenAddress}
-                  onChange={(e) => setNewTokenAddress(e.target.value)}
-                  className="flex-1 px-4 py-2 rounded-lg border border-gray-300 focus:border-gold outline-none font-mono text-xs md:text-sm"
-                />
-                <input
-                  type="text"
-                  placeholder="Price Feed (0x...)"
-                  value={newPriceFeed}
-                  onChange={(e) => setNewPriceFeed(e.target.value)}
-                  className="flex-1 px-4 py-2 rounded-lg border border-gray-300 focus:border-gold outline-none font-mono text-xs md:text-sm"
-                />
-                <button
-                  onClick={handleAddToken}
-<<<<<<< HEAD
-                  disabled={isLoading}
-                  className="bg-gold hover:bg-gold-hover text-white font-bold px-6 py-2 rounded-lg transition flex items-center justify-center gap-2 disabled:opacity-50"
-                >
-                  {isLoading ? (
-                    "Adding..."
-                  ) : (
-                    <>
-                      <Plus className="w-4 h-4" /> Add
-                    </>
-                  )}
-                </button>
+              {/* Contract info */}
+              <div className="bg-white rounded-xl border border-gray-200 p-6">
+                <h2 className="text-sm font-heading font-bold text-gray-700 uppercase tracking-wider mb-4">
+                  Contract Addresses
+                </h2>
+                <div className="space-y-3">
+                  <ContractRow label="TokenFarm" address="0x736Ee2066fd93601Cb86Ce4d8ce7109d014cbDE4" onCopy={copyToClipboard} />
+                  <ContractRow label="GoldenToken (GLD)" address="0x92e474EcD778406C8A101175E32cA9149C2c1499" onCopy={copyToClipboard} />
+                </div>
               </div>
             </div>
-          </div>
+          )}
 
-          {/* REWARD DISTRIBUTION (Grid 1 col mobile -> 2 cols desktop) */}
-          <div className="bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden">
-            <div className="p-4 md:p-6 border-b border-gray-100 bg-gray-50">
-              <h2 className="text-lg font-heading font-bold text-primary flex items-center gap-2">
-                🎁 Reward Distribution
-              </h2>
-            </div>
+          {/* ==========================================
+              TAB: TOKENS
+          ========================================== */}
+          {activeTab === "tokens" && (
+            <div className="space-y-6">
+              {/* Token list */}
+              <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+                <div className="px-6 py-4 border-b border-gray-100">
+                  <h2 className="text-base font-heading font-bold text-dark">
+                    Allowed Tokens
+                  </h2>
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    Two transactions per token: addAllowedTokens + setPriceFeedContract
+                  </p>
+                </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 divide-y lg:divide-y-0 lg:divide-x divide-gray-100">
-              {/* GAUCHE */}
-              <div className="p-6 md:p-8">
-                <h3 className="font-bold text-base md:text-lg text-primary mb-2">
-                  Distribute to All
-                </h3>
-                <p className="text-gray-500 text-xs md:text-sm mb-4">
-                  Issue rewards to all stakers.
-                </p>
-                <button
-                  onClick={handleDistributeAll}
-                  disabled={distributeLoading}
-                  className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 md:py-4 rounded-xl shadow-lg transition flex items-center justify-center gap-2 text-sm md:text-base disabled:opacity-50"
-                >
-                  {distributeLoading ? (
-                    "Processing..."
-                  ) : (
-                    <>
-                      <Gift className="w-5 h-5" /> Distribute All
-                    </>
-                  )}
-                </button>
+                {tokens.length > 0 ? (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left">
+                      <thead className="bg-gray-50 text-gray-400 text-[11px] uppercase tracking-wider">
+                        <tr>
+                          <th className="px-6 py-3 font-semibold">Token Address</th>
+                          <th className="px-6 py-3 font-semibold">Price Feed</th>
+                          <th className="px-6 py-3 font-semibold">Status</th>
+                          <th className="px-6 py-3 font-semibold text-right">Action</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-50">
+                        {tokens.map((token) => (
+                          <tr key={token.id} className="hover:bg-gray-50/50 transition">
+                            <td className="px-6 py-4">
+                              <div className="flex items-center gap-2">
+                                <span className="font-mono text-xs text-gray-600">{truncate(token.address)}</span>
+                                <button onClick={() => copyToClipboard(token.address)} className="text-gray-300 hover:text-primary">
+                                  <Copy className="w-3 h-3" />
+                                </button>
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 font-mono text-xs text-gray-400">
+                              {token.priceFeed.startsWith("0x") ? truncate(token.priceFeed) : token.priceFeed}
+                            </td>
+                            <td className="px-6 py-4">
+                              <span className="inline-flex items-center gap-1 text-green-600 text-xs font-semibold">
+                                <CheckCircle className="w-3 h-3" /> Active
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 text-right">
+                              <button onClick={() => handleRemoveToken(token.address)} className="text-gray-300 hover:text-red-500 transition">
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="p-10 text-center">
+                    <AlertTriangle className="w-6 h-6 mx-auto mb-2 text-gray-300" />
+                    <p className="text-sm text-gray-400">No tokens configured yet</p>
+                  </div>
+                )}
+
+                {/* Add token form */}
+                <div className="px-6 py-5 bg-gray-50 border-t border-gray-100">
+                  <p className="text-xs font-semibold text-gray-500 mb-3">Add New Token</p>
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <input
+                      type="text"
+                      placeholder="Token address (0x...)"
+                      value={newTokenAddress}
+                      onChange={(e) => setNewTokenAddress(e.target.value)}
+                      className="flex-1 px-3 py-2 rounded-lg border border-gray-200 focus:border-primary focus:ring-1 focus:ring-primary outline-none font-mono text-xs"
+                    />
+                    <input
+                      type="text"
+                      placeholder="Price feed address (0x...)"
+                      value={newPriceFeed}
+                      onChange={(e) => setNewPriceFeed(e.target.value)}
+                      className="flex-1 px-3 py-2 rounded-lg border border-gray-200 focus:border-primary focus:ring-1 focus:ring-primary outline-none font-mono text-xs"
+                    />
+                    <button
+                      onClick={handleAddToken}
+                      disabled={isLoading}
+                      className="bg-primary hover:bg-primary-dark text-white font-semibold px-5 py-2 rounded-lg transition text-sm flex items-center justify-center gap-1.5 disabled:opacity-50 whitespace-nowrap"
+                    >
+                      {isLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
+                      {isLoading ? "Adding..." : "Add Token"}
+                    </button>
+                  </div>
+                </div>
               </div>
-              {/* DROITE */}
-              <div className="p-6 md:p-8">
-                <h3 className="font-bold text-base md:text-lg text-primary mb-2">
-                  Individual Reward
-                </h3>
-                <p className="text-gray-500 text-xs md:text-sm mb-4">
-                  Send to specific user.
-                </p>
-                <div className="flex flex-col gap-3">
-                  <input
-                    type="text"
-                    placeholder="User Address (0x...)"
-                    className="w-full px-4 py-2 rounded-lg border border-gray-300 font-mono text-xs md:text-sm"
-                  />
-                  <button className="w-full bg-white border border-primary text-primary hover:bg-primary hover:text-white font-bold py-2 rounded-lg transition text-sm">
-                    Issue Reward
+
+              {/* Distribute rewards */}
+              <div className="bg-white rounded-xl border border-gray-200 p-6">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div>
+                    <h2 className="text-base font-heading font-bold text-dark">Reward Distribution</h2>
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      Sends GLD tokens proportional to each staker's total value
+                    </p>
+                  </div>
+                  <button
+                    onClick={handleDistributeAll}
+                    disabled={distributeLoading}
+                    className="bg-gold hover:bg-gold-hover text-white font-semibold px-6 py-2.5 rounded-lg transition text-sm flex items-center gap-2 disabled:opacity-50 shrink-0"
+                  >
+                    {distributeLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Gift className="w-4 h-4" />}
+                    {distributeLoading ? "Processing..." : "Distribute to All"}
                   </button>
                 </div>
               </div>
             </div>
-          </div>
+          )}
+
+          {/* ==========================================
+              TAB: COURSES
+          ========================================== */}
+          {activeTab === "courses" && (
+            <div className="space-y-6">
+              {/* Header + Add button */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-base font-heading font-bold text-dark">Academy Courses</h2>
+                  <p className="text-xs text-gray-400 mt-0.5">{courses.length} courses total</p>
+                </div>
+                <button
+                  onClick={() => {
+                    setEditingCourse(null);
+                    setCourseForm({ title: "", category: "", level: "Beginner" });
+                    setShowCourseForm(true);
+                  }}
+                  className="bg-primary hover:bg-primary-dark text-white font-semibold px-4 py-2 rounded-lg transition text-sm flex items-center gap-1.5"
+                >
+                  <Plus className="w-4 h-4" /> New Course
+                </button>
+              </div>
+
+              {/* Course form modal */}
+              {showCourseForm && (
+                <div className="bg-white rounded-xl border border-primary/20 p-6 shadow-sm">
+                  <h3 className="text-sm font-heading font-bold text-dark mb-4">
+                    {editingCourse ? "Edit Course" : "New Course"}
+                  </h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
+                    <input
+                      type="text"
+                      placeholder="Course title"
+                      value={courseForm.title}
+                      onChange={(e) => setCourseForm({ ...courseForm, title: e.target.value })}
+                      className="px-3 py-2 rounded-lg border border-gray-200 focus:border-primary outline-none text-sm"
+                    />
+                    <input
+                      type="text"
+                      placeholder="Category (DeFi, Security...)"
+                      value={courseForm.category}
+                      onChange={(e) => setCourseForm({ ...courseForm, category: e.target.value })}
+                      className="px-3 py-2 rounded-lg border border-gray-200 focus:border-primary outline-none text-sm"
+                    />
+                    <select
+                      value={courseForm.level}
+                      onChange={(e) => setCourseForm({ ...courseForm, level: e.target.value as Course["level"] })}
+                      className="px-3 py-2 rounded-lg border border-gray-200 focus:border-primary outline-none text-sm bg-white"
+                    >
+                      <option value="Beginner">Beginner</option>
+                      <option value="Intermediate">Intermediate</option>
+                      <option value="Advanced">Advanced</option>
+                    </select>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handleSaveCourse}
+                      className="bg-primary hover:bg-primary-dark text-white font-semibold px-5 py-2 rounded-lg transition text-sm"
+                    >
+                      {editingCourse ? "Save Changes" : "Create Course"}
+                    </button>
+                    <button
+                      onClick={() => { setShowCourseForm(false); setEditingCourse(null); }}
+                      className="border border-gray-200 text-gray-500 hover:text-dark font-semibold px-5 py-2 rounded-lg transition text-sm"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Course list */}
+              <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left">
+                    <thead className="bg-gray-50 text-gray-400 text-[11px] uppercase tracking-wider">
+                      <tr>
+                        <th className="px-6 py-3 font-semibold">Title</th>
+                        <th className="px-6 py-3 font-semibold">Category</th>
+                        <th className="px-6 py-3 font-semibold">Level</th>
+                        <th className="px-6 py-3 font-semibold">Students</th>
+                        <th className="px-6 py-3 font-semibold">Status</th>
+                        <th className="px-6 py-3 font-semibold text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-50">
+                      {courses.map((course) => (
+                        <tr key={course.id} className="hover:bg-gray-50/50 transition">
+                          <td className="px-6 py-4">
+                            <span className="text-sm font-semibold text-dark">{course.title}</span>
+                          </td>
+                          <td className="px-6 py-4">
+                            <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded font-medium">
+                              {course.category}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4">
+                            <span className={`text-xs font-medium ${
+                              course.level === "Beginner" ? "text-green-600"
+                                : course.level === "Intermediate" ? "text-blue-600"
+                                : "text-purple-600"
+                            }`}>
+                              {course.level}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-sm text-gray-500 font-mono">
+                            {course.students}
+                          </td>
+                          <td className="px-6 py-4">
+                            <button
+                              onClick={() => handleToggleCourseStatus(course.id)}
+                              className={`text-xs font-semibold px-2.5 py-1 rounded cursor-pointer transition ${
+                                course.status === "Published"
+                                  ? "bg-green-50 text-green-600 hover:bg-green-100"
+                                  : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+                              }`}
+                            >
+                              {course.status}
+                            </button>
+                          </td>
+                          <td className="px-6 py-4 text-right">
+                            <div className="flex items-center justify-end gap-1">
+                              <button
+                                onClick={() => handleEditCourse(course)}
+                                className="p-1.5 text-gray-300 hover:text-primary transition rounded hover:bg-gray-100"
+                                title="Edit"
+                              >
+                                <Pencil className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteCourse(course.id)}
+                                className="p-1.5 text-gray-300 hover:text-red-500 transition rounded hover:bg-gray-100"
+                                title="Delete"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ==========================================
+              TAB: USERS
+          ========================================== */}
+          {activeTab === "users" && (
+            <div className="space-y-6">
+              {/* Header + search */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <h2 className="text-base font-heading font-bold text-dark">Platform Users</h2>
+                  <p className="text-xs text-gray-400 mt-0.5">{users.length} registered users</p>
+                </div>
+                <div className="relative">
+                  <Search className="w-4 h-4 text-gray-300 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    placeholder="Search by address..."
+                    value={userSearch}
+                    onChange={(e) => setUserSearch(e.target.value)}
+                    className="pl-9 pr-4 py-2 rounded-lg border border-gray-200 focus:border-primary outline-none text-sm font-mono w-full sm:w-72"
+                  />
+                </div>
+              </div>
+
+              {/* Users table */}
+              <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left">
+                    <thead className="bg-gray-50 text-gray-400 text-[11px] uppercase tracking-wider">
+                      <tr>
+                        <th className="px-6 py-3 font-semibold">Wallet Address</th>
+                        <th className="px-6 py-3 font-semibold">Joined</th>
+                        <th className="px-6 py-3 font-semibold">Staked Value</th>
+                        <th className="px-6 py-3 font-semibold">Status</th>
+                        <th className="px-6 py-3 font-semibold text-right">View</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-50">
+                      {filteredUsers.length > 0 ? (
+                        filteredUsers.map((user) => (
+                          <tr key={user.id} className="hover:bg-gray-50/50 transition">
+                            <td className="px-6 py-4">
+                              <div className="flex items-center gap-2">
+                                <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-bold text-primary">
+                                  {user.address.slice(2, 4).toUpperCase()}
+                                </div>
+                                <div>
+                                  <span className="font-mono text-xs text-gray-600">{truncate(user.address)}</span>
+                                  <button onClick={() => copyToClipboard(user.address)} className="ml-1.5 text-gray-200 hover:text-primary">
+                                    <Copy className="w-3 h-3 inline" />
+                                  </button>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 text-sm text-gray-400">
+                              {user.joinedDate}
+                            </td>
+                            <td className="px-6 py-4 text-sm font-semibold text-dark font-mono">
+                              {user.stakedValue}
+                            </td>
+                            <td className="px-6 py-4">
+                              <span className={`text-xs font-semibold ${
+                                user.status === "Active" ? "text-green-600" : "text-gray-400"
+                              }`}>
+                                {user.status}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 text-right">
+                              <a
+                                href={`https://sepolia.etherscan.io/address/${user.address}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="p-1.5 text-gray-300 hover:text-primary transition rounded hover:bg-gray-100 inline-flex"
+                                title="View on Etherscan"
+                              >
+                                <Eye className="w-3.5 h-3.5" />
+                              </a>
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan={5} className="px-6 py-10 text-center text-gray-400 text-sm">
+                            No users found
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Pagination */}
+                <div className="flex items-center justify-between px-6 py-3 border-t border-gray-100 bg-gray-50/50">
+                  <p className="text-xs text-gray-400">
+                    Showing {filteredUsers.length} of {users.length} users
+                  </p>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => setUserPage(Math.max(1, userPage - 1))}
+                      disabled={userPage === 1}
+                      className="p-1.5 rounded border border-gray-200 text-gray-400 hover:text-primary disabled:opacity-30 transition"
+                    >
+                      <ChevronLeft className="w-3.5 h-3.5" />
+                    </button>
+                    <span className="text-xs font-semibold text-gray-500 px-3">{userPage}</span>
+                    <button
+                      onClick={() => setUserPage(userPage + 1)}
+                      disabled={filteredUsers.length <= 10}
+                      className="p-1.5 rounded border border-gray-200 text-gray-400 hover:text-primary disabled:opacity-30 transition"
+                    >
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </main>
       <Footer />
@@ -451,23 +796,27 @@ const AdminDashboard = () => {
   );
 };
 
-// Composant Helper pour les cartes Stats (pour éviter la répétition)
-const StatCard = ({ title, value, sub, icon, color, iconColor }: any) => (
-  <div className={`bg-white p-5 rounded-xl shadow-sm border-l-4 ${color}`}>
-    <div className="flex justify-between items-start mb-2">
-      <div>
-        <p className="text-gray-500 text-[10px] md:text-xs font-bold uppercase">
-          {title}
-        </p>
-        <h3 className="text-2xl md:text-3xl font-heading font-bold text-primary mt-1">
-          {value}
-        </h3>
-      </div>
-      <div className={`p-2 rounded-lg ${iconColor} shrink-0`}>
-        {React.cloneElement(icon, { className: "w-5 h-5 md:w-6 md:h-6" })}
-      </div>
+// ==========================================
+// SUB-COMPONENTS
+// ==========================================
+
+const StatCard = ({ label, value, sub }: { label: string; value: string; sub: string }) => (
+  <div className="bg-white rounded-xl border border-gray-200 p-5">
+    <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">{label}</p>
+    <p className="text-2xl font-heading font-bold text-primary mt-1">{value}</p>
+    <p className="text-[11px] text-gray-400 mt-1">{sub}</p>
+  </div>
+);
+
+const ContractRow = ({ label, address, onCopy }: { label: string; address: string; onCopy: (s: string) => void }) => (
+  <div className="flex items-center justify-between py-2">
+    <span className="text-sm text-gray-500">{label}</span>
+    <div className="flex items-center gap-2">
+      <span className="font-mono text-xs text-gray-600">{`${address.slice(0, 10)}...${address.slice(-8)}`}</span>
+      <button onClick={() => onCopy(address)} className="text-gray-300 hover:text-primary transition">
+        <Copy className="w-3 h-3" />
+      </button>
     </div>
-    <p className="text-[10px] md:text-xs text-gray-400">{sub}</p>
   </div>
 );
 
