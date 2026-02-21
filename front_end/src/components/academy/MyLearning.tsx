@@ -1,11 +1,33 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import Navbar from "../../components/Navbar";
 import Footer from "../../components/Footer";
 import CourseCard from "../../components/academy/CourseCard";
-import { myLearning } from "../../data/academyData";
-import { Trophy, Flame, Clock } from "lucide-react";
+import { enrollmentsApi, analyticsApi } from "../../services/api";
+import { Trophy, Flame, Clock, Loader2 } from "lucide-react";
 
 const MyLearning = () => {
+  const [enrollments, setEnrollments] = useState<any[]>([]);
+  const [stats, setStats] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [enrollData, statsData] = await Promise.all([
+          enrollmentsApi.list(),
+          analyticsApi.mySummary()
+        ]);
+        setEnrollments(enrollData);
+        setStats(statsData);
+      } catch (err) {
+        console.error("Failed to fetch learning data", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
+
   return (
     <div className="bg-gray-50 min-h-screen font-body text-dark flex flex-col">
       <Navbar />
@@ -24,7 +46,7 @@ const MyLearning = () => {
             <div className="flex gap-6">
               <div className="text-center">
                 <div className="text-2xl font-bold text-gold flex justify-center items-center gap-1">
-                  <Flame className="fill-gold" /> 7
+                  <Flame className="fill-gold" /> {stats?.streak || 0}
                 </div>
                 <div className="text-xs text-gray-400 uppercase font-bold">
                   Day Streak
@@ -32,7 +54,7 @@ const MyLearning = () => {
               </div>
               <div className="text-center">
                 <div className="text-2xl font-bold text-blue-500 flex justify-center items-center gap-1">
-                  <Trophy /> 2
+                  <Trophy /> {stats?.certificates || 0}
                 </div>
                 <div className="text-xs text-gray-400 uppercase font-bold">
                   Certificates
@@ -40,30 +62,47 @@ const MyLearning = () => {
               </div>
               <div className="text-center">
                 <div className="text-2xl font-bold text-purple-500 flex justify-center items-center gap-1">
-                  <Clock /> 12h
+                  <Clock /> {Math.round(stats?.total_spent) || 0}
                 </div>
                 <div className="text-xs text-gray-400 uppercase font-bold">
-                  Watched
+                  Total Spent
                 </div>
               </div>
             </div>
           </div>
 
-          {/* CONTINUE WATCHING */}
-          <div>
-            <h2 className="text-xl font-heading font-bold text-primary mb-6">
-              Continue Learning
-            </h2>
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {myLearning.map((course) => (
-                <CourseCard
-                  key={course.id}
-                  course={course}
-                  progress={course.progress}
-                />
-              ))}
+          {loading ? (
+            <div className="flex justify-center py-20">
+              <Loader2 className="w-10 h-10 text-gold animate-spin" />
             </div>
-          </div>
+          ) : (
+            <>
+              {/* CONTINUE WATCHING */}
+              <div>
+                <h2 className="text-xl font-heading font-bold text-primary mb-6">
+                  Continue Learning
+                </h2>
+                {enrollments.length > 0 ? (
+                  <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {enrollments.map((en) => (
+                      <CourseCard
+                        key={en.id}
+                        course={en.course_detail}
+                        progress={en.progress}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="bg-white p-12 rounded-2xl text-center border border-gray-100">
+                    <p className="text-gray-400 mb-4">You haven't enrolled in any courses yet.</p>
+                    <a href="/academy/catalog" className="text-gold font-bold hover:underline">
+                      Browse Catalog
+                    </a>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
 
           {/* RECOMMENDED */}
           <div className="pt-8 border-t border-gray-200">

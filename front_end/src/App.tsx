@@ -1,5 +1,6 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { AuthProvider } from './contexts/AuthContext';
 
 // Import des pages
 import Navbar from './components/Navbar';
@@ -9,8 +10,8 @@ import Performance from './components/Performance';
 import Team from './components/Team';
 import CallToAction from './components/CallToAction';
 import Footer from './components/Footer';
-import SignIn from './components/SignIn'; // Nouveau
-import SignUp from './components/SignUp'; // Nouveau
+import SignIn from './components/SignIn';
+import SignUp from './components/SignUp';
 import Staking from './components/Staking';
 import AdminDashboard from './components/AdminDashboard';
 import AcademyHome from './components/academy/AcademyHome';
@@ -34,28 +35,30 @@ const LandingPage = () => (
 
 function App() {
   return (
-    <Router>
-      <div className="bg-white min-h-screen font-body text-dark">
-        <Routes>
-          {/* Route pour l'accueil (Landing Page) */}
-          <Route path="/" element={<LandingPage />} />
+    <AuthProvider>
+      <Router>
+        <div className="bg-white min-h-screen font-body text-dark">
+          <Routes>
+            {/* Route pour l'accueil (Landing Page) */}
+            <Route path="/" element={<LandingPage />} />
 
-          {/* Route pour la connexion */}
-          <Route path="/signin" element={<SignIn />} />
+            {/* Route pour la connexion */}
+            <Route path="/signin" element={<SignIn />} />
 
-          {/* Route pour l'inscription */}
-          <Route path="/signup" element={<SignUp />} />
+            {/* Route pour l'inscription */}
+            <Route path="/signup" element={<SignUp />} />
 
-          <Route path="/staking" element={<Staking />} />
+            <Route path="/staking" element={<Staking />} />
 
-          <Route path="/admin" element={<AdminDashboard />} />
+            <Route path="/admin" element={<AdminDashboard />} />
 
-          <Route path="/academy" element={<AcademyHome />} />
-          <Route path="/academy/catalog" element={<AcademyCatalog />} />
-          <Route path="/academy/my-learning" element={<MyLearning />} />
-        </Routes>
-      </div>
-    </Router>
+            <Route path="/academy" element={<AcademyHome />} />
+            <Route path="/academy/catalog" element={<AcademyCatalog />} />
+            <Route path="/academy/my-learning" element={<MyLearning />} />
+          </Routes>
+        </div>
+      </Router>
+    </AuthProvider>
   );
 }
 

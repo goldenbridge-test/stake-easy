@@ -1,12 +1,14 @@
 import { useState, useEffect } from "react";
-import { Globe, Menu, X, Wallet } from "lucide-react";
+import { Globe, Menu, X, Wallet, LogOut, User } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useWeb3 } from "../hooks/useWeb3";
+import { useAuth } from "../contexts/AuthContext";
 
 const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { connectWallet, account, isConnected } = useWeb3();
+  const { user, isLoggedIn, logout } = useAuth();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -18,10 +20,9 @@ const Navbar = () => {
 
   const navLinks = [
     { name: "Home", href: "/" },
-    { name: "Investments", href: "/staking" },
-    { name: "Performance", href: "/#performance" },
-    { name: "Team", href: "/#team" },
-    { name: "About", href: "/#about" },
+    { name: "Academy", href: "/academy" },
+    { name: "Staking", href: "/staking" },
+    { name: "My Learning", href: "/academy/my-learning" },
   ];
 
   const truncateAddress = (addr: string) =>
@@ -29,9 +30,8 @@ const Navbar = () => {
 
   return (
     <nav
-      className={`fixed w-full z-50 transition-all duration-300 ${
-        isScrolled ? "bg-white shadow-sm py-3" : "bg-white py-5"
-      }`}
+      className={`fixed w-full z-50 transition-all duration-300 ${isScrolled ? "bg-white shadow-sm py-3" : "bg-white py-5"
+        }`}
     >
       <div className="max-w-7xl mx-auto px-6 flex justify-between items-center">
         {/* LOGO */}
@@ -61,12 +61,28 @@ const Navbar = () => {
 
         {/* BOUTONS D'ACTION */}
         <div className="hidden lg:flex items-center gap-4">
-          <Link
-            to="/signin"
-            className="px-6 py-2 rounded-md border border-gold text-primary font-heading font-semibold hover:bg-gold/10 transition"
-          >
-            Sign In
-          </Link>
+          {isLoggedIn ? (
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2 text-primary font-bold">
+                <User className="w-4 h-4" />
+                <span>{user?.username}</span>
+              </div>
+              <button
+                onClick={logout}
+                className="p-2 text-gray-400 hover:text-red-500 transition"
+                title="Logout"
+              >
+                <LogOut className="w-5 h-5" />
+              </button>
+            </div>
+          ) : (
+            <Link
+              to="/signin"
+              className="px-6 py-2 rounded-md border border-gold text-primary font-heading font-semibold hover:bg-gold/10 transition"
+            >
+              Sign In
+            </Link>
+          )}
 
           {isConnected ? (
             <div className="flex items-center gap-2 bg-green-50 border border-green-200 text-green-700 px-4 py-2 rounded-md font-mono text-sm">
@@ -106,13 +122,28 @@ const Navbar = () => {
             </Link>
           ))}
           <div className="flex flex-col gap-3 mt-4">
-            <Link
-              to="/signin"
-              className="w-full py-3 rounded-lg border border-gold text-primary font-bold text-center"
-              onClick={() => setIsMobileMenuOpen(false)}
-            >
-              Sign In
-            </Link>
+            {isLoggedIn ? (
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center gap-2 text-primary font-bold py-2">
+                  <User className="w-5 h-5" />
+                  <span>{user?.username}</span>
+                </div>
+                <button
+                  onClick={logout}
+                  className="w-full py-3 rounded-lg border border-red-200 text-red-500 font-bold flex items-center justify-center gap-2"
+                >
+                  <LogOut className="w-5 h-5" /> Logout
+                </button>
+              </div>
+            ) : (
+              <Link
+                to="/signin"
+                className="w-full py-3 rounded-lg border border-gold text-primary font-bold text-center"
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                Sign In
+              </Link>
+            )}
 
             {isConnected ? (
               <div className="w-full py-3 rounded-lg bg-green-50 border border-green-200 text-green-700 font-mono text-sm text-center">

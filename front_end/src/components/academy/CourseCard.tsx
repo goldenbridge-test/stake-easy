@@ -1,19 +1,29 @@
 import React from "react";
-import { Star, Clock, User, ArrowRight } from "lucide-react";
+import { Star, Clock, User } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const CourseCard = ({ course, progress }: any) => {
+  if (!course) return null;
+
+  // Adaptation pour les noms de champs backend
+  const thumbnail = course.thumbnail || course.image;
+  const rating = course.average_rating || course.rating || 0;
+  const reviews = course.reviews_count || course.reviews || 0;
+  const instructor = course.instructor_name || course.instructor;
+  const duration = course.duration_hours ? `${course.duration_hours}h` : course.duration;
+  const level = course.level || "Beginner";
+
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-lg transition-all hover:-translate-y-1 group flex flex-col h-full">
       {/* Thumbnail */}
       <div className="relative h-48 overflow-hidden">
         <img
-          src={course.image}
+          src={thumbnail || "https://via.placeholder.com/400x225?text=Course+Thumbnail"}
           alt={course.title}
           className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
         />
         <span className="absolute top-3 left-3 bg-white/90 backdrop-blur text-primary text-xs font-bold px-2 py-1 rounded shadow-sm">
-          {course.category}
+          {course.category_name || course.category}
         </span>
         {course.bestseller && (
           <span className="absolute top-3 right-3 bg-gold text-white text-xs font-bold px-2 py-1 rounded shadow-sm">
@@ -26,21 +36,20 @@ const CourseCard = ({ course, progress }: any) => {
       <div className="p-5 flex flex-col flex-grow">
         <div className="flex justify-between items-start mb-2">
           <div className="flex items-center text-xs text-gold font-bold">
-            <Star className="w-3 h-3 mr-1 fill-current" /> {course.rating}{" "}
+            <Star className="w-3 h-3 mr-1 fill-current" /> {rating}{" "}
             <span className="text-gray-400 font-normal ml-1">
-              ({course.reviews})
+              ({reviews})
             </span>
           </div>
           <span
-            className={`text-xs px-2 py-0.5 rounded-full font-bold ${
-              course.level === "Beginner"
-                ? "bg-green-100 text-green-700"
-                : course.level === "Intermediate"
+            className={`text-xs px-2 py-0.5 rounded-full font-bold ${level.toLowerCase() === "beginner"
+              ? "bg-green-100 text-green-700"
+              : level.toLowerCase() === "intermediate"
                 ? "bg-orange-100 text-orange-700"
                 : "bg-red-100 text-red-700"
-            }`}
+              }`}
           >
-            {course.level}
+            {level}
           </span>
         </div>
 
@@ -48,16 +57,16 @@ const CourseCard = ({ course, progress }: any) => {
           {course.title}
         </h3>
         <p className="text-xs text-gray-500 mb-4 flex items-center gap-1">
-          <User className="w-3 h-3" /> {course.instructor}
+          <User className="w-3 h-3" /> {instructor}
         </p>
 
         {/* Info Footer */}
         <div className="mt-auto pt-4 border-t border-gray-100 flex justify-between items-center">
           <span className="text-xs text-gray-500 flex items-center gap-1">
-            <Clock className="w-3 h-3" /> {course.duration}
+            <Clock className="w-3 h-3" /> {duration}
           </span>
           <span className="font-bold text-primary">
-            {course.price === 0 ? "FREE" : `$${course.price}`}
+            {course.price === 0 || course.is_free ? "FREE" : `$${course.price}`}
           </span>
         </div>
 
@@ -66,7 +75,7 @@ const CourseCard = ({ course, progress }: any) => {
           <div className="mt-4">
             <div className="flex justify-between text-xs mb-1">
               <span className="font-bold text-primary">
-                {progress}% Complete
+                {Math.round(progress)}% Complete
               </span>
             </div>
             <div className="w-full bg-gray-100 h-1.5 rounded-full">

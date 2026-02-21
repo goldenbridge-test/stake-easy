@@ -26,6 +26,9 @@ import {
 import Navbar from "./Navbar";
 import Footer from "./Footer";
 import { useWeb3 } from "../hooks/useWeb3";
+import { analyticsApi } from "../services/api";
+import { BookOpen, GraduationCap, Award } from "lucide-react";
+
 
 // --- MOCK DATA ---
 const performanceData = [
@@ -117,11 +120,22 @@ const activities = [
 const UserDashboard = () => {
   const { account, isConnected, connectWallet } = useWeb3();
   const [isLoading, setIsLoading] = useState(true);
+  const [stats, setStats] = useState<any>(null);
 
-  // Simulation chargement
   useEffect(() => {
-    setTimeout(() => setIsLoading(false), 1500);
-  }, []);
+    const fetchData = async () => {
+      try {
+        const data = await analyticsApi.mySummary();
+        setStats(data);
+      } catch (err) {
+        console.error("Failed to fetch personal stats", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchData();
+  }, [account]);
+
 
   // --- HELPER: FORMAT ADDRESS ---
   const formatAddress = (addr: string | null) =>
@@ -256,6 +270,52 @@ const UserDashboard = () => {
             />
           </div>
 
+          {/* SECTION: ACADEMY STATS */}
+          <div className="space-y-4">
+            <h3 className="font-heading font-bold text-xl text-primary flex items-center gap-2">
+              <BookOpen className="w-6 h-6 text-gold" /> Learning Overview
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+              <StatCard
+                title="Courses Enrolled"
+                value={stats?.courses_enrolled || 0}
+                sub="Total courses in catalog"
+                icon={<BookOpen />}
+                color="border-l-blue-400"
+                btnLink="/academy"
+                btnText="Catalog"
+              />
+              <StatCard
+                title="Completed"
+                value={stats?.courses_completed || 0}
+                sub="Courses finished"
+                icon={<GraduationCap />}
+                color="border-l-green-400"
+                btnLink="/academy/my-learning"
+                btnText="My Learning"
+              />
+              <StatCard
+                title="Certificates"
+                value={stats?.certificates || 0}
+                sub="Earned credentials"
+                icon={<Award />}
+                color="border-l-gold"
+                btnLink="/academy/my-learning"
+                btnText="View"
+              />
+              <StatCard
+                title="Avg. Progress"
+                value={`${Math.round(stats?.average_progress || 0)}%`}
+                sub="Overall completion"
+                icon={<TrendingUp />}
+                color="border-l-purple-400"
+                btnLink="/academy/my-learning"
+                btnText="Continue"
+              />
+            </div>
+          </div>
+
+
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* SECTION 3: STAKED ASSETS (2/3 width) */}
             <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-100 p-6">
@@ -330,15 +390,14 @@ const UserDashboard = () => {
                   >
                     {/* Dot */}
                     <div
-                      className={`absolute -left-[5px] top-1.5 w-2.5 h-2.5 rounded-full ${
-                        act.type === "stake"
+                      className={`absolute -left-[5px] top-1.5 w-2.5 h-2.5 rounded-full ${act.type === "stake"
                           ? "bg-green-500"
                           : act.type === "invest"
-                          ? "bg-gold"
-                          : act.type === "claim"
-                          ? "bg-blue-500"
-                          : "bg-red-400"
-                      }`}
+                            ? "bg-gold"
+                            : act.type === "claim"
+                              ? "bg-blue-500"
+                              : "bg-red-400"
+                        }`}
                     ></div>
 
                     <div className="flex justify-between items-start">
@@ -439,11 +498,10 @@ const UserDashboard = () => {
                 {["1W", "1M", "3M", "1Y", "ALL"].map((period, idx) => (
                   <button
                     key={period}
-                    className={`px-4 py-1 text-xs font-bold rounded-md transition ${
-                      idx === 0
+                    className={`px-4 py-1 text-xs font-bold rounded-md transition ${idx === 0
                         ? "bg-white shadow text-primary"
                         : "text-gray-500 hover:text-dark"
-                    }`}
+                      }`}
                   >
                     {period}
                   </button>

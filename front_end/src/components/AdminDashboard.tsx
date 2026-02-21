@@ -23,6 +23,9 @@ import { Link } from "react-router-dom";
 import Navbar from "./Navbar";
 import Footer from "./Footer";
 import { useWeb3 } from "../hooks/useWeb3";
+import { useAuth } from "../contexts/AuthContext";
+import { analyticsApi, coursesApi, usersApi } from "../services/api";
+
 
 // ==========================================
 // TYPES
@@ -37,19 +40,25 @@ type AllowedToken = {
 type Course = {
   id: number;
   title: string;
-  category: string;
-  level: "Beginner" | "Intermediate" | "Advanced";
-  status: "Published" | "Draft";
-  students: number;
+  category_name: string;
+  level: string;
+  status: string;
+  students_count: number;
 };
 
 type UserRow = {
   id: number;
-  address: string;
-  joinedDate: string;
-  stakedValue: string;
-  status: "Active" | "Inactive";
+  username: string;
+  date_joined: string;
+  role: string;
+  status?: string;
 };
+
+type Category = {
+  id: number;
+  name: string;
+};
+
 
 // ==========================================
 // TABS
@@ -68,9 +77,13 @@ const AdminDashboard = () => {
     checkTokenIsAllowed,
   } = useWeb3();
 
+  const { user, isLoggedIn } = useAuth();
   const [isAdmin, setIsAdmin] = useState(false);
   const [isCheckingAdmin, setIsCheckingAdmin] = useState(true);
   const [activeTab, setActiveTab] = useState<TabKey>("overview");
+
+  // Analytics states
+  const [platformStats, setPlatformStats] = useState<any>(null);
 
   // Token states
   const [isLoading, setIsLoading] = useState(false);
@@ -80,25 +93,15 @@ const AdminDashboard = () => {
   const [tokens, setTokens] = useState<AllowedToken[]>([]);
 
   // Course states
-  const [courses, setCourses] = useState<Course[]>([
-    { id: 1, title: "Introduction to DeFi", category: "DeFi", level: "Beginner", status: "Published", students: 234 },
-    { id: 2, title: "Smart Contract Security", category: "Security", level: "Advanced", status: "Published", students: 89 },
-    { id: 3, title: "Yield Farming Strategies", category: "DeFi", level: "Intermediate", status: "Draft", students: 0 },
-    { id: 4, title: "NFT Development", category: "Development", level: "Intermediate", status: "Published", students: 156 },
-  ]);
+  const [courses, setCourses] = useState<any[]>([]);
   const [showCourseForm, setShowCourseForm] = useState(false);
-  const [editingCourse, setEditingCourse] = useState<Course | null>(null);
-  const [courseForm, setCourseForm] = useState({ title: "", category: "", level: "Beginner" as Course["level"] });
+  const [editingCourse, setEditingCourse] = useState<any | null>(null);
+  const [courseForm, setCourseForm] = useState({ title: "", description: "", price: "0", category: 1, level: "beginner" });
 
   // User states
   const [userSearch, setUserSearch] = useState("");
-  const [users] = useState<UserRow[]>([
-    { id: 1, address: "0x742d35Cc6634C0532925a3b844Bc9e7595f2bD18", joinedDate: "2024-12-15", stakedValue: "$12,450", status: "Active" },
-    { id: 2, address: "0x8ba1f109551bD432803012645Ac136ddd64DBA72", joinedDate: "2025-01-03", stakedValue: "$5,200", status: "Active" },
-    { id: 3, address: "0x2546BcD3c84621e976D8185a91A922aE77ECEc30", joinedDate: "2025-01-20", stakedValue: "$0", status: "Inactive" },
-    { id: 4, address: "0xbDA5747bFD65F08deb54cb465eB87D40e51B197E", joinedDate: "2025-02-01", stakedValue: "$8,900", status: "Active" },
-    { id: 5, address: "0xdD2FD4581271e230360230F9337D5c0430Bf44C0", joinedDate: "2025-02-10", stakedValue: "$1,100", status: "Active" },
-  ]);
+  const [users, setUsers] = useState<UserRow[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [userPage, setUserPage] = useState(1);
 
   // ==========================================
@@ -107,31 +110,37 @@ const AdminDashboard = () => {
 
   useEffect(() => {
     const verify = async () => {
-      if (!isConnected || !account) {
-        setIsAdmin(false);
-        setIsCheckingAdmin(false);
-        return;
-      }
+      // Check both Web3 and Backend roles
+      const backendIsAdmin = user?.role === 'admin';
+      const web3IsAdmin = await checkIsAdmin();
 
-      const adminStatus = await checkIsAdmin();
-      setIsAdmin(adminStatus);
+      setIsAdmin(backendIsAdmin || web3IsAdmin);
       setIsCheckingAdmin(false);
 
-      const gldAllowed = await checkTokenIsAllowed(
-        "0x92e474EcD778406C8A101175E32cA9149C2c1499"
-      );
-      if (gldAllowed) {
-        setTokens([
-          {
-            id: 1,
-            address: "0x92e474EcD778406C8A101175E32cA9149C2c1499",
-            priceFeed: "Configured",
-          },
-        ]);
+      if (backendIsAdmin || web3IsAdmin) {
+        fetchDashboardData();
       }
     };
     verify();
-  }, [account, isConnected]);
+  }, [account, isConnected, user]);
+
+  const fetchDashboardData = async () => {
+    try {
+      const [stats, coursesData, categoriesData, usersData] = await Promise.all([
+        analyticsApi.adminSummary(),
+        coursesApi.list(),
+        coursesApi.categories(),
+        usersApi.list()
+      ]);
+      setPlatformStats(stats);
+      setCourses(coursesData.results || coursesData);
+      setCategories(categoriesData);
+      setUsers(usersData.results || usersData);
+    } catch (err) {
+      console.error("Failed to fetch admin data", err);
+    }
+  };
+
 
   // ==========================================
   // TOKEN HANDLERS
@@ -185,50 +194,57 @@ const AdminDashboard = () => {
   // COURSE HANDLERS (frontend only)
   // ==========================================
 
-  const handleSaveCourse = () => {
-    if (!courseForm.title || !courseForm.category) return;
+  const handleSaveCourse = async () => {
+    if (!courseForm.title || !courseForm.description) return;
 
-    if (editingCourse) {
-      setCourses(courses.map((c) =>
-        c.id === editingCourse.id
-          ? { ...c, title: courseForm.title, category: courseForm.category, level: courseForm.level }
-          : c
-      ));
-    } else {
-      setCourses([
-        ...courses,
-        {
-          id: Date.now(),
-          title: courseForm.title,
-          category: courseForm.category,
-          level: courseForm.level,
-          status: "Draft",
-          students: 0,
-        },
-      ]);
+    try {
+      if (editingCourse) {
+        const updated = await coursesApi.update(editingCourse.id, courseForm);
+        setCourses(courses.map(c => c.id === editingCourse.id ? updated : c));
+      } else {
+        const created = await coursesApi.create(courseForm);
+        setCourses([...courses, created]);
+      }
+      setCourseForm({ title: "", description: "", price: "0", category: 1, level: "beginner" });
+      setEditingCourse(null);
+      setShowCourseForm(false);
+    } catch (err) {
+      alert("Failed to save course");
     }
-
-    setCourseForm({ title: "", category: "", level: "Beginner" });
-    setEditingCourse(null);
-    setShowCourseForm(false);
   };
 
-  const handleEditCourse = (course: Course) => {
+  const handleEditCourse = (course: any) => {
     setEditingCourse(course);
-    setCourseForm({ title: course.title, category: course.category, level: course.level });
+    setCourseForm({
+      title: course.title,
+      description: course.description,
+      price: course.price,
+      category: course.category || 1,
+      level: course.level
+    });
     setShowCourseForm(true);
   };
 
-  const handleDeleteCourse = (id: number) => {
+  const handleDeleteCourse = async (id: number) => {
     if (!window.confirm("Supprimer ce cours ?")) return;
-    setCourses(courses.filter((c) => c.id !== id));
+    try {
+      await coursesApi.delete(id);
+      setCourses(courses.filter((c) => c.id !== id));
+    } catch (err) {
+      alert("Failed to delete course");
+    }
   };
 
-  const handleToggleCourseStatus = (id: number) => {
-    setCourses(courses.map((c) =>
-      c.id === id ? { ...c, status: c.status === "Published" ? "Draft" : "Published" } : c
-    ));
+  const handleToggleCourseStatus = async (course: any) => {
+    try {
+      const newStatus = course.status === "Published" ? "Draft" : "Published";
+      const updated = await coursesApi.update(course.id, { status: newStatus });
+      setCourses(courses.map((c) => (c.id === course.id ? updated : c)));
+    } catch (err) {
+      alert("Failed to update status");
+    }
   };
+
 
   // ==========================================
   // HELPERS
@@ -238,7 +254,7 @@ const AdminDashboard = () => {
   const copyToClipboard = (text: string) => navigator.clipboard.writeText(text);
 
   const filteredUsers = users.filter(
-    (u) => u.address.toLowerCase().includes(userSearch.toLowerCase())
+    (u) => (u.username || "").toLowerCase().includes(userSearch.toLowerCase())
   );
 
   const tabs: { key: TabKey; label: string; icon: React.ReactNode }[] = [
@@ -331,11 +347,10 @@ const AdminDashboard = () => {
               <button
                 key={tab.key}
                 onClick={() => setActiveTab(tab.key)}
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-md text-sm font-semibold transition whitespace-nowrap ${
-                  activeTab === tab.key
-                    ? "bg-primary text-white shadow-sm"
-                    : "text-gray-500 hover:text-primary hover:bg-gray-50"
-                }`}
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-md text-sm font-semibold transition whitespace-nowrap ${activeTab === tab.key
+                  ? "bg-primary text-white shadow-sm"
+                  : "text-gray-500 hover:text-primary hover:bg-gray-50"
+                  }`}
               >
                 {tab.icon}
                 {tab.label}
@@ -350,11 +365,12 @@ const AdminDashboard = () => {
             <div className="space-y-6">
               {/* Stat cards */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <StatCard label="Allowed Tokens" value={String(tokens.length)} sub="On-chain" />
-                <StatCard label="Total Courses" value={String(courses.length)} sub={`${courses.filter(c => c.status === "Published").length} published`} />
-                <StatCard label="Platform Users" value={String(users.length)} sub={`${users.filter(u => u.status === "Active").length} active`} />
-                <StatCard label="Network" value="Sepolia" sub="Chain 11155111" />
+                <StatCard label="Total Revenue" value={`$${platformStats?.total_revenue || 0}`} sub="Lifetime" />
+                <StatCard label="Total Courses" value={String(platformStats?.total_courses || 0)} sub="All items" />
+                <StatCard label="Total Users" value={String(platformStats?.total_users || 0)} sub="Registered" />
+                <StatCard label="Total Enrollments" value={String(platformStats?.total_enrollments || 0)} sub="Active" />
               </div>
+
 
               {/* Quick actions */}
               <div className="bg-white rounded-xl border border-gray-200 p-6">
@@ -540,7 +556,7 @@ const AdminDashboard = () => {
                 <button
                   onClick={() => {
                     setEditingCourse(null);
-                    setCourseForm({ title: "", category: "", level: "Beginner" });
+                    setCourseForm({ title: "", description: "", price: "0", category: 1, level: "beginner" });
                     setShowCourseForm(true);
                   }}
                   className="bg-primary hover:bg-primary-dark text-white font-semibold px-4 py-2 rounded-lg transition text-sm flex items-center gap-1.5"
@@ -563,23 +579,41 @@ const AdminDashboard = () => {
                       onChange={(e) => setCourseForm({ ...courseForm, title: e.target.value })}
                       className="px-3 py-2 rounded-lg border border-gray-200 focus:border-primary outline-none text-sm"
                     />
+                    <textarea
+                      placeholder="Course description"
+                      value={courseForm.description}
+                      onChange={(e) => setCourseForm({ ...courseForm, description: e.target.value })}
+                      className="px-3 py-2 rounded-lg border border-gray-200 focus:border-primary outline-none text-sm h-24 col-span-1 sm:col-span-3"
+                    />
                     <input
-                      type="text"
-                      placeholder="Category (DeFi, Security...)"
-                      value={courseForm.category}
-                      onChange={(e) => setCourseForm({ ...courseForm, category: e.target.value })}
+                      type="number"
+                      placeholder="Price"
+                      value={courseForm.price}
+                      onChange={(e) => setCourseForm({ ...courseForm, price: e.target.value })}
                       className="px-3 py-2 rounded-lg border border-gray-200 focus:border-primary outline-none text-sm"
                     />
                     <select
-                      value={courseForm.level}
-                      onChange={(e) => setCourseForm({ ...courseForm, level: e.target.value as Course["level"] })}
+                      value={courseForm.category}
+                      onChange={(e) => setCourseForm({ ...courseForm, category: Number(e.target.value) })}
                       className="px-3 py-2 rounded-lg border border-gray-200 focus:border-primary outline-none text-sm bg-white"
                     >
-                      <option value="Beginner">Beginner</option>
-                      <option value="Intermediate">Intermediate</option>
-                      <option value="Advanced">Advanced</option>
+                      <option value="">Select Category</option>
+                      {categories.map(cat => (
+                        <option key={cat.id} value={cat.id}>{cat.name}</option>
+                      ))}
+                    </select>
+
+                    <select
+                      value={courseForm.level}
+                      onChange={(e) => setCourseForm({ ...courseForm, level: e.target.value as any })}
+                      className="px-3 py-2 rounded-lg border border-gray-200 focus:border-primary outline-none text-sm bg-white"
+                    >
+                      <option value="beginner">Beginner</option>
+                      <option value="intermediate">Intermediate</option>
+                      <option value="advanced">Advanced</option>
                     </select>
                   </div>
+
                   <div className="flex gap-2">
                     <button
                       onClick={handleSaveCourse}
@@ -619,33 +653,32 @@ const AdminDashboard = () => {
                           </td>
                           <td className="px-6 py-4">
                             <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded font-medium">
-                              {course.category}
+                              {course.category_name || "N/A"}
                             </span>
                           </td>
                           <td className="px-6 py-4">
-                            <span className={`text-xs font-medium ${
-                              course.level === "Beginner" ? "text-green-600"
-                                : course.level === "Intermediate" ? "text-blue-600"
+                            <span className={`text-xs font-medium ${course.level === "Beginner" ? "text-green-600"
+                              : course.level === "Intermediate" ? "text-blue-600"
                                 : "text-purple-600"
-                            }`}>
+                              }`}>
                               {course.level}
                             </span>
                           </td>
                           <td className="px-6 py-4 text-sm text-gray-500 font-mono">
-                            {course.students}
+                            {course.students_count || 0}
                           </td>
                           <td className="px-6 py-4">
                             <button
-                              onClick={() => handleToggleCourseStatus(course.id)}
-                              className={`text-xs font-semibold px-2.5 py-1 rounded cursor-pointer transition ${
-                                course.status === "Published"
-                                  ? "bg-green-50 text-green-600 hover:bg-green-100"
-                                  : "bg-gray-100 text-gray-500 hover:bg-gray-200"
-                              }`}
+                              onClick={() => handleToggleCourseStatus(course)}
+                              className={`text-xs font-semibold px-2.5 py-1 rounded cursor-pointer transition ${course.status === "Published"
+                                ? "bg-green-50 text-green-600 hover:bg-green-100"
+                                : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+                                }`}
                             >
                               {course.status}
                             </button>
                           </td>
+
                           <td className="px-6 py-4 text-right">
                             <div className="flex items-center justify-end gap-1">
                               <button
@@ -688,7 +721,7 @@ const AdminDashboard = () => {
                   <Search className="w-4 h-4 text-gray-300 absolute left-3 top-1/2 -translate-y-1/2" />
                   <input
                     type="text"
-                    placeholder="Search by address..."
+                    placeholder="Search by username..."
                     value={userSearch}
                     onChange={(e) => setUserSearch(e.target.value)}
                     className="pl-9 pr-4 py-2 rounded-lg border border-gray-200 focus:border-primary outline-none text-sm font-mono w-full sm:w-72"
@@ -702,7 +735,7 @@ const AdminDashboard = () => {
                   <table className="w-full text-left">
                     <thead className="bg-gray-50 text-gray-400 text-[11px] uppercase tracking-wider">
                       <tr>
-                        <th className="px-6 py-3 font-semibold">Wallet Address</th>
+                        <th className="px-6 py-3 font-semibold">User / Wallet</th>
                         <th className="px-6 py-3 font-semibold">Joined</th>
                         <th className="px-6 py-3 font-semibold">Staked Value</th>
                         <th className="px-6 py-3 font-semibold">Status</th>
@@ -716,39 +749,44 @@ const AdminDashboard = () => {
                             <td className="px-6 py-4">
                               <div className="flex items-center gap-2">
                                 <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-bold text-primary">
-                                  {user.address.slice(2, 4).toUpperCase()}
+                                  {(user.username || "0x").slice(0, 2).toUpperCase()}
                                 </div>
                                 <div>
-                                  <span className="font-mono text-xs text-gray-600">{truncate(user.address)}</span>
-                                  <button onClick={() => copyToClipboard(user.address)} className="ml-1.5 text-gray-200 hover:text-primary">
-                                    <Copy className="w-3 h-3 inline" />
-                                  </button>
+                                  <span className="font-mono text-xs text-gray-600">
+                                    {user.username && user.username.startsWith("0x") ? truncate(user.username) : user.username}
+                                  </span>
+                                  {user.username && user.username.startsWith("0x") && (
+                                    <button onClick={() => copyToClipboard(user.username)} className="ml-1.5 text-gray-200 hover:text-primary">
+                                      <Copy className="w-3 h-3 inline" />
+                                    </button>
+                                  )}
                                 </div>
                               </div>
                             </td>
                             <td className="px-6 py-4 text-sm text-gray-400">
-                              {user.joinedDate}
+                              {user.date_joined ? new Date(user.date_joined).toLocaleDateString() : "N/A"}
                             </td>
                             <td className="px-6 py-4 text-sm font-semibold text-dark font-mono">
-                              {user.stakedValue}
+                              {user.role}
                             </td>
                             <td className="px-6 py-4">
-                              <span className={`text-xs font-semibold ${
-                                user.status === "Active" ? "text-green-600" : "text-gray-400"
-                              }`}>
+                              <span className={`text-xs font-semibold ${user.status === "Active" ? "text-green-600" : "text-gray-400"
+                                }`}>
                                 {user.status}
                               </span>
                             </td>
                             <td className="px-6 py-4 text-right">
-                              <a
-                                href={`https://sepolia.etherscan.io/address/${user.address}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="p-1.5 text-gray-300 hover:text-primary transition rounded hover:bg-gray-100 inline-flex"
-                                title="View on Etherscan"
-                              >
-                                <Eye className="w-3.5 h-3.5" />
-                              </a>
+                              {user.username && user.username.startsWith("0x") && (
+                                <a
+                                  href={`https://sepolia.etherscan.io/address/${user.username}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="p-1.5 text-gray-300 hover:text-primary transition rounded hover:bg-gray-100 inline-flex"
+                                  title="View on Etherscan"
+                                >
+                                  <Eye className="w-3.5 h-3.5" />
+                                </a>
+                              )}
                             </td>
                           </tr>
                         ))
