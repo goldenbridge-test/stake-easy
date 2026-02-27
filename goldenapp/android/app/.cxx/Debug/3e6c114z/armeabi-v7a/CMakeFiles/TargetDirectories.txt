@@ -1,0 +1,2 @@
+C:/Users/Mouhsine/Desktop/Golden/golden/goldenapp/android/app/.cxx/Debug/3e6c114z/armeabi-v7a/CMakeFiles/edit_cache.dir
+C:/Users/Mouhsine/Desktop/Golden/golden/goldenapp/android/app/.cxx/Debug/3e6c114z/armeabi-v7a/CMakeFiles/rebuild_cache.dir

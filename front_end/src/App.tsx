@@ -18,6 +18,7 @@ import AcademyHome from './components/academy/AcademyHome';
 import AcademyCatalog from './components/academy/AcademyCatalog';
 import MyLearning from './components/academy/MyLearning';
 import CourseDetails from './components/academy/CourseDetails';
+import CoachingPrograms from './components/academy/CoachingPrograms';
 
 // On crée un composant pour la Landing Page complète pour garder le code propre
 const LandingPage = () => (
@@ -57,6 +58,7 @@ function App() {
             <Route path="/academy/catalog" element={<AcademyCatalog />} />
             <Route path="/academy/my-learning" element={<MyLearning />} />
             <Route path="/academy/course/:id" element={<CourseDetails />} />
+            <Route path="/academy/coaching" element={<CoachingPrograms />} />
           </Routes>
         </div>
       </Router>

@@ -212,6 +212,47 @@ export const analyticsApi = {
     },
 };
 
+// ─── Coaching ─────────────────────────────────────────────────────────────────
+export const coachingApi = {
+    async subscribe(instructorId: number, sessions: number, price: string) {
+        const res = await apiFetch('/api/courses/coaching-programs/', {
+            method: 'POST',
+            body: JSON.stringify({
+                instructor: instructorId,
+                total_sessions: sessions,
+                price: price
+            }),
+        });
+        if (!res.ok) {
+            const err = await res.json();
+            throw new Error(err.detail || 'Coaching subscription failed');
+        }
+        return res.json();
+    },
+
+    async list() {
+        const res = await apiFetch('/api/courses/coaching-programs/');
+        if (!res.ok) throw new Error('Failed to fetch coaching programs');
+        return res.json();
+    },
+
+    async validateSession(sessionId: number) {
+        const res = await apiFetch(`/api/courses/coaching-sessions/${sessionId}/validate_session/`, {
+            method: 'POST',
+        });
+        if (!res.ok) throw new Error('Failed to validate session');
+        return res.json();
+    },
+
+    async confirmSession(sessionId: number) {
+        const res = await apiFetch(`/api/courses/coaching-sessions/${sessionId}/confirm_session/`, {
+            method: 'POST',
+        });
+        if (!res.ok) throw new Error('Failed to confirm session');
+        return res.json();
+    },
+};
+
 // ─── Users ────────────────────────────────────────────────────────────────────
 export const usersApi = {
     async list() {

@@ -365,10 +365,10 @@ const AdminDashboard = () => {
             <div className="space-y-6">
               {/* Stat cards */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <StatCard label="Total Revenue" value={`$${platformStats?.total_revenue || 0}`} sub="Lifetime" />
-                <StatCard label="Total Courses" value={String(platformStats?.total_courses || 0)} sub="All items" />
-                <StatCard label="Total Users" value={String(platformStats?.total_users || 0)} sub="Registered" />
-                <StatCard label="Total Enrollments" value={String(platformStats?.total_enrollments || 0)} sub="Active" />
+                <StatCard label="Total GMV" value={`$${platformStats?.gmv || 0}`} sub="Ventes globales" />
+                <StatCard label="Total Courses" value={String(platformStats?.total_courses || 0)} sub="Articles actifs" />
+                <StatCard label="Active Students" value={String(platformStats?.active_students || 0)} sub="Engagés" />
+                <StatCard label="Coaching Success" value={`${platformStats?.coaching_success_rate || 0}%`} sub="Taux de réussite" />
               </div>
 
 

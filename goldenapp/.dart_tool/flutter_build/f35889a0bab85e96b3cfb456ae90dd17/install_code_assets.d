@@ -1,0 +1,1 @@
+ C:\\Users\\Mouhsine\\Desktop\\Golden\\golden\\goldenapp\\.dart_tool\\flutter_build\\f35889a0bab85e96b3cfb456ae90dd17\\native_assets.json: 

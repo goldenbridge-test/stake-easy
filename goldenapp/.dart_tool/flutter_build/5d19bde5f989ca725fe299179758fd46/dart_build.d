@@ -1,0 +1,1 @@
+ C:\\Users\\Mouhsine\\Desktop\\Golden\\golden\\stake-easy\\goldenapp\\.dart_tool\\flutter_build\\5d19bde5f989ca725fe299179758fd46\\dart_build_result.json: 

@@ -3,7 +3,7 @@ import Navbar from "../../components/Navbar";
 import Footer from "../../components/Footer";
 import CourseCard from "../../components/academy/CourseCard";
 import { enrollmentsApi, analyticsApi } from "../../services/api";
-import { Trophy, Flame, Clock, Loader2 } from "lucide-react";
+import { Trophy, Flame, Clock, Loader2, Target } from "lucide-react";
 
 const MyLearning = () => {
   const [enrollments, setEnrollments] = useState<any[]>([]);
@@ -48,26 +48,42 @@ const MyLearning = () => {
                 <div className="text-2xl font-bold text-gold flex justify-center items-center gap-1">
                   <Flame className="fill-gold" /> {stats?.streak || 0}
                 </div>
-                <div className="text-xs text-gray-400 uppercase font-bold">
+                <div className="text-[10px] text-gray-400 uppercase font-bold">
                   Day Streak
+                </div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-green-500 flex justify-center items-center gap-1">
+                  <Target className="w-5 h-5" /> {Math.round(stats?.coaching_progression_avg || 0)}%
+                </div>
+                <div className="text-[10px] text-gray-400 uppercase font-bold">
+                  Progression Coaching
                 </div>
               </div>
               <div className="text-center">
                 <div className="text-2xl font-bold text-blue-500 flex justify-center items-center gap-1">
                   <Trophy /> {stats?.certificates || 0}
                 </div>
-                <div className="text-xs text-gray-400 uppercase font-bold">
+                <div className="text-[10px] text-gray-400 uppercase font-bold">
                   Certificates
                 </div>
               </div>
               <div className="text-center">
                 <div className="text-2xl font-bold text-purple-500 flex justify-center items-center gap-1">
-                  <Clock /> {Math.round(stats?.total_spent) || 0}
+                  <Clock className="w-5 h-5" /> {stats?.completed_coaching_sessions || 0}
                 </div>
                 <div className="text-xs text-gray-400 uppercase font-bold">
-                  Total Spent
+                  Sessions Coaching
                 </div>
               </div>
+            </div>
+            <div className="mt-4 md:mt-0">
+              <a
+                href="/academy/coaching"
+                className="inline-flex items-center gap-2 bg-gold text-primary font-bold px-6 py-3 rounded-xl hover:bg-gold-hover transition shadow-lg shadow-gold/20"
+              >
+                <Target className="w-5 h-5" /> Mon Coaching
+              </a>
             </div>
           </div>
 
