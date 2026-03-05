@@ -11,7 +11,7 @@ export const useUnstakeTokens = () => {
   const { chainId } = useEthers()
 
   const { abi } = TokenFarm
-  const tokenFarmContractAddress = chainId ? networkMapping[String(chainId)]["TokenFarm"][0] : constants.AddressZero
+  const tokenFarmContractAddress = chainId ? (networkMapping as any)[String(chainId)]["TokenFarm"][0] : constants.AddressZero
 
   const tokenFarmInterface = new utils.Interface(abi)
 
@@ -20,7 +20,7 @@ export const useUnstakeTokens = () => {
     tokenFarmInterface
   )
 
-  return useContractFunction(tokenFarmContract, "unstakeTokens", {
+  return useContractFunction(tokenFarmContract as any, "unstakeTokens", {
     transactionName: "Unstake tokens",
   })
 }

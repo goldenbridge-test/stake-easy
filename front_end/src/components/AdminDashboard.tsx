@@ -18,13 +18,15 @@ import {
   Search,
   ChevronLeft,
   ChevronRight,
+  Settings,
+  Target,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import Navbar from "./Navbar";
 import Footer from "./Footer";
 import { useWeb3 } from "../hooks/useWeb3";
 import { useAuth } from "../contexts/AuthContext";
-import { analyticsApi, coursesApi, usersApi } from "../services/api";
+import { analyticsApi, coursesApi, usersApi, getUser } from "../services/api";
 
 
 // ==========================================
@@ -66,6 +68,9 @@ type Category = {
 type TabKey = "overview" | "tokens" | "courses" | "users";
 
 const AdminDashboard = () => {
+  const { user, isLoggedIn } = useAuth();
+  const currentUser = user || getUser();
+
   const {
     account,
     isConnected,
@@ -77,8 +82,8 @@ const AdminDashboard = () => {
     checkTokenIsAllowed,
   } = useWeb3();
 
-  const { user, isLoggedIn } = useAuth();
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isInstructor, setIsInstructor] = useState(false);
   const [isCheckingAdmin, setIsCheckingAdmin] = useState(true);
   const [activeTab, setActiveTab] = useState<TabKey>("overview");
 
@@ -112,12 +117,14 @@ const AdminDashboard = () => {
     const verify = async () => {
       // Check both Web3 and Backend roles
       const backendIsAdmin = user?.role === 'admin';
+      const backendIsInstructor = user?.role === 'instructor';
       const web3IsAdmin = await checkIsAdmin();
 
       setIsAdmin(backendIsAdmin || web3IsAdmin);
+      setIsInstructor(backendIsInstructor);
       setIsCheckingAdmin(false);
 
-      if (backendIsAdmin || web3IsAdmin) {
+      if (backendIsAdmin || backendIsInstructor || web3IsAdmin) {
         fetchDashboardData();
       }
     };
@@ -264,6 +271,12 @@ const AdminDashboard = () => {
     { key: "users", label: "Users", icon: <Users className="w-4 h-4" /> },
   ];
 
+  const visibleTabs = tabs.filter(tab => {
+    if (isAdmin) return true;
+    if (isInstructor) return tab.key === "overview" || tab.key === "courses";
+    return false;
+  });
+
   // ==========================================
   // GUARD VIEWS
   // ==========================================
@@ -281,32 +294,18 @@ const AdminDashboard = () => {
     );
   }
 
-  if (!isAdmin) {
+  if (!isAdmin && !isInstructor) {
     return (
-      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4 font-body">
-        <div className="bg-white p-8 rounded-xl shadow-lg max-w-sm w-full text-center border border-gray-100">
-          <div className="w-14 h-14 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-5">
-            <ShieldAlert className="w-7 h-7 text-red-500" />
+      <div className="min-h-screen bg-primary flex flex-col items-center justify-center p-4 font-body">
+        <div className="bg-white/5 border border-white/10 p-10 rounded-3xl max-w-sm w-full text-center">
+          <div className="w-20 h-20 bg-red-500/10 rounded-3xl flex items-center justify-center mx-auto mb-6 text-red-500">
+            <ShieldAlert className="w-10 h-10" />
           </div>
-          <h1 className="text-xl font-heading font-bold text-dark mb-2">
-            Access Denied
-          </h1>
-          <p className="text-gray-400 text-sm mb-6">
-            Reserved for contract owner
-            {account && <span className="block font-mono text-xs mt-1">{truncate(account)}</span>}
-          </p>
-          <Link
-            to="/"
-            className="inline-flex items-center justify-center gap-2 bg-primary text-white px-5 py-2.5 rounded-lg font-semibold hover:bg-primary-dark transition w-full text-sm"
-          >
-            <ArrowLeft className="w-4 h-4" /> Back to Home
+          <h1 className="text-2xl font-heading font-bold text-white mb-2">Accès Refusé</h1>
+          <p className="text-gray-400 text-sm mb-8">Réservé aux instructeurs et administrateurs.</p>
+          <Link to="/" className="inline-block bg-gold text-primary font-bold px-8 py-3 rounded-xl hover:bg-gold-hover transition">
+            Retour à l'accueil
           </Link>
-          <button
-            onClick={() => setIsAdmin(true)}
-            className="mt-4 text-[11px] text-gray-300 hover:text-gray-500 underline"
-          >
-            [DEV] Force access
-          </button>
         </div>
       </div>
     );
@@ -343,7 +342,7 @@ const AdminDashboard = () => {
 
           {/* Tab Navigation */}
           <div className="flex gap-1 bg-white rounded-lg border border-gray-200 p-1 mb-8 overflow-x-auto">
-            {tabs.map((tab) => (
+            {visibleTabs.map((tab) => (
               <button
                 key={tab.key}
                 onClick={() => setActiveTab(tab.key)}
@@ -363,6 +362,63 @@ const AdminDashboard = () => {
           ========================================== */}
           {activeTab === "overview" && (
             <div className="space-y-6">
+              {/* Instructor Portal Specific Section */}
+              {currentUser?.role === 'instructor' && (
+                <div className="bg-gold/5 border border-gold/20 rounded-3xl p-8 mb-10">
+                  <div className="flex items-center gap-4 mb-6">
+                    <div className="w-12 h-12 bg-gold/10 rounded-2xl flex items-center justify-center text-gold">
+                      <Settings className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <h2 className="text-2xl font-heading font-bold text-white">Portail Instructeur</h2>
+                      <p className="text-gray-400 text-sm">Gérez vos formations et vos programmes de coaching.</p>
+                    </div>
+                  </div>
+
+                  <div className="grid md:grid-cols-2 gap-6">
+                    <div className="bg-white/5 border border-white/10 rounded-2xl p-6 hover:border-gold/30 transition group">
+                      <h3 className="font-bold mb-4 flex items-center gap-2">
+                        <BookOpen className="w-5 h-5 text-gold" /> Vos Cours Actifs
+                      </h3>
+                      <div className="space-y-3">
+                        {/* Placeholder for instructor's courses */}
+                        <div className="flex items-center justify-between p-3 bg-primary-dark rounded-xl border border-white/5">
+                          <span className="text-sm font-medium">Introduction à la Blockchain</span>
+                          <button className="text-[10px] bg-gold text-primary font-bold px-3 py-1 rounded-lg hover:bg-gold-hover transition">
+                            Lier Coaching
+                          </button>
+                        </div>
+                        <div className="flex items-center justify-between p-3 bg-primary-dark rounded-xl border border-white/5">
+                          <span className="text-sm font-medium">Smart Contracts Masterclass</span>
+                          <span className="text-[10px] text-green-500 font-bold px-3 py-1 border border-green-500/20 rounded-lg bg-green-500/5">
+                            Coaching Actif
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="bg-white/5 border border-white/10 rounded-2xl p-6 hover:border-gold/30 transition group">
+                      <h3 className="font-bold mb-4 flex items-center gap-2">
+                        <Target className="w-5 h-5 text-gold" /> Performance Coaching
+                      </h3>
+                      <div className="space-y-4">
+                        <div className="flex justify-between items-center text-sm">
+                          <span className="text-gray-400">Total Revenu Coaching</span>
+                          <span className="font-bold text-gold">$1,250</span>
+                        </div>
+                        <div className="flex justify-between items-center text-sm">
+                          <span className="text-gray-400">Taux de Complétion</span>
+                          <span className="font-bold text-green-500">92%</span>
+                        </div>
+                        <a href="/academy/coaching" className="block text-center w-full py-2 mt-2 bg-white/10 rounded-xl text-xs font-bold hover:bg-white/20 transition">
+                          Voir tous les coachings
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Stat cards */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <StatCard label="Total GMV" value={`$${platformStats?.gmv || 0}`} sub="Ventes globales" />

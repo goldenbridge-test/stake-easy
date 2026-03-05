@@ -261,3 +261,180 @@ export const usersApi = {
         return res.json();
     }
 };
+
+// ─── Course Modules & Chapters ────────────────────────────────────────────────
+export const modulesApi = {
+    // Get full course curriculum (modules + chapters)
+    async getCurriculum(courseId: number) {
+        const res = await apiFetch(`/api/courses/${courseId}/curriculum/`);
+        if (!res.ok) throw new Error('Failed to fetch curriculum');
+        return res.json();
+    },
+
+    // Get a secure streaming URL for a chapter video
+    async getVideoUrl(chapterId: number) {
+        const res = await apiFetch(`/api/courses/chapters/${chapterId}/video-url/`);
+        if (!res.ok) throw new Error('Video not available');
+        return res.json(); // Returns { url, token, expires_at }
+    },
+
+    // Mark a chapter as completed
+    async completeChapter(chapterId: number) {
+        const res = await apiFetch(`/api/courses/chapters/${chapterId}/complete/`, {
+            method: 'POST',
+        });
+        if (!res.ok) throw new Error('Failed to mark chapter complete');
+        return res.json();
+    },
+
+    // Instructor: create a module
+    async createModule(courseId: number, data: { title: string; order?: number }) {
+        const res = await apiFetch(`/api/courses/${courseId}/modules/`, {
+            method: 'POST',
+            body: JSON.stringify(data),
+        });
+        if (!res.ok) throw new Error('Failed to create module');
+        return res.json();
+    },
+
+    // Instructor: create a chapter inside a module
+    async createChapter(moduleId: number, data: any) {
+        const res = await apiFetch(`/api/courses/modules/${moduleId}/chapters/`, {
+            method: 'POST',
+            body: JSON.stringify(data),
+        });
+        if (!res.ok) throw new Error('Failed to create chapter');
+        return res.json();
+    },
+
+    // Instructor: upload file (video or pdf) for a chapter
+    async uploadVideo(chapterId: number, file: File, onProgress?: (pct: number) => void) {
+        const formData = new FormData();
+        formData.append('file', file);
+        const token = getAccessToken();
+        return new Promise<any>((resolve, reject) => {
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', `${API_BASE}/api/courses/chapters/${chapterId}/upload-file/`);
+            if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+            xhr.upload.onprogress = (e) => { if (e.lengthComputable && onProgress) onProgress(Math.round((e.loaded / e.total) * 100)); };
+            xhr.onload = () => xhr.status < 300 ? resolve(JSON.parse(xhr.responseText)) : reject(new Error('Upload failed'));
+            xhr.onerror = () => reject(new Error('Upload failed'));
+            xhr.send(formData);
+        });
+    },
+};
+
+// ─── Progress ─────────────────────────────────────────────────────────────────
+export const progressApi = {
+    // Get student's progress for a course
+    async get(courseId: number) {
+        const res = await apiFetch(`/api/courses/${courseId}/my-progress/`);
+        if (!res.ok) return { percentage: 0, completed_chapters: [] };
+        return res.json(); // Returns { percentage, completed_chapters: [id,...], last_chapter_id }
+    },
+
+    // Save video watch position (for resume)
+    async savePosition(chapterId: number, positionSeconds: number) {
+        const res = await apiFetch(`/api/courses/chapters/${chapterId}/save-position/`, {
+            method: 'POST',
+            body: JSON.stringify({ position_seconds: positionSeconds }),
+        });
+        if (!res.ok) return;
+        return res.json();
+    },
+};
+
+// ─── Quizzes ──────────────────────────────────────────────────────────────────
+export const quizApi = {
+    // Get quiz for a chapter
+    async getForChapter(chapterId: number) {
+        const res = await apiFetch(`/api/courses/chapters/${chapterId}/quiz/`);
+        if (!res.ok) return null;
+        return res.json(); // Returns { id, questions: [{id, text, choices:[{id,text}]}] }
+    },
+
+    // Submit quiz answers
+    async submit(quizId: number, answers: { question_id: number; choice_id: number }[]) {
+        const res = await apiFetch(`/api/courses/quizzes/${quizId}/submit/`, {
+            method: 'POST',
+            body: JSON.stringify({ answers }),
+        });
+        if (!res.ok) throw new Error('Quiz submission failed');
+        return res.json(); // Returns { score, passed, correct_answers }
+    },
+};
+
+// ─── Reviews ──────────────────────────────────────────────────────────────────
+export const reviewsApi = {
+    async list(courseId: number) {
+        const res = await apiFetch(`/api/courses/${courseId}/reviews/`);
+        if (!res.ok) return [];
+        return res.json();
+    },
+
+    async create(courseId: number, data: { rating: number; comment: string }) {
+        const res = await apiFetch(`/api/courses/${courseId}/reviews/`, {
+            method: 'POST',
+            body: JSON.stringify(data),
+        });
+        if (!res.ok) {
+            const err = await res.json();
+            throw new Error(err.detail || 'Failed to submit review');
+        }
+        return res.json();
+    },
+};
+
+// ─── Certificate ──────────────────────────────────────────────────────────────
+export const certificateApi = {
+    // Get or generate certificate for a course
+    async get(courseId: number) {
+        const res = await apiFetch(`/api/courses/${courseId}/certificate/`);
+        if (!res.ok) throw new Error('Certificate not yet available. Complete all chapters first.');
+        return res.json(); // Returns { id, issued_at, student_name, course_title, pdf_url }
+    },
+
+    // Download certificate as PDF
+    async downloadPdf(courseId: number): Promise<Blob> {
+        const token = (await import('./api')).getAccessToken();
+        const res = await fetch(`${import.meta.env.VITE_API_URL || 'https://golden-backend-pcc1.onrender.com'}/api/courses/${courseId}/certificate/pdf/`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!res.ok) throw new Error('PDF generation failed');
+        return res.blob();
+    },
+
+    // Verify certificate by code (public endpoint)
+    async verify(code: string) {
+        const res = await fetch(`${import.meta.env.VITE_API_URL || 'https://golden-backend-pcc1.onrender.com'}/api/courses/certificates/verify/${code}/`);
+        if (!res.ok) throw new Error('Invalid certificate code');
+        return res.json();
+    },
+};
+
+// ─── Notes (Personal student notes) ───────────────────────────────────────────
+export const notesApi = {
+    async list(courseId: number) {
+        const res = await apiFetch(`/api/courses/${courseId}/notes/`);
+        if (!res.ok) return [];
+        return res.json();
+    },
+
+    async save(courseId: number, chapterId: number, content: string) {
+        const res = await apiFetch(`/api/courses/${courseId}/notes/`, {
+            method: 'POST',
+            body: JSON.stringify({ chapter: chapterId, content }),
+        });
+        if (!res.ok) throw new Error('Failed to save note');
+        return res.json();
+    },
+
+    async update(noteId: number, content: string) {
+        const res = await apiFetch(`/api/courses/notes/${noteId}/`, {
+            method: 'PATCH',
+            body: JSON.stringify({ content }),
+        });
+        if (!res.ok) throw new Error('Failed to update note');
+        return res.json();
+    },
+};

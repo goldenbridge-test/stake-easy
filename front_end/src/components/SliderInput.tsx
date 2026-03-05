@@ -39,9 +39,10 @@ export const SliderInput = ({
   };
 
   const handleBlur = () => {
-    if (value < 0) {
+    const numValue = typeof value === "number" ? value : Number(value);
+    if (numValue < 0) {
       onChange(0);
-    } else if (value > maxValue) {
+    } else if (numValue > maxValue) {
       onChange(maxValue);
     }
   };

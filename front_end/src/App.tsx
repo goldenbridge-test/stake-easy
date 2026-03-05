@@ -19,6 +19,10 @@ import AcademyCatalog from './components/academy/AcademyCatalog';
 import MyLearning from './components/academy/MyLearning';
 import CourseDetails from './components/academy/CourseDetails';
 import CoachingPrograms from './components/academy/CoachingPrograms';
+import CoursePlayer from './components/academy/CoursePlayer';
+import CourseCertificate from './components/academy/CourseCertificate';
+import CourseUploadForm from './components/academy/CourseUploadForm';
+import InstructorDashboard from './components/academy/InstructorDashboard';
 
 // On crée un composant pour la Landing Page complète pour garder le code propre
 const LandingPage = () => (
@@ -58,7 +62,12 @@ function App() {
             <Route path="/academy/catalog" element={<AcademyCatalog />} />
             <Route path="/academy/my-learning" element={<MyLearning />} />
             <Route path="/academy/course/:id" element={<CourseDetails />} />
+            <Route path="/academy/course/:id/player" element={<CoursePlayer />} />
+            <Route path="/academy/course/:id/player/:chapterId" element={<CoursePlayer />} />
+            <Route path="/academy/course/:id/certificate" element={<CourseCertificate />} />
+            <Route path="/academy/course/:id/upload" element={<CourseUploadForm />} />
             <Route path="/academy/coaching" element={<CoachingPrograms />} />
+            <Route path="/instructor" element={<InstructorDashboard />} />
           </Routes>
         </div>
       </Router>

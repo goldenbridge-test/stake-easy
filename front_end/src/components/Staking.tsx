@@ -102,7 +102,9 @@ const Staking = () => {
       balance: parseFloat(balances[token.symbol] || "0"),
     }));
     setTokens(updatedTokens);
-    setSelectedToken(updatedTokens[0]);
+    if (updatedTokens.length > 0) {
+      setSelectedToken(updatedTokens[0]);
+    }
 
     // 3. Charger l'historique des événements
     const events = await getStakingEvents();
@@ -229,9 +231,8 @@ const Staking = () => {
                             </div>
                           </div>
                           <ChevronDown
-                            className={`w-5 h-5 text-gray-400 group-hover:text-gold transition ${
-                              isDropdownOpen ? "rotate-180" : ""
-                            }`}
+                            className={`w-5 h-5 text-gray-400 group-hover:text-gold transition ${isDropdownOpen ? "rotate-180" : ""
+                              }`}
                           />
                         </button>
 
@@ -490,11 +491,10 @@ const Staking = () => {
                       >
                         <td className="p-4">
                           <span
-                            className={`px-3 py-1 rounded-full text-xs font-bold ${
-                              item.action === "Staked"
+                            className={`px-3 py-1 rounded-full text-xs font-bold ${item.action === "Staked"
                                 ? "bg-blue-100 text-blue-700"
                                 : "bg-orange-100 text-orange-700"
-                            }`}
+                              }`}
                           >
                             {item.action}
                           </span>

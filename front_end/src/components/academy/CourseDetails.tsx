@@ -1,5 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
+import Navbar from "../../components/Navbar";
+import Footer from "../../components/Footer";
+import { coursesApi, enrollmentsApi, progressApi, getUser } from "../../services/api";
+import CoachingSubscribe from "./CoachingSubscribe";
+import CourseReviews from "./CourseReviews";
 import {
     Play,
     Clock,
@@ -11,316 +16,372 @@ import {
     ArrowLeft,
     ShoppingBag,
     Star,
-    Users
+    Users,
+    Target,
+    Settings
 } from "lucide-react";
-import Navbar from "../../components/Navbar";
-import Footer from "../../components/Footer";
-import { coursesApi, enrollmentsApi } from "../../services/api";
 
 const CourseDetails = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
     const [course, setCourse] = useState<any>(null);
     const [loading, setLoading] = useState(true);
-    const [enrolling, setEnrolling] = useState(false);
+    const [isEnrolled, setIsEnrolled] = useState(false);
     const [error, setError] = useState("");
-    const [activeTab, setActiveTab] = useState("overview");
+    const [showCoachingModal, setShowCoachingModal] = useState(false);
+    const [courseProgress, setCourseProgress] = useState<number>(0);
+    const currentUser = getUser();
 
     useEffect(() => {
         const fetchCourse = async () => {
             try {
-                if (!id) return;
-                const data = await coursesApi.get(parseInt(id));
-                setCourse(data);
+                if (id) {
+                    const data = await coursesApi.get(parseInt(id));
+                    setCourse(data);
+
+                    // Check if enrolled
+                    try {
+                        const userCourses = await enrollmentsApi.list();
+                        const enrolled = userCourses.some((c: any) => c.id === parseInt(id));
+                        setIsEnrolled(enrolled);
+                        if (enrolled) {
+                            const prog = await progressApi.get(parseInt(id));
+                            setCourseProgress(prog.percentage || 0);
+                        }
+                    } catch (err) {
+                        console.error("Error checking enrollment:", err);
+                    }
+                }
             } catch (err: any) {
-                setError("Impossible de charger les détails du cours.");
-                console.error(err);
+                setError("Failed to load course details");
             } finally {
                 setLoading(false);
             }
         };
+
         fetchCourse();
     }, [id]);
 
     const handleEnroll = async () => {
-        try {
-            setEnrolling(true);
-            setError("");
+        if (!currentUser) {
+            navigate("/login");
+            return;
+        }
 
-            if (course.is_free || course.price === 0) {
-                await enrollmentsApi.enroll(course.id);
-                // On redirige vers "My Learning" après inscription réussie
-                navigate("/academy/my-learning");
-            } else {
-                // Pour les cours payants, on simule ou on prépare le paiement Stripe
-                alert("Ce cours est payant. L'intégration du paiement Stripe arrive bientôt !");
-            }
+        try {
+            await enrollmentsApi.enroll(parseInt(id!));
+            setIsEnrolled(true);
         } catch (err: any) {
-            setError(err.message || "L'inscription a échoué.");
-        } finally {
-            setEnrolling(false);
+            alert("Error enrolling in course");
         }
     };
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-gray-50 flex flex-col">
+            <div className="bg-primary min-h-screen flex items-center justify-center">
                 <Navbar />
-                <div className="flex-grow flex items-center justify-center">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gold"></div>
+                <div className="text-gold flex flex-col items-center gap-4">
+                    <div className="w-12 h-12 border-4 border-gold border-t-transparent rounded-full animate-spin"></div>
+                    <span className="font-bold tracking-widest text-sm uppercase">Chargement...</span>
                 </div>
-                <Footer />
             </div>
         );
     }
 
     if (error || !course) {
         return (
-            <div className="min-h-screen bg-gray-50 flex flex-col">
+            <div className="bg-primary min-h-screen">
                 <Navbar />
-                <div className="flex-grow flex flex-col items-center justify-center p-6 text-center">
-                    <div className="bg-red-50 text-red-500 p-6 rounded-2xl max-w-md">
-                        <h2 className="text-xl font-bold mb-2">Oups !</h2>
-                        <p>{error || "Cours introuvable."}</p>
-                        <Link to="/academy/catalog" className="mt-4 inline-block bg-primary text-white px-6 py-2 rounded-lg font-bold">
-                            Retour au catalogue
-                        </Link>
-                    </div>
+                <div className="max-w-7xl mx-auto px-4 pt-32 pb-20 text-center">
+                    <h2 className="text-2xl font-heading font-bold text-white mb-4">Oups !</h2>
+                    <p className="text-gray-400 mb-8">{error || "Cours non trouvé."}</p>
+                    <Link to="/academy/catalog" className="bg-gold text-primary font-bold px-8 py-3 rounded-xl hover:bg-gold-hover transition">
+                        Retour au catalogue
+                    </Link>
                 </div>
                 <Footer />
             </div>
         );
     }
 
+    // Check if current user is the instructor of this course
+    const isOwner = currentUser?.id === course.instructor_id || currentUser?.role === 'admin';
+
     return (
-        <div className="bg-white min-h-screen font-body text-dark flex flex-col">
+        <div className="bg-primary min-h-screen font-body text-white">
             <Navbar />
 
-            <main className="flex-grow pt-16">
-                {/* HEADER SECTION - Premium Dark Background */}
-                <section className="bg-primary text-white py-12 px-6">
-                    <div className="max-w-7xl mx-auto">
-                        <Link to="/academy/catalog" className="inline-flex items-center text-blue-200 hover:text-white transition gap-2 mb-6 text-sm font-medium">
-                            <ArrowLeft className="w-4 h-4" /> Retour au catalogue
-                        </Link>
+            {/* Header / Hero */}
+            <div className="relative pt-32 pb-20 overflow-hidden">
+                <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_30%_20%,rgba(212,175,55,0.05)_0%,transparent_50%)]"></div>
 
-                        <div className="grid lg:grid-cols-3 gap-12 items-start">
-                            <div className="lg:col-span-2 space-y-6">
-                                <div className="flex flex-wrap gap-2">
-                                    <span className="bg-gold/20 text-gold text-xs font-bold px-3 py-1 rounded-full border border-gold/30 uppercase tracking-wider">
-                                        {course.category_name || "Academy"}
-                                    </span>
-                                    <span className="bg-white/10 text-blue-100 text-xs font-bold px-3 py-1 rounded-full border border-white/10">
-                                        {course.level || "Tous niveaux"}
-                                    </span>
-                                </div>
+                <div className="max-w-7xl mx-auto px-4 relative z-10">
+                    <Link to="/academy/catalog" className="inline-flex items-center gap-2 text-gray-400 hover:text-gold transition mb-8 group">
+                        <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition" />
+                        <span>Retour au catalogue</span>
+                    </Link>
 
-                                <h1 className="text-4xl md:text-5xl font-heading font-bold leading-tight">
-                                    {course.title}
-                                </h1>
-
-                                <p className="text-blue-100 text-lg max-w-2xl leading-relaxed">
-                                    {course.description || "Master the foundations of blockchain technology and decentralized finance with our expert-led curriculum."}
-                                </p>
-
-                                <div className="flex flex-wrap items-center gap-6 text-sm text-blue-100/80">
-                                    <div className="flex items-center gap-1.5">
-                                        <Star className="w-4 h-4 text-gold fill-gold" />
-                                        <span className="font-bold text-white">{course.average_rating || "4.8"}</span>
-                                        <span>({course.reviews_count || "120"} avis)</span>
-                                    </div>
-                                    <div className="flex items-center gap-1.5">
-                                        <Users className="w-4 h-4" />
-                                        <span>{course.students_count || "1,240"} étudiants</span>
-                                    </div>
-                                    <div className="flex items-center gap-1.5">
-                                        <Clock className="w-4 h-4" />
-                                        <span>{course.duration_hours || "12"}h de contenu</span>
-                                    </div>
-                                </div>
-
-                                <div className="flex items-center gap-3 pt-2">
-                                    <div className="w-10 h-10 rounded-full bg-gold/20 flex items-center justify-center font-bold text-gold">
-                                        {course.instructor_name?.charAt(0) || "I"}
-                                    </div>
-                                    <div>
-                                        <p className="text-xs text-blue-200">Instructeur</p>
-                                        <p className="text-sm font-bold">{course.instructor_name || "Expert Academy"}</p>
-                                    </div>
+                    <div className="grid lg:grid-cols-2 gap-12 items-center">
+                        <div>
+                            <div className="flex items-center gap-3 mb-6">
+                                <span className="bg-gold/10 text-gold text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-widest border border-gold/20">
+                                    {course.category || "Formation"}
+                                </span>
+                                <div className="flex items-center gap-1 text-gold">
+                                    <Star className="w-4 h-4 fill-gold" />
+                                    <span className="text-sm font-bold">{course.rating || "4.9"}</span>
                                 </div>
                             </div>
 
-                            {/* ENROLL CARD */}
-                            <div className="bg-white rounded-2xl shadow-2xl p-6 border border-gray-100 text-dark relative lg:-mb-32 z-20">
-                                <div className="aspect-video rounded-xl overflow-hidden mb-6 bg-gray-100">
+                            <h1 className="text-4xl md:text-5xl lg:text-6xl font-heading font-bold mb-6 leading-tight">
+                                {course.title}
+                            </h1>
+
+                            <p className="text-xl text-gray-400 mb-8 leading-relaxed max-w-xl">
+                                {course.description}
+                            </p>
+
+                            <div className="flex flex-wrap gap-6 mb-10">
+                                <div className="flex items-center gap-2 text-gray-400">
+                                    <Users className="w-5 h-5 text-gold" />
+                                    <span className="text-sm font-medium">{course.enrolled_count || 120} Étudiants</span>
+                                </div>
+                                <div className="flex items-center gap-2 text-gray-400">
+                                    <Clock className="w-5 h-5 text-gold" />
+                                    <span className="text-sm font-medium">{course.duration || "8h 30min"}</span>
+                                </div>
+                                <div className="flex items-center gap-2 text-gray-400">
+                                    <BookOpen className="w-5 h-5 text-gold" />
+                                    <span className="text-sm font-medium">{course.lessons_count || 24} Leçons</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="relative">
+                            <div className="aspect-video rounded-3xl overflow-hidden border border-white/10 shadow-2xl relative group">
+                                <img
+                                    src={course.image_url || "/course-placeholder.jpg"}
+                                    alt={course.title}
+                                    className="w-full h-full object-cover"
+                                />
+                                <div className="absolute inset-0 bg-primary/40 flex items-center justify-center group-hover:bg-primary/20 transition">
+                                    <button className="w-20 h-20 bg-gold text-primary rounded-full flex items-center justify-center shadow-xl shadow-gold/20 hover:scale-110 transition">
+                                        <Play className="w-8 h-8 fill-primary ml-1" />
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Floating Card */}
+                            <div className="absolute -bottom-10 -right-6 lg:-right-10 bg-white rounded-3xl p-8 text-primary shadow-2xl max-w-sm hidden sm:block">
+                                <div className="text-3xl font-heading font-bold mb-6">
+                                    {course.is_free ? "Gratuit" : `${course.price} USDT`}
+                                </div>
+
+                                {isEnrolled ? (
+                                    <div className="space-y-3">
+                                        {courseProgress > 0 && (
+                                            <div>
+                                                <div className="flex justify-between text-xs mb-1.5">
+                                                    <span className="text-gray-500 font-medium">Progression</span>
+                                                    <span className="text-gold font-bold">{courseProgress}%</span>
+                                                </div>
+                                                <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                                                    <div className="h-full bg-gold rounded-full transition-all" style={{ width: `${courseProgress}%` }} />
+                                                </div>
+                                            </div>
+                                        )}
+                                        <Link to={`/academy/course/${id}/player`}
+                                            className="w-full bg-gold text-primary font-bold py-4 rounded-2xl flex items-center justify-center gap-3 shadow-lg shadow-gold/20 hover:bg-gold-hover transition">
+                                            <Play className="w-5 h-5 fill-primary" />
+                                            {courseProgress > 0 ? "Reprendre le cours" : "Commencer le cours"}
+                                        </Link>
+                                        {courseProgress === 100 && (
+                                            <Link to={`/academy/course/${id}/certificate`}
+                                                className="w-full border border-gold/30 text-gold font-bold py-3 rounded-2xl flex items-center justify-center gap-2 hover:bg-gold/5 transition text-sm">
+                                                <Award className="w-4 h-4" /> Voir mon certificat
+                                            </Link>
+                                        )}
+                                    </div>
+                                ) : (
+                                    <button
+                                        onClick={handleEnroll}
+                                        className="w-full bg-primary text-white font-bold py-4 rounded-2xl flex items-center justify-center gap-3 hover:bg-primary-dark transition shadow-lg shadow-primary/20"
+                                    >
+                                        <ShoppingBag className="w-6 h-6" /> Commencer maintenant
+                                    </button>
+                                )}
+
+                                {isOwner && (
+                                    <Link to={`/academy/course/${id}/upload`}
+                                        className="w-full border border-white/10 text-gray-400 font-bold py-3 rounded-2xl flex items-center justify-center gap-2 hover:border-gold/30 hover:text-gold transition text-sm">
+                                        <Settings className="w-4 h-4" /> Gérer les vidéos
+                                    </Link>
+                                )}
+
+                                <p className="text-center text-xs text-gray-400 mt-4 leading-relaxed">
+                                    Accès à vie • Certificat d'achèvement • Support 24/7
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Content Tabs / Body */}
+            <div className="max-w-7xl mx-auto px-4 pb-32">
+                <div className="grid lg:grid-cols-3 gap-12">
+                    <div className="lg:col-span-2 space-y-12">
+                        {/* Curriculum / Modules */}
+                        <section>
+                            <h2 className="text-2xl font-heading font-bold mb-8 flex items-center gap-3">
+                                <span className="bg-gold/20 p-2 rounded-xl text-gold">
+                                    <BookOpen className="w-6 h-6" />
+                                </span>
+                                Programme de la formation
+                            </h2>
+
+                            <div className="space-y-4">
+                                {(course.modules || []).map((module: any, idx: number) => (
+                                    <div key={idx} className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden transition hover:border-gold/30">
+                                        <button className="w-full p-6 flex items-center justify-between text-left group">
+                                            <div className="flex items-center gap-4">
+                                                <span className="text-gold font-bold">{String(idx + 1).padStart(2, '0')}</span>
+                                                <h3 className="font-bold group-hover:text-gold transition">{module.title}</h3>
+                                            </div>
+                                            <div className="flex items-center gap-4">
+                                                <span className="text-xs text-gray-500 uppercase font-bold tracking-widest">{module.lessons?.length || 0} Leçons</span>
+                                                <ChevronRight className="w-5 h-5 text-gray-600 group-hover:text-gold transition" />
+                                            </div>
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        </section>
+
+                        {/* Coaching Section */}
+                        <section className="bg-gold/5 border border-gold/20 rounded-3xl p-8 relative overflow-hidden">
+                            <div className="absolute top-0 right-0 w-64 h-64 bg-gold/5 blur-3xl -mr-32 -mt-32 rounded-full"></div>
+
+                            <div className="relative z-10 flex flex-col md:flex-row items-center gap-8 justify-between">
+                                <div className="flex-grow">
+                                    <div className="flex items-center gap-3 mb-4">
+                                        <div className="w-12 h-12 bg-gold/10 rounded-2xl flex items-center justify-center text-gold">
+                                            <Target className="w-7 h-7" />
+                                        </div>
+                                        <h2 className="text-2xl font-heading font-bold text-white">Coaching Privé</h2>
+                                    </div>
+                                    <p className="text-gray-400 leading-relaxed mb-6 max-w-lg">
+                                        Boostez votre apprentissage avec des sessions privées en direct avec l'instructeur {course.instructor_name}.
+                                        Questions-réponses, revue de projets et conseils personnalisés.
+                                    </p>
+
+                                    {isOwner && (
+                                        <div className="flex items-center gap-4 mb-4">
+                                            <span className="text-gold font-bold flex items-center gap-2">
+                                                <Settings className="w-4 h-4" /> Mode Instructeur
+                                            </span>
+                                            <button className="text-xs underline text-gray-400 hover:text-gold">Configurer le prix/sessions</button>
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="shrink-0 w-full md:w-auto">
+                                    {isOwner ? (
+                                        <button className="w-full md:w-auto bg-white/10 text-white font-bold px-8 py-4 rounded-2xl border border-white/20 hover:bg-white/20 transition">
+                                            Gérer mes Coachings
+                                        </button>
+                                    ) : (
+                                        <button
+                                            onClick={() => setShowCoachingModal(true)}
+                                            className="w-full md:w-auto bg-gold text-primary font-bold px-10 py-4 rounded-2xl hover:bg-gold-hover transition shadow-xl shadow-gold/20 flex items-center justify-center gap-2"
+                                        >
+                                            Réserver un Coaching
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+                        </section>
+                    </div>
+
+                    {/* Instructor & Stats */}
+                    <div className="space-y-8">
+                        <section className="bg-white/5 border border-white/10 rounded-3xl p-8">
+                            <h3 className="text-xl font-heading font-bold mb-8">Votre Instructeur</h3>
+
+                            <div className="flex items-center gap-4 mb-6">
+                                <div className="w-16 h-16 rounded-2xl overflow-hidden border-2 border-gold/30">
                                     <img
-                                        src={course.thumbnail || "https://via.placeholder.com/400x225?text=Course+Preview"}
-                                        alt={course.title}
+                                        src={course.instructor_avatar || "/avatar-placeholder.jpg"}
+                                        alt={course.instructor_name}
                                         className="w-full h-full object-cover"
                                     />
                                 </div>
-
-                                <div className="flex items-center justify-between mb-6">
-                                    <div>
-                                        <span className="text-gray-400 text-sm line-through block">69.99€</span>
-                                        <span className="text-3xl font-heading font-bold text-primary">
-                                            {course.is_free || course.price === 0 ? "GRATUIT" : `${course.price}€`}
-                                        </span>
-                                    </div>
-                                    {course.is_free && (
-                                        <span className="bg-green-100 text-green-700 text-[10px] font-bold px-2 py-1 rounded">OFFRE LIMITÉE</span>
-                                    )}
-                                </div>
-
-                                <button
-                                    onClick={handleEnroll}
-                                    disabled={enrolling}
-                                    className="w-full bg-gold hover:bg-gold-hover text-primary font-bold py-4 rounded-xl shadow-lg shadow-gold/20 transition transform hover:-translate-y-1 flex items-center justify-center gap-2 mb-4 disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                    {enrolling ? (
-                                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary"></div>
-                                    ) : (
-                                        <>
-                                            <Play className="w-5 h-5 fill-current" /> S'inscrire maintenant
-                                        </>
-                                    )}
-                                </button>
-
-                                <p className="text-[11px] text-center text-gray-400 mb-6">
-                                    Garantie satisfait ou remboursé de 30 jours
-                                </p>
-
-                                <div className="space-y-4">
-                                    <p className="font-bold text-xs uppercase tracking-widest text-gray-400">Ce cours comprend :</p>
-                                    <ul className="space-y-3">
-                                        {[
-                                            { icon: Play, text: "Vidéos à la demande" },
-                                            { icon: BookOpen, text: "Ressources téléchargeables" },
-                                            { icon: Clock, text: "Accès illimité" },
-                                            { icon: Award, text: "Certificat de fin de formation" },
-                                        ].map((item, idx) => (
-                                            <li key={idx} className="flex items-center gap-3 text-sm text-gray-600">
-                                                <item.icon className="w-4 h-4 text-gold" />
-                                                {item.text}
-                                            </li>
-                                        ))}
-                                    </ul>
+                                <div>
+                                    <h4 className="font-bold text-lg">{course.instructor_name || "Expert Coaching"}</h4>
+                                    <p className="text-sm text-gold font-medium">Expert Lead Developer</p>
                                 </div>
                             </div>
-                        </div>
-                    </div>
-                </section>
 
-                {/* CONTENT TABS */}
-                <section className="py-20 px-6 bg-gray-50/50">
-                    <div className="max-w-7xl mx-auto grid lg:grid-cols-3 gap-12">
-                        <div className="lg:col-span-2">
-                            <div className="border-b border-gray-200 mb-8 flex gap-8">
-                                {["overview", "curriculum", "instructor"].map((tab) => (
-                                    <button
-                                        key={tab}
-                                        onClick={() => setActiveTab(tab)}
-                                        className={`pb-4 text-sm font-bold uppercase tracking-wider transition relative ${activeTab === tab ? "text-primary" : "text-gray-400 hover:text-gray-600"
-                                            }`}
-                                    >
-                                        {tab}
-                                        {activeTab === tab && (
-                                            <div className="absolute bottom-0 left-0 w-full h-0.5 bg-gold"></div>
-                                        )}
-                                    </button>
+                            <p className="text-sm text-gray-400 leading-relaxed mb-8">
+                                Passionné par la transmission du savoir avec plus de 10 ans d'expérience dans l'écosystème web et blockchain.
+                            </p>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="bg-primary-dark rounded-2xl p-4 text-center">
+                                    <div className="text-gold font-bold text-lg">15k+</div>
+                                    <div className="text-[10px] text-gray-500 uppercase font-black">Élèves</div>
+                                </div>
+                                <div className="bg-primary-dark rounded-2xl p-4 text-center">
+                                    <div className="text-gold font-bold text-lg">48</div>
+                                    <div className="text-[10px] text-gray-500 uppercase font-black">Cours</div>
+                                </div>
+                            </div>
+                        </section>
+
+                        <section className="bg-gold/10 border border-gold/20 rounded-3xl p-8">
+                            <h3 className="text-xl font-heading font-bold mb-6 text-gold">Ce que vous obtiendrez</h3>
+                            <ul className="space-y-4">
+                                {[
+                                    "Certificat de fin de formation",
+                                    "Accès illimité à vie",
+                                    "Supports de cours téléchargeables",
+                                    "Accès à la communauté privée",
+                                    "Mises à jour régulières"
+                                ].map((item, idx) => (
+                                    <li key={idx} className="flex items-start gap-3 text-sm text-gray-300">
+                                        <CheckCircle2 className="w-5 h-5 text-gold shrink-0 mt-0.5" />
+                                        <span>{item}</span>
+                                    </li>
                                 ))}
-                            </div>
-
-                            {activeTab === "overview" && (
-                                <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
-                                    <div className="bg-white p-8 rounded-2xl border border-gray-100 shadow-sm">
-                                        <h3 className="text-xl font-bold mb-6 flex items-center gap-2">
-                                            Ce que vous allez apprendre
-                                        </h3>
-                                        <div className="grid md:grid-cols-2 gap-4">
-                                            {[
-                                                "Maîtriser les fondamentaux de la Blockchain",
-                                                "Comprendre le fonctionnement des Smart Contracts",
-                                                "Analyser les protocoles DeFi les plus sûrs",
-                                                "Gérer votre propre wallet numérique",
-                                                "Sécuriser vos actifs crypto",
-                                                "Optimiser vos rendements en staking"
-                                            ].map((item, idx) => (
-                                                <div key={idx} className="flex items-start gap-3 text-sm text-gray-600">
-                                                    <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
-                                                    <span>{item}</span>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-
-                                    <div className="prose prose-blue max-w-none text-gray-600">
-                                        <h3 className="text-xl font-bold text-dark">Description</h3>
-                                        <p>
-                                            {course.description || "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat."}
-                                        </p>
-                                    </div>
-                                </div>
-                            )}
-
-                            {activeTab === "curriculum" && (
-                                <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-500">
-                                    <div className="flex items-center justify-between mb-2">
-                                        <h3 className="text-xl font-bold">Programme du cours</h3>
-                                        <span className="text-sm text-gray-500">
-                                            {course.lessons?.length || 0} leçons • {course.duration_hours || "12"}h
-                                        </span>
-                                    </div>
-
-                                    <div className="space-y-3">
-                                        {course.lessons && course.lessons.length > 0 ? (
-                                            course.lessons.map((lesson: any, idx: number) => (
-                                                <div key={lesson.id} className="bg-white p-4 rounded-xl border border-gray-100 flex items-center justify-between hover:border-gold/30 transition group">
-                                                    <div className="flex items-center gap-4">
-                                                        <div className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center text-xs font-bold text-gray-400 group-hover:bg-gold/10 group-hover:text-gold transition">
-                                                            {idx + 1}
-                                                        </div>
-                                                        <div>
-                                                            <p className="text-sm font-bold text-gray-700">{lesson.title}</p>
-                                                            <p className="text-[10px] text-gray-400 uppercase tracking-widest">{lesson.duration_minutes || "15"} minutes</p>
-                                                        </div>
-                                                    </div>
-                                                    {lesson.is_preview ? (
-                                                        <span className="text-[10px] font-bold text-gold bg-gold/10 px-2 py-1 rounded">APERCU</span>
-                                                    ) : (
-                                                        <Lock className="w-4 h-4 text-gray-200" />
-                                                    )}
-                                                </div>
-                                            ))
-                                        ) : (
-                                            <div className="bg-gray-50 p-8 rounded-xl text-center border border-dashed border-gray-200">
-                                                <p className="text-gray-400 italic">Le programme détaillé est en cours de mise à jour.</p>
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                            )}
-
-                            {activeTab === "instructor" && (
-                                <div className="bg-white p-8 rounded-2xl border border-gray-100 shadow-sm animate-in fade-in slide-in-from-bottom-2 duration-500">
-                                    <div className="flex items-center gap-6 mb-6">
-                                        <div className="w-20 h-20 rounded-full bg-gold/20 flex items-center justify-center text-2xl font-bold text-gold">
-                                            {course.instructor_name?.charAt(0) || "I"}
-                                        </div>
-                                        <div>
-                                            <h4 className="text-xl font-bold text-primary">{course.instructor_name || "Expert Academy"}</h4>
-                                            <p className="text-sm text-gold font-medium">Bockchain Architect & Educator</p>
-                                        </div>
-                                    </div>
-                                    <p className="text-gray-600 text-sm leading-relaxed">
-                                        L'instructeur est un expert reconnu dans le domaine de la blockchain avec plus de 10 ans d'expérience dans le développement Web3 et la finance décentralisée. Il a formé des milliers d'étudiants à travers le monde.
-                                    </p>
-                                </div>
-                            )}
-                        </div>
+                            </ul>
+                        </section>
                     </div>
-                </section>
-            </main>
+                </div>
+            </div>
+
+            {/* Reviews Section */}
+            <div className="border-t border-white/10 py-20">
+                <div className="max-w-4xl mx-auto px-4">
+                    <CourseReviews courseId={parseInt(id!)} />
+                </div>
+            </div>
+
+            {showCoachingModal && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center px-4">
+                    <div className="absolute inset-0 bg-primary/90 backdrop-blur-sm" onClick={() => setShowCoachingModal(false)}></div>
+                    <div className="relative z-10 w-full max-w-lg">
+                        <CoachingSubscribe
+                            instructorId={course.instructor_id}
+                            instructorName={course.instructor_name || "Expert Coaching"}
+                            onCancel={() => setShowCoachingModal(false)}
+                            onSuccess={() => {
+                                setShowCoachingModal(false);
+                                navigate("/academy/coaching");
+                            }}
+                        />
+                    </div>
+                </div>
+            )}
 
             <Footer />
         </div>

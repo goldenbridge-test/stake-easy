@@ -17,7 +17,7 @@ import networkMapping from "../chain-info/map.json"
 export const useStakeTokens = (tokenAddress: string) => {
   const { chainId } = useEthers()
   const { abi } = TokenFarm
-  const tokenFarmContractAddress = chainId ? networkMapping[String(chainId)]["TokenFarm"][0] : constants.AddressZero
+  const tokenFarmContractAddress = chainId ? (networkMapping as any)[String(chainId)]["TokenFarm"][0] : constants.AddressZero
 
   const tokenFarmInterface = new utils.Interface(abi)
 
@@ -27,22 +27,22 @@ export const useStakeTokens = (tokenAddress: string) => {
   )
 
   const { send: stakeTokensSend, state: stakeTokensState } =
-    useContractFunction(tokenFarmContract, "stakeTokens", {
+    useContractFunction(tokenFarmContract as any, "stakeTokens", {
       transactionName: "Stake tokens",
     })
-  
+
   const erc20Interface = new utils.Interface(Erc20.abi)
 
   const tokenContract = new Contract(tokenAddress, erc20Interface)
 
   const { send: approveErc20Send, state: approveErc20State } =
-    useContractFunction(tokenContract, "approve", {
+    useContractFunction(tokenContract as any, "approve", {
       transactionName: "Approve ERC20 transfer",
     })
-    
+
   const [amountToStake, setAmountToStake] = useState("0")
 
-  useEffect(() => { 
+  useEffect(() => {
     if (approveErc20State.status === "Success") {
       stakeTokensSend(amountToStake, tokenAddress)
     }
