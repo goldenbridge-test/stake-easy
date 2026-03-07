@@ -132,20 +132,16 @@ const AdminDashboard = () => {
   }, [account, isConnected, user]);
 
   const fetchDashboardData = async () => {
-    try {
-      const [stats, coursesData, categoriesData, usersData] = await Promise.all([
-        analyticsApi.adminSummary(),
-        coursesApi.list(),
-        coursesApi.categories(),
-        usersApi.list()
-      ]);
-      setPlatformStats(stats);
-      setCourses(coursesData.results || coursesData);
-      setCategories(categoriesData);
-      setUsers(usersData.results || usersData);
-    } catch (err) {
-      console.error("Failed to fetch admin data", err);
-    }
+    const [stats, coursesData, categoriesData, usersData] = await Promise.all([
+      analyticsApi.adminSummary().catch(() => null),
+      coursesApi.list().catch(() => ({ results: [] })),
+      coursesApi.categories().catch(() => []),
+      usersApi.list().catch(() => ({ results: [] })),
+    ]);
+    if (stats) setPlatformStats(stats);
+    setCourses((coursesData as any).results || coursesData || []);
+    setCategories(categoriesData || []);
+    setUsers((usersData as any).results || usersData || []);
   };
 
 

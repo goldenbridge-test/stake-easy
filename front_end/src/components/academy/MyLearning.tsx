@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import Navbar from "../../components/Navbar";
 import Footer from "../../components/Footer";
 import CourseCard from "../../components/academy/CourseCard";
-import { enrollmentsApi, analyticsApi, getUser } from "../../services/api";
+import { enrollmentsApi, analyticsApi, coursesApi, getUser } from "../../services/api";
 import {
   Trophy,
   Flame,
@@ -15,6 +15,7 @@ import {
 
 const MyLearning = () => {
   const [enrollments, setEnrollments] = useState<any[]>([]);
+  const [myCourses, setMyCourses] = useState<any[]>([]);
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<"learning" | "teaching">("learning");
@@ -24,14 +25,17 @@ const MyLearning = () => {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const [enrolledData, statsData] = await Promise.all([
-          enrollmentsApi.list(),
-          analyticsApi.mySummary(),
+        const isInstructor = currentUser?.role === 'instructor' || currentUser?.role === 'admin';
+        const [enrolledData, statsData, coursesData] = await Promise.all([
+          enrollmentsApi.list().catch(() => []),
+          analyticsApi.mySummary().catch(() => null),
+          isInstructor ? coursesApi.myCourses().catch(() => []) : Promise.resolve([]),
         ]);
-        setEnrollments(enrolledData);
-        setStats(statsData);
+        setEnrollments(enrolledData || []);
+        if (statsData) setStats(statsData);
+        setMyCourses(coursesData.results || coursesData);
 
-        if (currentUser?.role === 'instructor') {
+        if (isInstructor) {
           setActiveTab("teaching");
         }
       } catch (error) {
@@ -194,20 +198,29 @@ const MyLearning = () => {
                 <h2 className="text-2xl font-heading font-bold flex items-center gap-3">
                   <Settings className="w-6 h-6 text-gold" /> Vos Formations
                 </h2>
-                <a href="/admin/dashboard" className="text-sm font-bold text-gold hover:underline">Accéder au Panel Admin</a>
+                <a href="/instructor" className="text-sm font-bold text-gold hover:underline">Gérer mes cours</a>
               </div>
-              <div className="grid gap-4">
-                <div className="p-6 bg-primary-dark rounded-2xl border border-white/5 flex items-center justify-between">
-                  <div>
-                    <h4 className="font-bold text-lg">Introduction à la Blockchain</h4>
-                    <p className="text-xs text-gray-500">254 élèves inscrits</p>
-                  </div>
-                  <div className="flex gap-3">
-                    <button className="text-xs bg-white/10 px-4 py-2 rounded-lg font-bold">Modifier</button>
-                    <button className="text-xs bg-gold text-primary px-4 py-2 rounded-lg font-bold shadow-lg shadow-gold/10">Lier Coaching</button>
-                  </div>
+              {myCourses.length === 0 ? (
+                <div className="text-center py-10">
+                  <p className="text-gray-400 mb-4">Vous n'avez pas encore créé de cours.</p>
+                  <a href="/instructor" className="text-gold font-bold underline">Créer mon premier cours</a>
                 </div>
-              </div>
+              ) : (
+                <div className="grid gap-4">
+                  {myCourses.map((course: any) => (
+                    <div key={course.id} className="p-6 bg-primary-dark rounded-2xl border border-white/5 flex items-center justify-between">
+                      <div>
+                        <h4 className="font-bold text-lg">{course.title}</h4>
+                        <p className="text-xs text-gray-500">{course.students_count || 0} élèves inscrits</p>
+                      </div>
+                      <div className="flex gap-3">
+                        <a href={`/academy/course/${course.id}/upload`} className="text-xs bg-white/10 px-4 py-2 rounded-lg font-bold hover:bg-white/20 transition">Modifier</a>
+                        <a href={`/academy/course/${course.id}`} className="text-xs bg-gold text-primary px-4 py-2 rounded-lg font-bold shadow-lg shadow-gold/10 hover:bg-gold-hover transition">Voir</a>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </section>
           )}
         </div>

@@ -107,15 +107,14 @@ const CourseUploadForm = () => {
                     };
                     if (ch.content_type === 'text') chData.text_content = ch.text_content;
 
-                    const createdCh = await modulesApi.createChapter(createdMod.id, chData);
+                    const createdCh = await modulesApi.createChapter(courseId, createdMod.id, chData);
 
                     if (ch.content_type === 'video' && ch.videoFile) {
-                        await modulesApi.uploadVideo(createdCh.id, ch.videoFile, (pct) => {
+                        await modulesApi.uploadVideo(courseId, createdMod.id, createdCh.id, ch.videoFile, (pct) => {
                             updateChapter(mod.id, ch.id, { uploadPct: pct });
                         });
                     } else if (ch.content_type === 'pdf' && ch.pdfFile) {
-                        // Assuming a similar upload endpoint for PDFs or the same one
-                        await modulesApi.uploadVideo(createdCh.id, ch.pdfFile, (pct) => {
+                        await modulesApi.uploadVideo(courseId, createdMod.id, createdCh.id, ch.pdfFile, (pct) => {
                             updateChapter(mod.id, ch.id, { uploadPct: pct });
                         });
                     }

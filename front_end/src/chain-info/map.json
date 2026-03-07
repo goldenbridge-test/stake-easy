@@ -6,5 +6,13 @@
     "TokenFarm": [
       "0x602C71e4DAC47a042Ee7f46E0aee17F94A3bA0B6"
     ]
+  },
+  "11155111": {
+    "GoldenToken": [
+      "0x4d05A6430C78D66d904dc49BAa5a55137Ed53110"
+    ],
+    "TokenFarm": [
+      "0x4eBF913470E62204e4b1cdf121d6Ed50d85Ba62A"
+    ]
   }
 }

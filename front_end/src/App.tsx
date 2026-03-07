@@ -23,6 +23,7 @@ import CoursePlayer from './components/academy/CoursePlayer';
 import CourseCertificate from './components/academy/CourseCertificate';
 import CourseUploadForm from './components/academy/CourseUploadForm';
 import InstructorDashboard from './components/academy/InstructorDashboard';
+import CertificateVerify from './components/academy/CertificateVerify';
 
 // On crée un composant pour la Landing Page complète pour garder le code propre
 const LandingPage = () => (
@@ -68,6 +69,7 @@ function App() {
             <Route path="/academy/course/:id/upload" element={<CourseUploadForm />} />
             <Route path="/academy/coaching" element={<CoachingPrograms />} />
             <Route path="/instructor" element={<InstructorDashboard />} />
+            <Route path="/verify/:code" element={<CertificateVerify />} />
           </Routes>
         </div>
       </Router>

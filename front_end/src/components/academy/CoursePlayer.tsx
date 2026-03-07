@@ -125,6 +125,7 @@ const CoursePlayer = () => {
     const [modules, setModules] = useState<Module[]>([]);
     const [progress, setProgress] = useState<Progress>({ percentage: 0, completed_chapters: [], last_chapter_id: null });
     const [activeChapter, setActiveChapter] = useState<Chapter | null>(null);
+    const [activeModuleId, setActiveModuleId] = useState<number | null>(null);
     const [videoUrl, setVideoUrl] = useState<string>("");
     const [loading, setLoading] = useState(true);
     const [videoLoading, setVideoLoading] = useState(false);
@@ -163,7 +164,7 @@ const CoursePlayer = () => {
                 if (targetId) {
                     const allChapters = (curriculum.modules || []).flatMap((m: Module) => m.chapters);
                     const ch = allChapters.find((c: Chapter) => c.id === targetId);
-                    if (ch) pickChapter(ch);
+                    if (ch) pickChapter(ch, curriculum.modules || []);
                 }
             } catch (err) {
                 console.error(err);
@@ -174,20 +175,22 @@ const CoursePlayer = () => {
         load();
     }, [courseId]);
 
-    const pickChapter = useCallback(async (chapter: Chapter) => {
+    const pickChapter = useCallback(async (chapter: Chapter, modulesList?: Module[]) => {
+        const mods = modulesList || modules;
+        const mod = mods.find(m => m.chapters.some(c => c.id === chapter.id));
+        const modId = mod?.id || null;
         setActiveChapter(chapter);
+        setActiveModuleId(modId);
         setVideoUrl("");
         setVideoLoading(true);
         setShowQuiz(false);
         setNoteContent("");
 
         try {
-            if (chapter.content_type === 'video') {
-                const { url } = await modulesApi.getVideoUrl(chapter.id);
+            if (chapter.content_type === 'video' && modId) {
+                const { url } = await modulesApi.getVideoUrl(courseId, modId, chapter.id);
                 setVideoUrl(url);
             } else if (chapter.content_type === 'pdf') {
-                // For PDF, we might already have the URL or need to fetch a signed one
-                // For now assuming we fetch or use it directly
                 setVideoUrl(chapter.pdf_url || "");
             }
         } catch {
@@ -195,34 +198,36 @@ const CoursePlayer = () => {
         } finally {
             setVideoLoading(false);
         }
-    }, []);
+    }, [modules, courseId]);
 
     // Auto-save position every 15s
     const handleTimeUpdate = useCallback(() => {
         if (!videoRef.current || !activeChapter) return;
         if (savePositionRef.current) clearTimeout(savePositionRef.current);
         savePositionRef.current = setTimeout(() => {
-            progressApi.savePosition(activeChapter.id, Math.floor(videoRef.current!.currentTime));
+            if (activeModuleId) {
+                progressApi.savePosition(courseId, activeModuleId, activeChapter.id, Math.floor(videoRef.current!.currentTime));
+            }
         }, 15000);
-    }, [activeChapter]);
+    }, [activeChapter, activeModuleId, courseId]);
 
     const handleVideoEnded = useCallback(async () => {
-        if (!activeChapter) return;
+        if (!activeChapter || !activeModuleId) return;
         // Mark complete
         try {
-            await modulesApi.completeChapter(activeChapter.id);
+            await modulesApi.completeChapter(courseId, activeModuleId, activeChapter.id);
             setProgress(prev => ({
                 ...prev,
                 completed_chapters: [...new Set([...prev.completed_chapters, activeChapter.id])],
             }));
             // Check for quiz
             if (activeChapter.has_quiz) {
-                const quiz = await quizApi.getForChapter(activeChapter.id);
+                const quiz = await quizApi.getForChapter(courseId, activeModuleId, activeChapter.id);
                 if (quiz) { setCurrentQuiz(quiz); setShowQuiz(true); return; }
             }
         } catch { /* silent */ }
         goNextChapter();
-    }, [activeChapter, modules]);
+    }, [activeChapter, activeModuleId, courseId, modules]);
 
     const goNextChapter = useCallback(() => {
         const allChapters = modules.flatMap(m => m.chapters);
@@ -448,8 +453,8 @@ const CoursePlayer = () => {
                                 {activeChapter && !progress.completed_chapters.includes(activeChapter.id) && (
                                     <button
                                         onClick={async () => {
-                                            if (!activeChapter) return;
-                                            await modulesApi.completeChapter(activeChapter.id);
+                                            if (!activeChapter || !activeModuleId) return;
+                                            await modulesApi.completeChapter(courseId, activeModuleId, activeChapter.id);
                                             setProgress(prev => ({ ...prev, completed_chapters: [...new Set([...prev.completed_chapters, activeChapter.id])] }));
                                         }}
                                         className="flex items-center gap-2 bg-white/10 border border-white/10 text-xs font-bold px-4 py-2 rounded-xl hover:border-green-500/30 hover:text-green-400 transition">
@@ -458,7 +463,8 @@ const CoursePlayer = () => {
                                 )}
                                 {activeChapter?.has_quiz && (
                                     <button onClick={async () => {
-                                        const quiz = await quizApi.getForChapter(activeChapter.id);
+                                        if (!activeModuleId) return;
+                                        const quiz = await quizApi.getForChapter(courseId, activeModuleId, activeChapter.id);
                                         if (quiz) { setCurrentQuiz(quiz); setShowQuiz(true); }
                                     }}
                                         className="flex items-center gap-2 bg-purple-500/10 border border-purple-500/20 text-purple-300 text-xs font-bold px-4 py-2 rounded-xl hover:bg-purple-500/20 transition">
