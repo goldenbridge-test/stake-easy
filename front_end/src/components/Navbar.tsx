@@ -23,7 +23,7 @@ const Navbar = () => {
   const baseLinks = [
     { name: "Accueil", href: "/" },
     { name: "Academy", href: "/academy" },
-    { name: "Staking", href: "/staking" },
+    { name: "Golden Earn", href: "/earn" },
   ];
 
   // Links for authenticated students

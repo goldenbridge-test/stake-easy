@@ -12,7 +12,10 @@ import CallToAction from './components/CallToAction';
 import Footer from './components/Footer';
 import SignIn from './components/SignIn';
 import SignUp from './components/SignUp';
-import Staking from './components/Staking';
+import EarnHub from './components/earn/EarnHub';
+import GldStaking from './components/earn/GldStaking';
+import StakingDashboard from './components/earn/StakingDashboard';
+import ApiDebug from './components/earn/ApiDebug';
 import AdminDashboard from './components/AdminDashboard';
 import AcademyHome from './components/academy/AcademyHome';
 import AcademyCatalog from './components/academy/AcademyCatalog';
@@ -55,7 +58,10 @@ function App() {
             {/* Route pour l'inscription */}
             <Route path="/signup" element={<SignUp />} />
 
-            <Route path="/staking" element={<Staking />} />
+            <Route path="/earn" element={<EarnHub />} />
+            <Route path="/earn/staking" element={<GldStaking />} />
+            <Route path="/earn/dashboard" element={<StakingDashboard />} />
+            <Route path="/earn/debug" element={<ApiDebug />} />
 
             <Route path="/admin" element={<AdminDashboard />} />
 
