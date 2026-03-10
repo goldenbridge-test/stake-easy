@@ -98,6 +98,32 @@ export const authApi = {
         clearTokens();
         window.location.href = '/';
     },
+
+    async requestPasswordReset(email: string) {
+        const res = await fetch(`${API_BASE}/api/accounts/password_reset/`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email }),
+        });
+        if (!res.ok) {
+            const err = await res.json();
+            throw new Error(err.detail || 'Email not found or error occurred');
+        }
+        return res.json();
+    },
+
+    async confirmPasswordReset(token: string, password: any) {
+        const res = await fetch(`${API_BASE}/api/accounts/password_reset/confirm/`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token, password }),
+        });
+        if (!res.ok) {
+            const err = await res.json();
+            throw new Error(err.detail || 'Invalid code or error occurred');
+        }
+        return res.json();
+    },
 };
 
 // ─── Courses ──────────────────────────────────────────────────────────────────

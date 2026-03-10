@@ -23,6 +23,8 @@ import CoursePlayer from './components/academy/CoursePlayer';
 import CourseCertificate from './components/academy/CourseCertificate';
 import CourseUploadForm from './components/academy/CourseUploadForm';
 import InstructorDashboard from './components/academy/InstructorDashboard';
+import ForgotPassword from './components/ForgotPassword';
+import ResetPassword from './components/ResetPassword';
 
 // On crée un composant pour la Landing Page complète pour garder le code propre
 const LandingPage = () => (
@@ -55,6 +57,9 @@ function App() {
             <Route path="/signup" element={<SignUp />} />
 
             <Route path="/staking" element={<Staking />} />
+
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
 
             <Route path="/admin" element={<AdminDashboard />} />
 
