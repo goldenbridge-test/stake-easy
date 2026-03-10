@@ -1,6 +1,6 @@
 // Central API service for Golden Backend
 // Base URL from environment variable
-const API_BASE = import.meta.env.VITE_API_URL || 'https://golden-backend-pcc1.onrender.com';
+const API_BASE = (import.meta as any).env?.VITE_API_URL || 'https://golden-backend-pcc1.onrender.com';
 
 // ─── Token helpers ────────────────────────────────────────────────────────────
 export const getAccessToken = () => localStorage.getItem('access_token');
@@ -422,8 +422,8 @@ export const certificateApi = {
 
     // Download certificate as PDF
     async downloadPdf(courseId: number): Promise<Blob> {
-        const token = (await import('./api')).getAccessToken();
-        const res = await fetch(`${import.meta.env.VITE_API_URL || 'https://golden-backend-pcc1.onrender.com'}/api/courses/${courseId}/certificate/pdf/`, {
+        const token = getAccessToken();
+        const res = await fetch(`${API_BASE}/api/courses/${courseId}/certificate/pdf/`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         if (!res.ok) throw new Error('PDF generation failed');
@@ -432,7 +432,7 @@ export const certificateApi = {
 
     // Verify certificate by code (public endpoint)
     async verify(code: string) {
-        const res = await fetch(`${import.meta.env.VITE_API_URL || 'https://golden-backend-pcc1.onrender.com'}/api/courses/certificates/verify/${code}/`);
+        const res = await fetch(`${API_BASE}/api/courses/certificates/verify/${code}/`);
         if (!res.ok) throw new Error('Invalid certificate code');
         return res.json();
     },
@@ -461,6 +461,45 @@ export const notesApi = {
             body: JSON.stringify({ content }),
         });
         if (!res.ok) throw new Error('Failed to update note');
+        return res.json();
+    },
+};
+
+// ─── Instructor Applications ──────────────────────────────────────────────────
+export const instructorApplicationsApi = {
+    async submit(data: { youtube_channel: string; other_platforms: string }) {
+        const res = await apiFetch('/api/accounts/instructor-applications/', {
+            method: 'POST',
+            body: JSON.stringify(data),
+        });
+        if (!res.ok) {
+            const err = await res.json();
+            throw new Error(err.detail || 'Failed to submit application');
+        }
+        return res.json();
+    },
+
+    async list() {
+        const res = await apiFetch('/api/accounts/instructor-applications/');
+        if (!res.ok) throw new Error('Failed to fetch applications');
+        return res.json();
+    },
+
+    async approve(id: number, notes: string) {
+        const res = await apiFetch(`/api/accounts/instructor-applications/${id}/approve/`, {
+            method: 'POST',
+            body: JSON.stringify({ admin_notes: notes }),
+        });
+        if (!res.ok) throw new Error('Failed to approve application');
+        return res.json();
+    },
+
+    async reject(id: number, notes: string) {
+        const res = await apiFetch(`/api/accounts/instructor-applications/${id}/reject/`, {
+            method: 'POST',
+            body: JSON.stringify({ admin_notes: notes }),
+        });
+        if (!res.ok) throw new Error('Failed to reject application');
         return res.json();
     },
 };

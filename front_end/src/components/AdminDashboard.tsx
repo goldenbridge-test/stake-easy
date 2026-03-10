@@ -20,6 +20,7 @@ import {
   ChevronRight,
   Settings,
   Target,
+  ClipboardList,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import Navbar from "./Navbar";
@@ -27,6 +28,7 @@ import Footer from "./Footer";
 import { useWeb3 } from "../hooks/useWeb3";
 import { useAuth } from "../contexts/AuthContext";
 import { analyticsApi, coursesApi, usersApi, getUser } from "../services/api";
+import AdminInstructorApplications from "./AdminInstructorApplications";
 
 
 // ==========================================
@@ -37,15 +39,6 @@ type AllowedToken = {
   id: number;
   address: string;
   priceFeed: string;
-};
-
-type Course = {
-  id: number;
-  title: string;
-  category_name: string;
-  level: string;
-  status: string;
-  students_count: number;
 };
 
 type UserRow = {
@@ -65,10 +58,10 @@ type Category = {
 // ==========================================
 // TABS
 // ==========================================
-type TabKey = "overview" | "tokens" | "courses" | "users";
+type TabKey = "overview" | "tokens" | "courses" | "users" | "applications";
 
 const AdminDashboard = () => {
-  const { user, isLoggedIn } = useAuth();
+  const { user } = useAuth();
   const currentUser = user || getUser();
 
   const {
@@ -79,7 +72,6 @@ const AdminDashboard = () => {
     setPriceFeed,
     removeAllowedToken,
     distributeRewardsToAll,
-    checkTokenIsAllowed,
   } = useWeb3();
 
   const [isAdmin, setIsAdmin] = useState(false);
@@ -198,7 +190,7 @@ const AdminDashboard = () => {
   };
 
   // ==========================================
-  // COURSE HANDLERS (frontend only)
+  // COURSE HANDLERS
   // ==========================================
 
   const handleSaveCourse = async () => {
@@ -269,6 +261,7 @@ const AdminDashboard = () => {
     { key: "tokens", label: "Tokens", icon: <Coins className="w-4 h-4" /> },
     { key: "courses", label: "Courses", icon: <BookOpen className="w-4 h-4" /> },
     { key: "users", label: "Users", icon: <Users className="w-4 h-4" /> },
+    { key: "applications", label: "Applications", icon: <ClipboardList className="w-4 h-4" /> },
   ];
 
   const visibleTabs = tabs.filter(tab => {
@@ -381,7 +374,6 @@ const AdminDashboard = () => {
                         <BookOpen className="w-5 h-5 text-gold" /> Vos Cours Actifs
                       </h3>
                       <div className="space-y-3">
-                        {/* Placeholder for instructor's courses */}
                         <div className="flex items-center justify-between p-3 bg-primary-dark rounded-xl border border-white/5">
                           <span className="text-sm font-medium">Introduction à la Blockchain</span>
                           <button className="text-[10px] bg-gold text-primary font-bold px-3 py-1 rounded-lg hover:bg-gold-hover transition">
@@ -426,7 +418,6 @@ const AdminDashboard = () => {
                 <StatCard label="Active Students" value={String(platformStats?.active_students || 0)} sub="Engagés" />
                 <StatCard label="Coaching Success" value={`${platformStats?.coaching_success_rate || 0}%`} sub="Taux de réussite" />
               </div>
-
 
               {/* Quick actions */}
               <div className="bg-white rounded-xl border border-gray-200 p-6">
@@ -883,12 +874,20 @@ const AdminDashboard = () => {
               </div>
             </div>
           )}
+
+          {/* ==========================================
+              TAB: APPLICATIONS
+          ========================================== */}
+          {activeTab === "applications" && (
+            <AdminInstructorApplications />
+          )}
         </div>
       </main>
       <Footer />
     </div>
   );
 };
+
 
 // ==========================================
 // SUB-COMPONENTS
