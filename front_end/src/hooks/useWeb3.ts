@@ -44,6 +44,7 @@ const TOKEN_FARM_ABI = [
   "function owner() public view returns (address)",
   "function stakingBalance(address token, address user) public view returns (uint256)",
   "function tokenIsAllowed(address token) public view returns (bool)",
+  "function allowedTokens(uint256 index) public view returns (address)",
   "function getUserTotalValue(address user) public view returns (uint256)",
   "function getUserTokenStakingBalanceEthValue(address user, address token) public view returns (uint256)",
   "function getTokenEthPrice(address token) public view returns (uint256, uint8)",
@@ -330,6 +331,37 @@ export const useWeb3 = () => {
     }
   };
 
+  // Lire tous les tokens autorisés depuis le contrat (tableau public allowedTokens[])
+  const getAllowedTokens = async (): Promise<Array<{ address: string; symbol: string; name: string }>> => {
+    if (!provider) return [];
+
+    try {
+      const farmContract = new ethers.Contract(TOKEN_FARM_ADDRESS!, TOKEN_FARM_ABI, provider);
+      const tokens: Array<{ address: string; symbol: string; name: string }> = [];
+      let index = 0;
+
+      while (true) {
+        try {
+          const address: string = await farmContract.allowedTokens(index);
+          const tokenContract = new ethers.Contract(address, ERC20_ABI, provider);
+          const [symbol, name] = await Promise.all([
+            tokenContract.symbol().catch(() => `TOKEN${index}`),
+            tokenContract.name().catch(() => `Unknown Token ${index}`),
+          ]);
+          tokens.push({ address, symbol, name });
+          index++;
+        } catch {
+          break; // fin du tableau (index hors limites)
+        }
+      }
+
+      return tokens;
+    } catch (error) {
+      console.error('Erreur lecture allowedTokens:', error);
+      return [];
+    }
+  };
+
   // Récupérer l'historique des événements Stake/Unstake
   const getStakingEvents = async () => {
     if (!provider || !account) return [];
@@ -509,6 +541,7 @@ export const useWeb3 = () => {
     getStakingBalance,
     getUserTotalValue,
     checkTokenIsAllowed,
+    getAllowedTokens,
     getStakingEvents,
     // Admin
     checkIsAdmin,

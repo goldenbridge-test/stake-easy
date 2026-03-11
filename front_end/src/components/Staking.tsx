@@ -1,5 +1,17 @@
 import { useState, useEffect } from "react";
 import { SUPPORTED_TOKENS } from "../constants/tokens";
+
+// Couleur d'icône par défaut selon l'initiale du symbole
+const ICON_COLORS: Record<string, string> = {
+  G: "bg-gradient-to-br from-yellow-400 to-yellow-600",
+  E: "bg-gradient-to-br from-blue-400 to-blue-600",
+  D: "bg-gradient-to-br from-green-400 to-green-600",
+  U: "bg-gradient-to-br from-teal-400 to-teal-600",
+  W: "bg-gradient-to-br from-purple-400 to-purple-600",
+  L: "bg-gradient-to-br from-cyan-400 to-cyan-600",
+};
+const defaultIconColor = (symbol: string) =>
+  ICON_COLORS[symbol[0]?.toUpperCase()] || "bg-gradient-to-br from-gray-400 to-gray-600";
 import {
   Wallet,
   Info,
@@ -51,6 +63,7 @@ const Staking = () => {
     getTokenBalance,
     getStakingBalance,
     getStakingEvents,
+    getAllowedTokens,
     account,
     isConnected,
     loading,
@@ -73,12 +86,26 @@ const Staking = () => {
     const balances: { [key: string]: string } = {};
     const staked: StakedAsset[] = [];
 
-    for (const token of SUPPORTED_TOKENS) {
-      // 1. Balance dans le wallet (combien tu possèdes)
+    // 1. Charger la liste des tokens autorisés depuis le contrat (dynamique)
+    const allowedTokens = await getAllowedTokens();
+    // Fallback vers SUPPORTED_TOKENS si le contrat n'est pas accessible
+    const tokenList = allowedTokens.length > 0
+      ? allowedTokens.map(t => ({
+          symbol: t.symbol,
+          name: t.name,
+          address: t.address,
+          balance: 0,
+          price: SUPPORTED_TOKENS.find(s => s.address.toLowerCase() === t.address.toLowerCase())?.price ?? 0,
+          iconColor: defaultIconColor(t.symbol),
+        }))
+      : SUPPORTED_TOKENS;
+
+    for (const token of tokenList) {
+      // Balance dans le wallet
       const balance = await getTokenBalance(token.address);
       balances[token.symbol] = balance;
 
-      // 2. Balance stakée (combien tu as mis en staking)
+      // Balance stakée
       const stakingBal = await getStakingBalance(token.address);
       const stakedAmount = parseFloat(stakingBal);
 
@@ -96,8 +123,7 @@ const Staking = () => {
     setTokenBalances(balances);
     setStakedAssets(staked);
 
-    // Mettre à jour les tokens avec les vraies balances
-    const updatedTokens = SUPPORTED_TOKENS.map((token) => ({
+    const updatedTokens = tokenList.map((token) => ({
       ...token,
       balance: parseFloat(balances[token.symbol] || "0"),
     }));
@@ -106,7 +132,7 @@ const Staking = () => {
       setSelectedToken(updatedTokens[0]);
     }
 
-    // 3. Charger l'historique des événements
+    // Charger l'historique des événements
     const events = await getStakingEvents();
     setHistory(events);
 
@@ -145,9 +171,9 @@ const Staking = () => {
     }
   };
 
-  // Trouver le symbole d'un token à partir de son adresse
+  // Trouver le symbole d'un token à partir de son adresse (utilise les tokens chargés dynamiquement)
   const getSymbolFromAddress = (address: string) => {
-    const token = SUPPORTED_TOKENS.find(
+    const token = tokens.find(
       (t) => t.address.toLowerCase() === address.toLowerCase()
     );
     return token?.symbol || `${address.slice(0, 6)}...${address.slice(-4)}`;
