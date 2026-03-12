@@ -174,6 +174,24 @@ export const networksApi = {
 };
 
 // ─── Fund Assets (futurs fonds d'investissement) ──────────────────────────────
+// ─── Token Prices ─────────────────────────────────────────────────────────────
+export const tokenPricesApi = {
+    async list() {
+        const res = await apiFetch('/api/blockchain/token-prices/');
+        if (!res.ok) throw new Error('Failed to fetch token prices');
+        return res.json();
+    },
+};
+
+// ─── Golden Tokens ────────────────────────────────────────────────────────────
+export const goldenTokensApi = {
+    async list() {
+        const res = await apiFetch('/api/blockchain/golden-tokens/');
+        if (!res.ok) throw new Error('Failed to fetch golden tokens');
+        return res.json();
+    },
+};
+
 export const fundAssetsApi = {
     // GET /api/blockchain/fund-assets/ — liste des assets de fonds
     async list() {

@@ -34,8 +34,9 @@ import { analyticsApi, coursesApi, usersApi, getUser } from "../services/api";
 // ==========================================
 
 type AllowedToken = {
-  id: number;
   address: string;
+  symbol: string;
+  name: string;
   priceFeed: string;
 };
 
@@ -80,6 +81,7 @@ const AdminDashboard = () => {
     removeAllowedToken,
     distributeRewardsToAll,
     checkTokenIsAllowed,
+    getAllowedTokens,
   } = useWeb3();
 
   const [isAdmin, setIsAdmin] = useState(false);
@@ -132,16 +134,25 @@ const AdminDashboard = () => {
   }, [account, isConnected, user]);
 
   const fetchDashboardData = async () => {
-    const [stats, coursesData, categoriesData, usersData] = await Promise.all([
+    const [stats, coursesData, categoriesData, usersData, onchainTokens] = await Promise.all([
       analyticsApi.adminSummary().catch(() => null),
       coursesApi.list().catch(() => ({ results: [] })),
       coursesApi.categories().catch(() => []),
       usersApi.list().catch(() => ({ results: [] })),
+      getAllowedTokens(),
     ]);
     if (stats) setPlatformStats(stats);
     setCourses((coursesData as any).results || coursesData || []);
     setCategories(categoriesData || []);
     setUsers((usersData as any).results || usersData || []);
+    // Dédupliquer par adresse
+    const seen = new Set<string>();
+    setTokens(onchainTokens.filter(t => {
+      const addr = t.address.toLowerCase();
+      if (seen.has(addr)) return false;
+      seen.add(addr);
+      return true;
+    }));
   };
 
 
@@ -174,9 +185,17 @@ const AdminDashboard = () => {
       return;
     }
 
-    setTokens([...tokens, { id: Date.now(), address: newTokenAddress, priceFeed: newPriceFeed }]);
     setNewTokenAddress("");
     setNewPriceFeed("");
+    // Recharger depuis le contrat pour avoir symbole + price feed à jour
+    const fresh = await getAllowedTokens();
+    const seen = new Set<string>();
+    setTokens(fresh.filter(t => {
+      const addr = t.address.toLowerCase();
+      if (seen.has(addr)) return false;
+      seen.add(addr);
+      return true;
+    }));
     setIsLoading(false);
   };
 
@@ -508,9 +527,10 @@ const AdminDashboard = () => {
                       </thead>
                       <tbody className="divide-y divide-gray-50">
                         {tokens.map((token) => (
-                          <tr key={token.id} className="hover:bg-gray-50/50 transition">
+                          <tr key={token.address} className="hover:bg-gray-50/50 transition">
                             <td className="px-6 py-4">
                               <div className="flex items-center gap-2">
+                                <span className="font-bold text-xs text-primary mr-1">{token.symbol}</span>
                                 <span className="font-mono text-xs text-gray-600">{truncate(token.address)}</span>
                                 <button onClick={() => copyToClipboard(token.address)} className="text-gray-300 hover:text-primary">
                                   <Copy className="w-3 h-3" />

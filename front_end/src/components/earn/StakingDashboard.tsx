@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 
 const StakingDashboard = () => {
-  const { account, isConnected, connectWallet } = useWeb3();
+  const { account, isConnected, connectWallet, getAllowedTokens } = useWeb3();
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -26,20 +26,30 @@ const StakingDashboard = () => {
   const [positions, setPositions] = useState<any[]>([]);
   const [rewards, setRewards] = useState<any[]>([]);
   const [distributions, setDistributions] = useState<any[]>([]);
+  const [allowedTokens, setAllowedTokens] = useState<Array<{ address: string; symbol: string; name: string }>>([]);
 
   const loadDashboard = async () => {
     try {
-      const [valueData, posData, rewardData, distData] = await Promise.all([
+      const [valueData, posData, rewardData, distData, onchainTokens] = await Promise.all([
         portfolioApi.totalValue().catch(() => null),
         stakingApi.myPositions().catch(() => ({ results: [] })),
         rewardsApi.myRewards().catch(() => ({ results: [] })),
         rewardsApi.myDistributions().catch(() => ({ results: [] })),
+        getAllowedTokens(),
       ]);
 
       setTotalValue(valueData);
       setPositions(posData?.results || posData || []);
       setRewards(rewardData?.results || rewardData || []);
       setDistributions(distData?.results || distData || []);
+      // Dédupliquer par adresse
+      const seen = new Set<string>();
+      setAllowedTokens(onchainTokens.filter(t => {
+        const addr = t.address.toLowerCase();
+        if (seen.has(addr)) return false;
+        seen.add(addr);
+        return true;
+      }));
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -167,6 +177,48 @@ const StakingDashboard = () => {
                   <div className="text-3xl font-heading font-bold text-primary">{rewards.length}</div>
                   <p className="text-xs text-gray-400 mt-1">Récompenses reçues</p>
                 </div>
+              </div>
+
+              {/* ── Tokens Autorisés ── */}
+              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                <div className="p-6 border-b border-gray-50 flex items-center justify-between">
+                  <h2 className="text-lg font-heading font-bold text-primary flex items-center gap-2">
+                    <Coins className="w-5 h-5 text-gold" /> Tokens Autorisés
+                  </h2>
+                  <span className="text-xs text-gray-400 bg-gray-50 px-3 py-1 rounded-full">
+                    {allowedTokens.length} token{allowedTokens.length !== 1 ? "s" : ""} on-chain
+                  </span>
+                </div>
+                {allowedTokens.length === 0 ? (
+                  <div className="p-8 text-center text-gray-400 text-sm">
+                    Aucun token autorisé trouvé dans le contrat
+                  </div>
+                ) : (
+                  <div className="divide-y divide-gray-50">
+                    {allowedTokens.map((token) => (
+                      <div key={token.address} className="flex items-center justify-between px-6 py-4 hover:bg-gray-50 transition">
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-yellow-400 to-yellow-600 flex items-center justify-center text-white text-xs font-bold">
+                            {token.symbol.slice(0, 3)}
+                          </div>
+                          <div>
+                            <p className="font-bold text-primary text-sm">{token.symbol}</p>
+                            <p className="text-xs text-gray-400">{token.name}</p>
+                          </div>
+                        </div>
+                        <a
+                          href={`https://sepolia.etherscan.io/address/${token.address}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs font-mono text-gray-400 hover:text-gold transition flex items-center gap-1"
+                        >
+                          {token.address.slice(0, 8)}…{token.address.slice(-6)}
+                          <ExternalLink className="w-3 h-3" />
+                        </a>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* ── Positions de staking ── */}

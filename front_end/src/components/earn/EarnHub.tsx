@@ -16,9 +16,9 @@ import {
 } from "lucide-react";
 
 const WHY_ITEMS = [
-  { icon: <Shield className="w-5 h-5" />, title: "Non-custodial", desc: "Vos fonds restent sous votre contrôle à tout moment." },
-  { icon: <Zap className="w-5 h-5" />, title: "Rewards automatiques", desc: "Récompenses distribuées directement on-chain." },
-  { icon: <Lock className="w-5 h-5" />, title: "Contrats audités", desc: "Smart contracts vérifiés et transparents sur Sepolia." },
+  { icon: <Shield className="w-5 h-5" />, title: "Non-custodial", desc: "Your funds remain under your control at all times." },
+  { icon: <Zap className="w-5 h-5" />, title: "Automatic Rewards", desc: "Rewards distributed directly on-chain." },
+  { icon: <Lock className="w-5 h-5" />, title: "Audited Contracts", desc: "Verified and transparent smart contracts on Sepolia." },
 ];
 
 const EarnHub = () => {
@@ -48,28 +48,28 @@ const EarnHub = () => {
               <Coins className="w-3.5 h-3.5" /> Golden Earn
             </div>
             <h1 className="text-5xl font-heading font-bold text-primary mb-5 leading-tight">
-              Faites travailler<br />
-              <span className="text-gold">vos actifs</span>
+              Put your assets<br />
+              <span className="text-gold">to work</span>
             </h1>
             <p className="text-xl text-gray-500 leading-relaxed mb-8">
-              Staking, Liquidity Pools, Fonds on-chain — tous vos produits de rendement DeFi au même endroit.
+              Staking, Liquidity Pools, On-chain Funds — all your DeFi yield products in one place.
             </p>
             <div className="flex items-center gap-4">
               <Link
                 to="/earn/staking"
                 className="inline-flex items-center gap-2 bg-gold text-primary font-bold px-6 py-3 rounded-xl hover:bg-gold-hover transition shadow-lg shadow-gold/20"
               >
-                Commencer à staker <ArrowRight className="w-4 h-4" />
+                Start staking <ArrowRight className="w-4 h-4" />
               </Link>
               <Link
                 to="/earn/dashboard"
                 className="inline-flex items-center gap-2 border border-gray-200 bg-white text-primary font-bold px-6 py-3 rounded-xl hover:border-gold transition text-sm"
               >
-                Mon Dashboard
+                My Dashboard
               </Link>
               <div className="flex items-center gap-2 text-gray-400 text-sm">
                 <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-                Live sur Sepolia
+                Live on Sepolia
               </div>
             </div>
           </div>
@@ -78,16 +78,16 @@ const EarnHub = () => {
 
       <div className="max-w-7xl mx-auto px-6 py-16 space-y-16">
 
-        {/* ── Staking Farms (dynamique depuis API) ── */}
+        {/* ── Staking Farms ── */}
         <section>
           <div className="flex items-center justify-between mb-8">
             <div>
               <h2 className="text-2xl font-heading font-bold text-primary">Staking</h2>
-              <p className="text-sm text-gray-400 mt-1">Stakez vos tokens et percevez des récompenses</p>
+              <p className="text-sm text-gray-400 mt-1">Stake your tokens and earn automatic rewards</p>
             </div>
             {!loading && (
               <span className="text-sm text-gray-400">
-                {farms.length > 0 ? `${farms.length} farm${farms.length > 1 ? 's' : ''} actif${farms.length > 1 ? 's' : ''}` : 'Chargement...'}
+                {farms.length > 0 ? `${farms.length} active farm${farms.length > 1 ? 's' : ''}` : 'Loading...'}
               </span>
             )}
           </div>
@@ -103,34 +103,31 @@ const EarnHub = () => {
               ))}
             </div>
           ) : (
-            /* Fallback statique si l'API ne retourne rien encore */
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               <StaticFarmCard />
             </div>
           )}
         </section>
 
-        {/* ── Fonds d'investissement (dynamique) ── */}
+        {/* ── Funds & Pools ── */}
         <section>
           <div className="flex items-center justify-between mb-8">
             <div>
-              <h2 className="text-2xl font-heading font-bold text-primary">Fonds & Pools</h2>
-              <p className="text-sm text-gray-400 mt-1">Investissez dans des fonds gérés on-chain</p>
+              <h2 className="text-2xl font-heading font-bold text-primary">Funds & Pools</h2>
+              <p className="text-sm text-gray-400 mt-1">Invest in on-chain managed funds</p>
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {/* Fonds actifs depuis API */}
             {fundAssets.filter((f: any) => f.is_investment_enabled).map((fund: any) => (
               <FundCard key={fund.id} fund={fund} />
             ))}
 
-            {/* Placeholders "Coming Soon" pour futures pools */}
             <ComingSoonCard
               icon={<TrendingUp className="w-7 h-7" />}
               iconBg="bg-blue-100 text-blue-600"
               title="Liquidity Pools"
-              desc="Fournissez de la liquidité et génèrez des revenus passifs sur chaque transaction."
+              desc="Provide liquidity and earn passive income on every transaction."
               apy="~18%"
               eta="Q3 2025"
             />
@@ -138,7 +135,7 @@ const EarnHub = () => {
               icon={<BarChart3 className="w-7 h-7" />}
               iconBg="bg-purple-100 text-purple-600"
               title="Golden Funds"
-              desc="Fonds diversifiés gérés par notre équipe, transparents et on-chain."
+              desc="Diversified funds managed by our team, transparent and on-chain."
               apy="~25%"
               eta="Q4 2025"
             />
@@ -146,10 +143,10 @@ const EarnHub = () => {
         </section>
       </div>
 
-      {/* Pourquoi Golden Earn */}
+      {/* Why Golden Earn */}
       <div className="border-t border-gray-100 bg-white py-16">
         <div className="max-w-7xl mx-auto px-6">
-          <h2 className="text-2xl font-heading font-bold text-primary mb-10 text-center">Pourquoi Golden Earn ?</h2>
+          <h2 className="text-2xl font-heading font-bold text-primary mb-10 text-center">Why Golden Earn?</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {WHY_ITEMS.map((item, i) => (
               <div key={i} className="flex items-start gap-4 p-6 bg-gray-50 rounded-2xl border border-gray-100">
@@ -171,7 +168,7 @@ const EarnHub = () => {
   );
 };
 
-// ── Card pour un Farm venant de l'API ──────────────────────────────────────────
+// ── Farm card from API ─────────────────────────────────────────────────────────
 const FarmCard = ({ farm }: { farm: any }) => (
   <div className="bg-white rounded-2xl border border-gray-100 shadow-sm hover:border-gold/40 hover:shadow-md transition-all flex flex-col overflow-hidden">
     <div className="h-1 w-full bg-gradient-to-r from-gold to-gold-hover" />
@@ -181,7 +178,7 @@ const FarmCard = ({ farm }: { farm: any }) => (
           <Coins className="w-6 h-6" />
         </div>
         <span className={`text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full ${farm.is_verified ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
-          {farm.is_verified ? 'Vérifié' : 'Non vérifié'}
+          {farm.is_verified ? 'Verified' : 'Unverified'}
         </span>
       </div>
       <h3 className="text-lg font-heading font-bold text-primary mb-1">{farm.name}</h3>
@@ -197,20 +194,20 @@ const FarmCard = ({ farm }: { farm: any }) => (
         </div>
         <div className="bg-gray-50 rounded-xl p-3 text-center">
           <div className="font-bold text-sm text-primary truncate text-xs">{parseFloat(farm.total_staked || 0).toFixed(0)}</div>
-          <div className="text-[10px] text-gray-400 uppercase font-black mt-0.5">Staké</div>
+          <div className="text-[10px] text-gray-400 uppercase font-black mt-0.5">Staked</div>
         </div>
       </div>
       <Link
         to="/earn/staking"
         className="w-full bg-primary text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-primary-dark transition text-sm"
       >
-        Staker <ChevronRight className="w-4 h-4" />
+        Stake <ChevronRight className="w-4 h-4" />
       </Link>
     </div>
   </div>
 );
 
-// ── Card statique fallback (GLD Staking) ──────────────────────────────────────
+// ── Static fallback card ───────────────────────────────────────────────────────
 const StaticFarmCard = () => (
   <div className="bg-white rounded-2xl border border-gray-100 shadow-sm hover:border-gold/40 hover:shadow-md transition-all flex flex-col overflow-hidden">
     <div className="h-1 w-full bg-gradient-to-r from-gold to-gold-hover" />
@@ -222,7 +219,7 @@ const StaticFarmCard = () => (
         <span className="text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full bg-green-100 text-green-700">Live</span>
       </div>
       <h3 className="text-lg font-heading font-bold text-primary mb-1">GLD Staking</h3>
-      <p className="text-sm text-gray-500 mb-5 flex-1">Stakez vos tokens GLD et percevez des récompenses automatiques.</p>
+      <p className="text-sm text-gray-500 mb-5 flex-1">Stake your GLD tokens and earn automatic on-chain rewards.</p>
       <div className="grid grid-cols-3 gap-2 mb-5">
         <div className="bg-gray-50 rounded-xl p-3 text-center">
           <div className="font-bold text-sm text-green-600">12.5%</div>
@@ -234,17 +231,17 @@ const StaticFarmCard = () => (
         </div>
         <div className="bg-gray-50 rounded-xl p-3 text-center">
           <div className="font-bold text-sm text-primary">Sepolia</div>
-          <div className="text-[10px] text-gray-400 uppercase font-black mt-0.5">Réseau</div>
+          <div className="text-[10px] text-gray-400 uppercase font-black mt-0.5">Network</div>
         </div>
       </div>
       <Link to="/earn/staking" className="w-full bg-primary text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-primary-dark transition text-sm">
-        Staker <ChevronRight className="w-4 h-4" />
+        Stake <ChevronRight className="w-4 h-4" />
       </Link>
     </div>
   </div>
 );
 
-// ── Card pour un Fund actif depuis l'API ──────────────────────────────────────
+// ── Fund card from API ─────────────────────────────────────────────────────────
 const FundCard = ({ fund }: { fund: any }) => (
   <div className="bg-white rounded-2xl border border-gray-100 shadow-sm hover:border-gold/40 hover:shadow-md transition-all flex flex-col overflow-hidden">
     <div className="h-1 w-full bg-gradient-to-r from-purple-400 to-blue-500" />
@@ -265,17 +262,17 @@ const FundCard = ({ fund }: { fund: any }) => (
         </div>
         <div className="bg-gray-50 rounded-xl p-3 text-center">
           <div className="font-bold text-sm text-primary">{fund.max_fund_allocation_percentage}%</div>
-          <div className="text-[10px] text-gray-400 uppercase font-black mt-0.5">Alloc. max</div>
+          <div className="text-[10px] text-gray-400 uppercase font-black mt-0.5">Max alloc.</div>
         </div>
       </div>
       <button disabled className="w-full bg-gray-100 text-gray-400 font-bold py-3 rounded-xl flex items-center justify-center gap-2 cursor-not-allowed text-sm">
-        <Lock className="w-4 h-4" /> Bientôt disponible
+        <Lock className="w-4 h-4" /> Coming soon
       </button>
     </div>
   </div>
 );
 
-// ── Card "Coming Soon" ────────────────────────────────────────────────────────
+// ── Coming Soon card ───────────────────────────────────────────────────────────
 const ComingSoonCard = ({ icon, iconBg, title, desc, apy, eta }: {
   icon: React.ReactNode; iconBg: string; title: string;
   desc: string; apy: string; eta: string;
@@ -285,22 +282,22 @@ const ComingSoonCard = ({ icon, iconBg, title, desc, apy, eta }: {
     <div className="p-6 flex flex-col flex-1">
       <div className="flex items-start justify-between mb-5">
         <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${iconBg}`}>{icon}</div>
-        <span className="text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full bg-gray-100 text-gray-500">Bientôt</span>
+        <span className="text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full bg-gray-100 text-gray-500">Soon</span>
       </div>
       <h3 className="text-lg font-heading font-bold text-primary mb-2">{title}</h3>
       <p className="text-sm text-gray-500 mb-5 flex-1">{desc}</p>
       <div className="grid grid-cols-2 gap-2 mb-5">
         <div className="bg-gray-50 rounded-xl p-3 text-center">
           <div className="font-bold text-sm text-gray-400">{apy}</div>
-          <div className="text-[10px] text-gray-400 uppercase font-black mt-0.5">APY est.</div>
+          <div className="text-[10px] text-gray-400 uppercase font-black mt-0.5">Est. APY</div>
         </div>
         <div className="bg-gray-50 rounded-xl p-3 text-center">
           <div className="font-bold text-sm text-gray-400">{eta}</div>
-          <div className="text-[10px] text-gray-400 uppercase font-black mt-0.5">Lancement</div>
+          <div className="text-[10px] text-gray-400 uppercase font-black mt-0.5">Launch</div>
         </div>
       </div>
       <button disabled className="w-full bg-gray-100 text-gray-400 font-bold py-3 rounded-xl flex items-center justify-center gap-2 cursor-not-allowed text-sm">
-        <Lock className="w-4 h-4" /> Disponible prochainement
+        <Lock className="w-4 h-4" /> Coming soon
       </button>
     </div>
   </div>

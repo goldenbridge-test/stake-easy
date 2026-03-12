@@ -4,14 +4,13 @@ import networkMap from '../chain-info/map.json';
 import { walletApi, networksApi } from '../services/blockchainApi';
 
 // Lit dynamiquement la dernière paire TokenFarm/GoldenToken depuis map.json
-function getContractAddresses(chainId: number) {
+function getContractAddresses(chainId: number): { tokenFarm: string; goldenToken: string } {
   const chainData = (networkMap as any)[String(chainId)];
-  if (!chainData) return { tokenFarm: null, goldenToken: null };
-  const farms: string[] = chainData.TokenFarm || [];
-  const tokens: string[] = chainData.GoldenToken || [];
+  const farms: string[] = chainData?.TokenFarm || [];
+  const tokens: string[] = chainData?.GoldenToken || [];
   return {
-    tokenFarm: farms[0] || null,
-    goldenToken: tokens[0] || null,
+    tokenFarm: farms[0] || '0x328011A76260088494119a77940DD0C6E4DCdFfD',
+    goldenToken: tokens[0] || '0xD6592daDd49Dd401CD5dF8CC54dFe98cDB922E71',
   };
 }
 
@@ -51,6 +50,7 @@ const TOKEN_FARM_ABI = [
   "function uniqueTokensStaked(address user) public view returns (uint256)",
   "function goldenToken() public view returns (address)",
   "function name() public view returns (string)",
+  "function tokenPriceFeedMapping(address token) public view returns (address)",
 
   // --- Événements (logs enregistrés sur la blockchain) ---
   "event TokenStaked(address indexed user, address indexed token, uint256 amount)",
@@ -332,30 +332,32 @@ export const useWeb3 = () => {
   };
 
   // Lire tous les tokens autorisés depuis le contrat (tableau public allowedTokens[])
-  const getAllowedTokens = async (): Promise<Array<{ address: string; symbol: string; name: string }>> => {
+  const getAllowedTokens = async (): Promise<Array<{ address: string; symbol: string; name: string; priceFeed: string }>> => {
     if (!provider) return [];
 
     try {
       const farmContract = new ethers.Contract(TOKEN_FARM_ADDRESS!, TOKEN_FARM_ABI, provider);
-      const tokens: Array<{ address: string; symbol: string; name: string }> = [];
+      const result: Array<{ address: string; symbol: string; name: string; priceFeed: string }> = [];
       let index = 0;
 
       while (true) {
         try {
           const address: string = await farmContract.allowedTokens(index);
+          if (!address || address === ethers.constants.AddressZero) break;
           const tokenContract = new ethers.Contract(address, ERC20_ABI, provider);
-          const [symbol, name] = await Promise.all([
+          const [symbol, name, priceFeed] = await Promise.all([
             tokenContract.symbol().catch(() => `TOKEN${index}`),
             tokenContract.name().catch(() => `Unknown Token ${index}`),
+            farmContract.tokenPriceFeedMapping(address).catch(() => ethers.constants.AddressZero),
           ]);
-          tokens.push({ address, symbol, name });
+          result.push({ address, symbol, name, priceFeed });
           index++;
         } catch {
           break; // fin du tableau (index hors limites)
         }
       }
 
-      return tokens;
+      return result;
     } catch (error) {
       console.error('Erreur lecture allowedTokens:', error);
       return [];

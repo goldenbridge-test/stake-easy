@@ -13,7 +13,7 @@ import {
 import Navbar from "../Navbar";
 import Footer from "../Footer";
 import { useWeb3 } from "../../hooks/useWeb3";
-import { stakingApi, tokenFarmsApi, fundAssetsApi } from "../../services/blockchainApi";
+import { stakingApi, tokenFarmsApi, fundAssetsApi, tokenPricesApi } from "../../services/blockchainApi";
 import { isAuthenticated } from "../../services/api";
 
 type Token = {
@@ -54,6 +54,7 @@ const Staking = () => {
     getTokenBalance,
     getStakingBalance,
     getStakingEvents,
+    getAllowedTokens,
     account,
     isConnected,
     loading,
@@ -78,7 +79,7 @@ const Staking = () => {
     const balances: { [key: string]: string } = {};
     const staked: StakedAsset[] = [];
 
-    for (const token of SUPPORTED_TOKENS) {
+    for (const token of tokens) {
       // 1. Balance dans le wallet (combien tu possèdes)
       const balance = await getTokenBalance(token.address);
       balances[token.symbol] = balance;
@@ -102,7 +103,7 @@ const Staking = () => {
     setStakedAssets(staked);
 
     // Mettre à jour les tokens avec les vraies balances
-    const updatedTokens = SUPPORTED_TOKENS.map((token) => ({
+    const updatedTokens = tokens.map((token) => ({
       ...token,
       balance: parseFloat(balances[token.symbol] || "0"),
     }));
@@ -118,7 +119,41 @@ const Staking = () => {
     setIsLoading(false);
   };
 
-  // Charger le FundTokenAsset ID (token_id pour recordStake)
+  // Helper : charge tokens autorisés depuis le contrat + prix
+  const loadTokensFromChain = async () => {
+    const [onchainTokens, priceData] = await Promise.all([
+      getAllowedTokens(),
+      tokenPricesApi.list().catch(() => []),
+    ]);
+    const apiPrices = Array.isArray(priceData) ? priceData : ((priceData as any).results || []);
+    // Dédupliquer par adresse (le contrat peut avoir des doublons)
+    const seen = new Set<string>();
+    const unique = onchainTokens.filter((t: any) => {
+      const addr = t.address.toLowerCase();
+      if (seen.has(addr)) return false;
+      seen.add(addr);
+      return true;
+    });
+    if (unique.length === 0) return;
+    const mapped = unique.map((t: any) => {
+      const priceEntry = (apiPrices as any[]).find(
+        (p: any) => p.token_symbol?.toUpperCase() === t.symbol?.toUpperCase()
+      );
+      const price = priceEntry?.price_usd ? parseFloat(priceEntry.price_usd) : 2000;
+      return {
+        symbol: t.symbol,
+        name: t.name,
+        address: t.address,
+        balance: 0,
+        price,
+        iconColor: "bg-gradient-to-br from-yellow-400 to-yellow-600",
+      };
+    });
+    setTokens(mapped);
+    setSelectedToken(mapped[0]);
+  };
+
+  // Charger farm ID + fund asset ID (une seule fois)
   useEffect(() => {
     tokenFarmsApi.list().then((data: any) => {
       const farms = data.results || data || [];
@@ -128,8 +163,14 @@ const Staking = () => {
     fundAssetsApi.list().then((data: any) => {
       const assets = data.results || data || [];
       if (assets.length > 0) setFundAssetId(assets[0].id);
-    }).catch(() => {});
+    }).catch(() => { setFundAssetId(1); });
   }, []);
+
+  // Recharger les tokens depuis le contrat à chaque fois que le provider change
+  // (au mount avec RPC public, puis avec le vrai provider MetaMask une fois connecté)
+  useEffect(() => {
+    loadTokensFromChain();
+  }, [isConnected]);
 
   useEffect(() => {
     if (isConnected) {
@@ -149,18 +190,21 @@ const Staking = () => {
       // Enregistrer le stake en base Django
       if (fundAssetId && txHash && isAuthenticated()) {
         try {
-          await stakingApi.recordStake({
+          const recorded = await stakingApi.recordStake({
             token_id: fundAssetId,
             amount,
             tx_hash: txHash,
           });
+          console.log("✅ recordStake 201:", recorded);
         } catch (e: any) {
-          console.warn("Enregistrement stake Django échoué:", e);
+          console.warn("❌ Enregistrement stake Django échoué:", e);
           alert(`Stake on-chain réussi (tx: ${txHash.slice(0, 10)}...) mais l'enregistrement a échoué. Vérifiez votre connexion.`);
         }
       }
       alert("Tokens stakés avec succès !");
       setAmount("");
+      // Attendre que le nœud RPC reflète le nouvel état
+      await new Promise(r => setTimeout(r, 2000));
       await loadAllData();
     }
   };
@@ -183,7 +227,7 @@ const Staking = () => {
 
   // Trouver le symbole d'un token à partir de son adresse
   const getSymbolFromAddress = (address: string) => {
-    const token = SUPPORTED_TOKENS.find(
+    const token = tokens.find(
       (t) => t.address.toLowerCase() === address.toLowerCase()
     );
     return token?.symbol || `${address.slice(0, 6)}...${address.slice(-4)}`;

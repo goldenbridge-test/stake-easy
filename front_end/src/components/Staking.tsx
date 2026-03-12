@@ -139,6 +139,24 @@ const Staking = () => {
     setIsLoading(false);
   };
 
+  // Charger la liste des tokens dès le montage (RPC public, sans wallet)
+  useEffect(() => {
+    getAllowedTokens().then(allowed => {
+      if (allowed.length > 0) {
+        const list = allowed.map(t => ({
+          symbol: t.symbol,
+          name: t.name,
+          address: t.address,
+          balance: 0,
+          price: SUPPORTED_TOKENS.find(s => s.address.toLowerCase() === t.address.toLowerCase())?.price ?? 0,
+          iconColor: defaultIconColor(t.symbol),
+        }));
+        setTokens(list);
+        setSelectedToken(list[0]);
+      }
+    });
+  }, []);
+
   useEffect(() => {
     if (isConnected) {
       loadAllData();
