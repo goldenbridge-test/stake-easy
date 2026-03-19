@@ -9,11 +9,13 @@ import {
   Coins,
   ExternalLink,
   ArrowLeft,
+  Clock,
+  CalendarCheck,
 } from "lucide-react";
 import Navbar from "../Navbar";
 import Footer from "../Footer";
 import { useWeb3 } from "../../hooks/useWeb3";
-import { stakingApi, tokenFarmsApi, fundAssetsApi, tokenPricesApi } from "../../services/blockchainApi";
+import { stakingApi, tokenPricesApi } from "../../services/blockchainApi";
 import { isAuthenticated } from "../../services/api";
 
 type Token = {
@@ -31,6 +33,10 @@ type StakedAsset = {
   amount: number;
   value: number;
   iconColor: string;
+  duration_years?: number;
+  end_date?: string;
+  status?: string;
+  staked_at?: string;
 };
 
 type HistoryItem = {
@@ -41,12 +47,20 @@ type HistoryItem = {
   hash: string;
 };
 
+const DURATION_OPTIONS = [
+  { years: 1, label: "1 an",  apy: "8%" },
+  { years: 2, label: "2 ans", apy: "10%" },
+  { years: 3, label: "3 ans", apy: "12%" },
+  { years: 4, label: "4 ans", apy: "15%" },
+];
+
 const Staking = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [amount, setAmount] = useState("");
   const [selectedToken, setSelectedToken] = useState<Token | null>(null);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isCooldownChecked, setIsCooldownChecked] = useState(false);
+  const [durationYears, setDurationYears] = useState(1);
   const {
     connectWallet,
     stakeTokens,
@@ -58,15 +72,13 @@ const Staking = () => {
     account,
     isConnected,
     loading,
+    chainId,
   } = useWeb3();
 
   const [tokens, setTokens] = useState(SUPPORTED_TOKENS);
   const [tokenBalances, setTokenBalances] = useState<{
     [key: string]: string;
   }>({});
-  const [farmDjangoId, setFarmDjangoId] = useState<string | null>(null);
-  const [fundAssetId, setFundAssetId] = useState<number | null>(null);
-
   // Données réelles depuis la blockchain
   const [stakedAssets, setStakedAssets] = useState<StakedAsset[]>([]);
   const [history, setHistory] = useState<HistoryItem[]>([]);
@@ -79,6 +91,16 @@ const Staking = () => {
     const balances: { [key: string]: string } = {};
     const staked: StakedAsset[] = [];
 
+    // Charger les positions API (duration, end_date, status)
+    let apiPositions: any[] = [];
+    try {
+      const res = await stakingApi.myPositions();
+      apiPositions = Array.isArray(res) ? res : (res.results || []);
+      console.log("📦 API positions:", JSON.stringify(apiPositions, null, 2));
+    } catch (e) {
+      console.warn("myPositions() failed:", e);
+    }
+
     for (const token of tokens) {
       // 1. Balance dans le wallet (combien tu possèdes)
       const balance = await getTokenBalance(token.address);
@@ -89,12 +111,25 @@ const Staking = () => {
       const stakedAmount = parseFloat(stakingBal);
 
       if (stakedAmount > 0) {
+        // Merger avec les données API — essai par adresse, puis par symbole
+        const apiPos = apiPositions.find(
+          (p: any) => p.token_address?.toLowerCase() === token.address.toLowerCase()
+        ) || apiPositions.find(
+          (p: any) => p.token_symbol?.toUpperCase() === token.symbol.toUpperCase()
+        ) || apiPositions.find(
+          (p: any) => p.token?.symbol?.toUpperCase() === token.symbol.toUpperCase()
+        );
+        console.log(`🔍 Merge [${token.symbol}]:`, apiPos ?? "no match");
         staked.push({
           symbol: token.symbol,
           address: token.address,
           amount: stakedAmount,
           value: stakedAmount * token.price,
           iconColor: token.iconColor,
+          duration_years: apiPos?.duration_years,
+          end_date: apiPos?.end_date,
+          status: apiPos?.status,
+          staked_at: apiPos?.staked_at,
         });
       }
     }
@@ -153,18 +188,6 @@ const Staking = () => {
     setSelectedToken(mapped[0]);
   };
 
-  // Charger farm ID + fund asset ID (une seule fois)
-  useEffect(() => {
-    tokenFarmsApi.list().then((data: any) => {
-      const farms = data.results || data || [];
-      if (farms.length > 0) setFarmDjangoId(farms[0].id);
-    }).catch(() => {});
-
-    fundAssetsApi.list().then((data: any) => {
-      const assets = data.results || data || [];
-      if (assets.length > 0) setFundAssetId(assets[0].id);
-    }).catch(() => { setFundAssetId(1); });
-  }, []);
 
   // Recharger les tokens depuis le contrat à chaque fois que le provider change
   // (au mount avec RPC public, puis avec le vrai provider MetaMask une fois connecté)
@@ -183,22 +206,24 @@ const Staking = () => {
   const handleStake = async () => {
     if (!amount || !selectedToken) return;
     if (!isAuthenticated()) {
-      alert("Vous devez être connecté à votre compte (Sign In) pour enregistrer votre stake. Le stake on-chain sera quand même effectué.");
+      alert("You must be signed in to record your stake. The on-chain transaction will still proceed.");
     }
     const { success, txHash } = await stakeTokens(amount, selectedToken.address);
     if (success) {
-      // Enregistrer le stake en base Django
-      if (fundAssetId && txHash && isAuthenticated()) {
+      if (txHash && isAuthenticated()) {
         try {
           const recorded = await stakingApi.recordStake({
-            token_id: fundAssetId,
+            token_address: selectedToken.address,
+            token_symbol: selectedToken.symbol,
+            chain_id: chainId ?? 11155111,
             amount,
             tx_hash: txHash,
+            duration_years: durationYears,
           });
-          console.log("✅ recordStake 201:", recorded);
+          console.log("✅ recordStake:", recorded);
         } catch (e: any) {
-          console.warn("❌ Enregistrement stake Django échoué:", e);
-          alert(`Stake on-chain réussi (tx: ${txHash.slice(0, 10)}...) mais l'enregistrement a échoué. Vérifiez votre connexion.`);
+          console.warn("❌ recordStake failed:", e);
+          alert(`Stake on-chain successful (tx: ${txHash.slice(0, 10)}...) but backend recording failed.`);
         }
       }
       alert("Tokens stakés avec succès !");
@@ -210,7 +235,24 @@ const Staking = () => {
   };
 
   const handleUnstake = async (tokenAddress: string) => {
-    if (!window.confirm("Unstaker tous vos tokens pour cet actif ?")) return;
+    // Vérifier si l'utilisateur unstake avant la fin de sa période
+    const asset = stakedAssets.find(a => a.address.toLowerCase() === tokenAddress.toLowerCase());
+    const isEarly = asset?.end_date && new Date(asset.end_date) > new Date();
+
+    if (isEarly) {
+      const endDateFormatted = new Date(asset!.end_date!).toLocaleDateString("en-GB", {
+        day: "2-digit", month: "long", year: "numeric"
+      });
+      const confirmed = window.confirm(
+        `⚠️ WARNING — Early Unstake\n\n` +
+        `Your staking period ends on ${endDateFormatted}.\n\n` +
+        `By unstaking now, you will lose ALL accumulated rewards for this position.\n\n` +
+        `Do you still want to proceed?`
+      );
+      if (!confirmed) return;
+    } else {
+      if (!window.confirm("Unstake all tokens for this asset?")) return;
+    }
     const { success, txHash } = await unstakeTokens(tokenAddress);
     if (success) {
       // Enregistrer l'unstake en base Django
@@ -382,6 +424,32 @@ const Staking = () => {
                     </div>
                   </div>
 
+                  {/* DURATION SELECTOR */}
+                  <div className="mb-6">
+                    <label className="block text-sm font-bold text-gray-700 mb-3">
+                      Durée du staking
+                    </label>
+                    <div className="grid grid-cols-4 gap-2">
+                      {DURATION_OPTIONS.map((opt) => (
+                        <button
+                          key={opt.years}
+                          type="button"
+                          onClick={() => setDurationYears(opt.years)}
+                          className={`flex flex-col items-center py-3 px-2 rounded-xl border-2 transition font-heading ${
+                            durationYears === opt.years
+                              ? "border-gold bg-gold/10 text-primary"
+                              : "border-gray-200 bg-white text-gray-500 hover:border-gold/50"
+                          }`}
+                        >
+                          <span className="text-base font-bold">{opt.label}</span>
+                          <span className={`text-xs font-semibold mt-0.5 ${durationYears === opt.years ? "text-green-600" : "text-gray-400"}`}>
+                            {opt.apy} APY
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
                   {/* INFO BOX */}
                   <div className="bg-blue-50/50 rounded-lg p-4 border border-blue-100 mb-6">
                     <h3 className="text-primary font-bold text-sm mb-3 flex items-center gap-2">
@@ -393,13 +461,13 @@ const Staking = () => {
                         <span className="font-mono font-bold">0.01 GLD</span>
                       </li>
                       <li className="flex justify-between">
-                        <span>Cooldown period:</span>{" "}
-                        <span className="font-mono font-bold">24 hours</span>
+                        <span>Durée choisie:</span>
+                        <span className="font-mono font-bold">{durationYears} an{durationYears > 1 ? "s" : ""}</span>
                       </li>
                       <li className="flex justify-between">
-                        <span>Current APY:</span>{" "}
+                        <span>APY estimé:</span>
                         <span className="font-mono font-bold text-green-600">
-                          12.5%
+                          {DURATION_OPTIONS.find(o => o.years === durationYears)?.apy}
                         </span>
                       </li>
                     </ul>
@@ -417,9 +485,9 @@ const Staking = () => {
                       <Check className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white opacity-0 peer-checked:opacity-100 pointer-events-none" />
                     </div>
                     <span className="text-sm text-gray-500 group-hover:text-primary transition select-none">
-                      I understand there is a{" "}
-                      <span className="font-bold">24-hour cooldown period</span>{" "}
-                      before unstaking.
+                      Je comprends que mes tokens seront bloqués pendant{" "}
+                      <span className="font-bold">{durationYears} an{durationYears > 1 ? "s" : ""}</span>{" "}
+                      (durée maximale : 4 ans).
                     </span>
                   </label>
 
@@ -477,45 +545,85 @@ const Staking = () => {
                       <thead>
                         <tr className="text-gray-400 text-sm border-b border-gray-100">
                           <th className="pb-4 font-medium pl-2">Token</th>
-                          <th className="pb-4 font-medium">Amount</th>
-                          <th className="pb-4 font-medium">Value (USD)</th>
-                          <th className="pb-4 font-medium text-right pr-2">
-                            Action
-                          </th>
+                          <th className="pb-4 font-medium">Montant</th>
+                          <th className="pb-4 font-medium">Valeur (USD)</th>
+                          <th className="pb-4 font-medium">Durée</th>
+                          <th className="pb-4 font-medium">Fin le</th>
+                          <th className="pb-4 font-medium">Statut</th>
+                          <th className="pb-4 font-medium text-right pr-2">Action</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-50">
                         {stakedAssets.map((asset) => (
-                          <tr
-                            key={asset.symbol}
-                            className="group hover:bg-gray-50 transition"
-                          >
+                          <tr key={asset.symbol} className="group hover:bg-gray-50 transition">
                             <td className="py-4 pl-2">
                               <div className="flex items-center gap-3">
-                                <div
-                                  className={`w-8 h-8 rounded-full ${asset.iconColor} flex items-center justify-center font-bold text-xs text-white`}
-                                >
+                                <div className={`w-8 h-8 rounded-full ${asset.iconColor} flex items-center justify-center font-bold text-xs text-white`}>
                                   {asset.symbol[0]}
                                 </div>
-                                <span className="font-bold text-primary">
-                                  {asset.symbol}
-                                </span>
+                                <span className="font-bold text-primary">{asset.symbol}</span>
                               </div>
                             </td>
-                            <td className="py-4 font-mono">
-                              {asset.amount.toFixed(4)}
+                            <td className="py-4 font-mono">{asset.amount.toFixed(4)}</td>
+                            <td className="py-4 font-mono text-gray-500">${asset.value.toLocaleString()}</td>
+                            <td className="py-4">
+                              {asset.duration_years ? (
+                                <div className="flex items-center gap-1 text-primary font-semibold text-sm">
+                                  <Clock className="w-3.5 h-3.5 text-gold" />
+                                  {asset.duration_years} an{asset.duration_years > 1 ? "s" : ""}
+                                </div>
+                              ) : (
+                                <span className="text-gray-300 text-xs">—</span>
+                              )}
                             </td>
-                            <td className="py-4 font-mono text-gray-500">
-                              ${asset.value.toLocaleString()}
+                            <td className="py-4">
+                              {asset.end_date ? (
+                                <div className="flex items-center gap-1 text-sm text-gray-600">
+                                  <CalendarCheck className="w-3.5 h-3.5 text-green-500" />
+                                  {new Date(asset.end_date).toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "numeric" })}
+                                </div>
+                              ) : (
+                                <span className="text-gray-300 text-xs">—</span>
+                              )}
+                            </td>
+                            <td className="py-4">
+                              {asset.status === "active" ? (
+                                <span className="inline-flex items-center gap-1 bg-green-50 text-green-700 text-xs font-bold px-2.5 py-1 rounded-full border border-green-200">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
+                                  Actif
+                                </span>
+                              ) : asset.status ? (
+                                <span className="inline-flex items-center gap-1 bg-gray-50 text-gray-500 text-xs font-bold px-2.5 py-1 rounded-full border border-gray-200">
+                                  {asset.status}
+                                </span>
+                              ) : (
+                                <span className="text-gray-300 text-xs">—</span>
+                              )}
                             </td>
                             <td className="py-4 text-right pr-2">
-                              <button
-                                onClick={() => handleUnstake(asset.address)}
-                                disabled={loading}
-                                className="text-sm font-bold text-primary border border-gray-200 px-4 py-2 rounded-lg hover:bg-white hover:border-gold hover:text-gold transition disabled:opacity-40 disabled:cursor-not-allowed"
-                              >
-                                {loading ? "..." : "Unstake"}
-                              </button>
+                              {(() => {
+                                const isEarly = asset.end_date && new Date(asset.end_date) > new Date();
+                                return (
+                                  <div className="flex flex-col items-end gap-1">
+                                    <button
+                                      onClick={() => handleUnstake(asset.address)}
+                                      disabled={loading}
+                                      className={`text-sm font-bold px-4 py-2 rounded-lg border transition disabled:opacity-40 disabled:cursor-not-allowed ${
+                                        isEarly
+                                          ? "text-red-600 border-red-200 bg-red-50 hover:bg-red-100 hover:border-red-400"
+                                          : "text-primary border-gray-200 hover:border-gold hover:text-gold"
+                                      }`}
+                                    >
+                                      {loading ? "..." : "Unstake"}
+                                    </button>
+                                    {isEarly && (
+                                      <span className="text-[10px] text-red-400 font-semibold">
+                                        ⚠️ Rewards will be lost
+                                      </span>
+                                    )}
+                                  </div>
+                                );
+                              })()}
                             </td>
                           </tr>
                         ))}

@@ -1,31 +1,34 @@
-import { TrendingUp, Shield, BarChart3, ArrowUpRight } from 'lucide-react';
+import { TrendingUp, Shield, BarChart3, ArrowUpRight, Clock } from 'lucide-react';
 
 const Investments = () => {
   const products = [
     {
-      icon: <TrendingUp className="w-10 h-10 text-gold" />, // Icône plus grande mais sans fond
-      title: "Yield Farming Pool",
-      desc: "Earn yields by providing liquidity to decentralized exchanges with our managed farming strategy.",
-      apy: "8-12%",
-      risk: "Medium",
-      lock: "30 days",
+      icon: <Shield className="w-10 h-10 text-gold" />,
+      title: "Conservative Staking",
+      desc: "Low-risk entry into Web3 staking. Lock your tokens for 1 year and earn stable, predictable returns.",
+      apy: "8%",
+      risk: "Low",
+      lock: "1 year",
+      lockYears: 1,
     },
     {
-      icon: <Shield className="w-10 h-10 text-gold" />,
-      title: "Stablecoin Treasury",
-      desc: "Low-risk exposure to secured stablecoin yields across multiple protocols.",
-      apy: "5-7%",
-      risk: "Low",
-      lock: "None",
+      icon: <TrendingUp className="w-10 h-10 text-gold" />,
+      title: "Balanced Growth",
+      desc: "The ideal balance between yield and commitment. A 2 to 3-year horizon for steady compounding rewards.",
+      apy: "10–12%",
+      risk: "Medium",
+      lock: "2–3 years",
+      lockYears: 2,
     },
     {
       icon: <BarChart3 className="w-10 h-10 text-gold" />,
-      title: "DeFi Growth Fund",
-      desc: "Actively managed fund investing in promising DeFi protocols with high growth potential.",
-      apy: "15-25%",
-      risk: "High",
-      lock: "90 days",
-    }
+      title: "Maximum Yield",
+      desc: "Maximize your earnings with our highest-tier staking plan. Commit for the full 4-year period and unlock peak APY.",
+      apy: "15%",
+      risk: "Medium",
+      lock: "4 years",
+      lockYears: 4,
+    },
   ];
 
   return (
@@ -34,8 +37,7 @@ const Investments = () => {
         
         <div className="text-center max-w-2xl mx-auto mb-12">
           <p className="text-base text-gray-500">
-            Diversify your portfolio with our carefully selected range of Web3 investment options, 
-            tailored to different risk profiles and growth targets.
+            All our financial products have a commitment period of <span className="font-semibold text-primary">1 to 4 years</span> — the longer you stake, the higher your yield. Choose the plan that fits your goals.
           </p>
         </div>
 
@@ -70,7 +72,9 @@ const Investments = () => {
                 </div>
                 <div className="flex justify-between items-center text-sm">
                   <span className="text-gray-400">Lock Period</span>
-                  <span className="font-bold text-primary">{product.lock}</span>
+                  <span className="font-bold text-primary flex items-center gap-1">
+                    <Clock className="w-3.5 h-3.5 text-gold" />{product.lock}
+                  </span>
                 </div>
               </div>
 

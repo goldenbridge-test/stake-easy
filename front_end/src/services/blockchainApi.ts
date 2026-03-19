@@ -60,13 +60,16 @@ export const stakingApi = {
         return res.json();
     },
     // POST /api/blockchain/stake-tokens/stake/ — enregistrer un stake
-    // token_id = ID du FundTokenAsset (pas GoldenToken)
-    async recordStake(data: { token_id: number; amount: string; tx_hash: string }) {
+    async recordStake(data: { token_address: string; token_symbol: string; chain_id: number; amount: string; tx_hash: string; duration_years: number }) {
         const res = await apiFetch('/api/blockchain/stake-tokens/stake/', {
             method: 'POST',
             body: JSON.stringify(data),
         });
-        if (!res.ok) throw new Error('Failed to record stake');
+        if (!res.ok) {
+            const errBody = await res.json().catch(() => ({}));
+            console.error('❌ recordStake 400 detail:', JSON.stringify(errBody));
+            throw new Error(JSON.stringify(errBody));
+        }
         return res.json();
     },
     // POST /api/blockchain/unstake/
