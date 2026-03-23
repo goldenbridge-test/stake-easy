@@ -27,6 +27,9 @@ import CourseCertificate from './components/academy/CourseCertificate';
 import CourseUploadForm from './components/academy/CourseUploadForm';
 import InstructorDashboard from './components/academy/InstructorDashboard';
 import CertificateVerify from './components/academy/CertificateVerify';
+import ForgotPassword from './components/ForgotPassword';
+import ResetPassword from './components/ResetPassword';
+import InstructorApplicationForm from './components/academy/InstructorApplicationForm';
 
 // On crée un composant pour la Landing Page complète pour garder le code propre
 const LandingPage = () => (
@@ -63,6 +66,9 @@ function App() {
             <Route path="/earn/dashboard" element={<StakingDashboard />} />
             <Route path="/earn/debug" element={<ApiDebug />} />
 
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
+
             <Route path="/admin" element={<AdminDashboard />} />
 
             <Route path="/academy" element={<AcademyHome />} />
@@ -74,6 +80,7 @@ function App() {
             <Route path="/academy/course/:id/certificate" element={<CourseCertificate />} />
             <Route path="/academy/course/:id/upload" element={<CourseUploadForm />} />
             <Route path="/academy/coaching" element={<CoachingPrograms />} />
+            <Route path="/academy/become-instructor" element={<InstructorApplicationForm />} />
             <Route path="/instructor" element={<InstructorDashboard />} />
             <Route path="/verify/:code" element={<CertificateVerify />} />
           </Routes>

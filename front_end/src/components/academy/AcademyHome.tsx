@@ -154,6 +154,34 @@ const AcademyHome = () => {
           </div>
         </section>
 
+        {/* BECOME AN INSTRUCTOR */}
+        <section className="py-20 px-6 bg-gray-50 border-t border-gray-100">
+          <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center gap-12">
+            <div className="md:w-1/2">
+              <h2 className="text-4xl font-heading font-bold text-primary mb-6">
+                Share Your Knowledge <br /> Become an Instructor
+              </h2>
+              <p className="text-gray-600 text-lg mb-8">
+                Join our elite group of Web3 instructors. Share your expertise with
+                students worldwide and earn from your content.
+              </p>
+              <Link
+                to="/academy/become-instructor"
+                className="bg-primary text-white font-bold px-10 py-4 rounded-xl shadow-lg hover:bg-primary-dark transition inline-block"
+              >
+                Apply Now
+              </Link>
+            </div>
+            <div className="md:w-1/2">
+              <img
+                src="https://cdni.iconscout.com/illustration/premium/thumb/male-teacher-explaining-lesson-to-students-illustration-download-in-svg-png-gif-file-formats--person-learning-man-study-school-activities-pack-people-illustrations-3944641.png"
+                alt="Teacher"
+                className="w-full max-w-md mx-auto"
+              />
+            </div>
+          </div>
+        </section>
+
         {/* CTA */}
         <section className="py-20 px-6">
           <div className="max-w-4xl mx-auto bg-gradient-to-r from-gold to-orange-400 rounded-2xl p-10 text-center text-white shadow-xl relative overflow-hidden">
