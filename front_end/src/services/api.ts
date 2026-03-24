@@ -171,6 +171,18 @@ export const coursesApi = {
         return res.json();
     },
 
+    async publish(id: number) {
+        const res = await apiFetch(`/api/courses/${id}/publish/`, { method: 'POST' });
+        if (!res.ok) throw new Error('Failed to publish course');
+        return res.json();
+    },
+
+    async unpublish(id: number) {
+        const res = await apiFetch(`/api/courses/${id}/unpublish/`, { method: 'POST' });
+        if (!res.ok) throw new Error('Failed to unpublish course');
+        return res.json();
+    },
+
     async delete(id: number) {
         const res = await apiFetch(`/api/courses/${id}/`, {
             method: 'DELETE',
@@ -300,6 +312,27 @@ export const coachingApi = {
         });
         if (!res.ok) throw new Error('Failed to confirm session');
         return res.json();
+    },
+};
+
+// ─── Payments (FedaPay) ───────────────────────────────────────────────────────
+export const paymentsApi = {
+    async createCheckout(data: { type: 'course' | 'coaching'; item_id: number; provider: 'fedapay' }) {
+        const res = await apiFetch('/api/finance/payments/create-checkout/', {
+            method: 'POST',
+            body: JSON.stringify(data),
+        });
+        if (!res.ok) {
+            const err = await res.json();
+            throw new Error(err.detail || 'Payment initiation failed');
+        }
+        return res.json() as Promise<{ checkout_url: string; transaction_id: string }>;
+    },
+
+    async getStatus(transactionId: string) {
+        const res = await apiFetch(`/api/finance/payments/status/?transaction_id=${transactionId}`);
+        if (!res.ok) throw new Error('Failed to get payment status');
+        return res.json() as Promise<{ status: 'pending' | 'paid' | 'failed' | 'cancelled'; transaction_id: string }>;
     },
 };
 

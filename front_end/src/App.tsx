@@ -28,6 +28,7 @@ import CourseUploadForm from './components/academy/CourseUploadForm';
 import InstructorDashboard from './components/academy/InstructorDashboard';
 import CertificateVerify from './components/academy/CertificateVerify';
 import ForgotPassword from './components/ForgotPassword';
+import PaymentReturn from './components/PaymentReturn';
 import ResetPassword from './components/ResetPassword';
 import InstructorApplicationForm from './components/academy/InstructorApplicationForm';
 
@@ -83,6 +84,7 @@ function App() {
             <Route path="/academy/become-instructor" element={<InstructorApplicationForm />} />
             <Route path="/instructor" element={<InstructorDashboard />} />
             <Route path="/verify/:code" element={<CertificateVerify />} />
+            <Route path="/payment/return" element={<PaymentReturn />} />
           </Routes>
         </div>
       </Router>

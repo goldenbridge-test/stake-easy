@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import Navbar from "../../components/Navbar";
 import Footer from "../../components/Footer";
-import { coursesApi, enrollmentsApi, progressApi, getUser } from "../../services/api";
+import { coursesApi, enrollmentsApi, progressApi, getUser, paymentsApi } from "../../services/api";
 import CoachingSubscribe from "./CoachingSubscribe";
 import CourseReviews from "./CourseReviews";
 import {
@@ -65,6 +65,25 @@ const CourseDetails = () => {
             navigate("/signin");
             return;
         }
+
+        const isPaid = !course?.is_free && parseFloat(course?.price || "0") > 0;
+
+        if (isPaid) {
+            try {
+                const { checkout_url, transaction_id } = await paymentsApi.createCheckout({
+                    type: "course",
+                    item_id: parseInt(id!),
+                    provider: "fedapay",
+                });
+                localStorage.setItem("pending_transaction_id", transaction_id);
+                localStorage.setItem("payment_redirect", `/academy/course/${id}/player`);
+                window.location.href = checkout_url;
+            } catch (err: any) {
+                alert("Payment initiation failed. Please try again.");
+            }
+            return;
+        }
+
         try {
             await enrollmentsApi.enroll(parseInt(id!));
             setIsEnrolled(true);
@@ -168,7 +187,7 @@ const CourseDetails = () => {
                             {/* Floating Card */}
                             <div className="absolute -bottom-8 -right-4 lg:-right-8 bg-white rounded-2xl p-6 shadow-xl border border-gray-100 max-w-xs hidden sm:block">
                                 <div className="text-2xl font-heading font-bold text-primary mb-4">
-                                    {course.is_free ? "Gratuit" : `${course.price} USDT`}
+                                    {course.is_free ? "Free" : `${Number(course.price).toLocaleString("fr-FR")} FCFA`}
                                 </div>
 
                                 {isEnrolled ? (
@@ -365,10 +384,6 @@ const CourseDetails = () => {
                             instructorId={course.instructor_id}
                             instructorName={course.instructor_name || "Expert Coaching"}
                             onCancel={() => setShowCoachingModal(false)}
-                            onSuccess={() => {
-                                setShowCoachingModal(false);
-                                navigate("/academy/coaching");
-                            }}
                         />
                     </div>
                 </div>
