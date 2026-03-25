@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Check, X, ExternalLink, Loader2, Youtube, Globe, MessageSquare } from 'lucide-react';
+import { Check, X, ExternalLink, Loader2, Youtube, Globe, MessageSquare, FileText, MapPin, Hash, User } from 'lucide-react';
 import { instructorApplicationsApi } from '../services/api';
 
 const AdminInstructorApplications = () => {
@@ -84,8 +84,10 @@ const AdminInstructorApplications = () => {
                                             {app.user_name?.[0].toUpperCase() || 'U'}
                                         </div>
                                         <div>
-                                            <h3 className="font-bold text-lg">{app.user_name}</h3>
-                                            <p className="text-xs text-gray-400">Applied on {new Date(app.created_at).toLocaleDateString()}</p>
+                                            <h3 className="font-bold text-lg">
+                                                {app.first_name || app.last_name ? `${app.first_name || ''} ${app.last_name || ''}` : app.user_name}
+                                            </h3>
+                                            <p className="text-xs text-gray-400">@{app.user_name} • Applied on {new Date(app.created_at).toLocaleDateString()}</p>
                                         </div>
                                     </div>
 
@@ -105,6 +107,37 @@ const AdminInstructorApplications = () => {
                                             <div>
                                                 <p className="text-xs font-bold text-gray-400 uppercase">Platform/Portfolio Info</p>
                                                 <p className="text-sm text-gray-700 whitespace-pre-wrap">{app.other_platforms}</p>
+                                            </div>
+                                        </div>
+
+                                        <div className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-100">
+                                            <div className="flex items-start gap-3">
+                                                <Hash className="w-4 h-4 text-gray-400 shrink-0 mt-0.5" />
+                                                <div>
+                                                    <p className="text-[10px] font-bold text-gray-400 uppercase">IFU (Tax ID)</p>
+                                                    <p className="text-sm text-gray-700">{app.ifu || 'N/A'}</p>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-start gap-3">
+                                                <MapPin className="w-4 h-4 text-gray-400 shrink-0 mt-0.5" />
+                                                <div>
+                                                    <p className="text-[10px] font-bold text-gray-400 uppercase">Location</p>
+                                                    <p className="text-sm text-gray-700">{app.city ? `${app.city}, ` : ''}{app.country || 'N/A'}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-start gap-3 pt-2">
+                                            <FileText className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
+                                            <div>
+                                                <p className="text-[10px] font-bold text-gray-400 uppercase">ID Card / Passport</p>
+                                                {app.id_card ? (
+                                                    <a href={app.id_card} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-600 hover:underline flex items-center gap-1 group">
+                                                        View Document
+                                                        <ExternalLink className="w-3 h-3 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+                                                    </a>
+                                                ) : (
+                                                    <span className="text-sm text-gray-500 italic">No document</span>
+                                                )}
                                             </div>
                                         </div>
                                     </div>

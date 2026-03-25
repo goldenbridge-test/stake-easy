@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Youtube, Globe, Send, Clock, CheckCircle, XCircle } from 'lucide-react';
+import { ArrowLeft, Youtube, Globe, Send, Clock, CheckCircle, XCircle, FileText, MapPin, Hash, Image as ImageIcon } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import Navbar from '../Navbar';
 import Footer from '../Footer';
@@ -8,6 +8,14 @@ import { instructorApplicationsApi } from '../../services/api';
 const InstructorApplicationForm = () => {
     const [youtube, setYoutube] = useState('');
     const [otherPlatforms, setOtherPlatforms] = useState('');
+
+    // KYC Fields
+    const [ifu, setIfu] = useState('');
+    const [address, setAddress] = useState('');
+    const [country, setCountry] = useState('');
+    const [city, setCity] = useState('');
+    const [idCard, setIdCard] = useState<File | null>(null);
+
     const [status, setStatus] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
@@ -39,11 +47,23 @@ const InstructorApplicationForm = () => {
         setError('');
         setSubmitting(true);
 
+        if (!idCard) {
+            setError('Please upload your ID Card or Passport.');
+            setSubmitting(false);
+            return;
+        }
+
         try {
-            await instructorApplicationsApi.submit({
-                youtube_channel: youtube,
-                other_platforms: otherPlatforms
-            });
+            const formData = new FormData();
+            formData.append('youtube_channel', youtube);
+            formData.append('other_platforms', otherPlatforms);
+            formData.append('ifu', ifu);
+            formData.append('address', address);
+            formData.append('country', country);
+            formData.append('city', city);
+            formData.append('id_card', idCard);
+
+            await instructorApplicationsApi.submit(formData);
             setSuccess(true);
             fetchStatus();
         } catch (err: any) {
@@ -133,6 +153,69 @@ const InstructorApplicationForm = () => {
                                             className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-gold focus:ring-1 focus:ring-gold outline-none transition"
                                         />
                                         <p className="text-xs text-gray-400 mt-2">Link to your main educational content platform.</p>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div>
+                                            <label className="flex items-center gap-2 text-sm font-bold text-primary mb-2">
+                                                <Hash className="w-4 h-4 text-gray-500" />
+                                                IFU (Tax ID)
+                                            </label>
+                                            <input
+                                                type="text"
+                                                required
+                                                placeholder="Your IFU Number"
+                                                value={ifu}
+                                                onChange={(e) => setIfu(e.target.value)}
+                                                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-gold focus:ring-1 focus:ring-gold outline-none transition"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="flex items-center gap-2 text-sm font-bold text-primary mb-2">
+                                                <FileText className="w-4 h-4 text-gray-500" />
+                                                ID Card / Passport
+                                            </label>
+                                            <input
+                                                type="file"
+                                                required
+                                                accept="image/*,.pdf"
+                                                onChange={(e) => setIdCard(e.target.files ? e.target.files[0] : null)}
+                                                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-gold focus:ring-1 focus:ring-gold outline-none transition bg-white text-sm"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label className="flex items-center gap-2 text-sm font-bold text-primary mb-2">
+                                            <MapPin className="w-4 h-4 text-gray-500" />
+                                            Residential Address
+                                        </label>
+                                        <input
+                                            type="text"
+                                            required
+                                            placeholder="123 Main St, Appt 4B"
+                                            value={address}
+                                            onChange={(e) => setAddress(e.target.value)}
+                                            className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-gold focus:ring-1 focus:ring-gold outline-none transition mb-4"
+                                        />
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <input
+                                                type="text"
+                                                required
+                                                placeholder="City"
+                                                value={city}
+                                                onChange={(e) => setCity(e.target.value)}
+                                                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-gold focus:ring-1 focus:ring-gold outline-none transition"
+                                            />
+                                            <input
+                                                type="text"
+                                                required
+                                                placeholder="Country"
+                                                value={country}
+                                                onChange={(e) => setCountry(e.target.value)}
+                                                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-gold focus:ring-1 focus:ring-gold outline-none transition"
+                                            />
+                                        </div>
                                     </div>
 
                                     <div>

@@ -23,8 +23,9 @@ export const isAuthenticated = () => !!getAccessToken();
 
 // ─── Core fetch with auth & auto-refresh ─────────────────────────────────────
 async function apiFetch(path: string, options: RequestInit = {}): Promise<Response> {
+    const isFormData = options.body instanceof FormData;
     const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
+        ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
         ...(options.headers as Record<string, string>),
     };
     const token = getAccessToken();
@@ -467,10 +468,10 @@ export const notesApi = {
 
 // ─── Instructor Applications ──────────────────────────────────────────────────
 export const instructorApplicationsApi = {
-    async submit(data: { youtube_channel: string; other_platforms: string }) {
+    async submit(data: FormData) {
         const res = await apiFetch('/api/accounts/instructor-applications/', {
             method: 'POST',
-            body: JSON.stringify(data),
+            body: data,
         });
         if (!res.ok) {
             const err = await res.json();
