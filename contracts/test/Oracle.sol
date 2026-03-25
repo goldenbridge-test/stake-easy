@@ -10,7 +10,7 @@ import "@chainlink/contracts/src/v0.6/vendor/SafeMathChainlink.sol";
  * @title The Chainlink Mock Oracle contract
  * @notice Chainlink smart contract developers can use this to test their contracts
  */
-contract MockOracle is ChainlinkRequestInterface, LinkTokenReceiver {
+contract Oracle is ChainlinkRequestInterface, LinkTokenReceiver {
   using SafeMathChainlink for uint256;
 
   uint256 constant public EXPIRY_TIME = 5 minutes;

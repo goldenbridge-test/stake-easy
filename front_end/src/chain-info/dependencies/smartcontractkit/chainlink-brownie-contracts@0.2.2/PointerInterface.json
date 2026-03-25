@@ -21,15 +21,15 @@
     "absolutePath": "C:/Users/1K/.brownie/packages/smartcontractkit/chainlink-brownie-contracts@0.2.2/contracts/src/v0.8/interfaces/PointerInterface.sol",
     "exportedSymbols": {
       "PointerInterface": [
-        2639
+        2987
       ]
     },
-    "id": 2640,
+    "id": 2988,
     "license": "MIT",
     "nodeType": "SourceUnit",
     "nodes": [
       {
-        "id": 2633,
+        "id": 2981,
         "literals": [
           "solidity",
           "^",
@@ -46,9 +46,9 @@
         "contractDependencies": [],
         "contractKind": "interface",
         "fullyImplemented": false,
-        "id": 2639,
+        "id": 2987,
         "linearizedBaseContracts": [
-          2639
+          2987
         ],
         "name": "PointerInterface",
         "nameLocation": "67:16:12",
@@ -56,7 +56,7 @@
         "nodes": [
           {
             "functionSelector": "38cc4831",
-            "id": 2638,
+            "id": 2986,
             "implemented": false,
             "kind": "function",
             "modifiers": [],
@@ -64,23 +64,23 @@
             "nameLocation": "100:10:12",
             "nodeType": "FunctionDefinition",
             "parameters": {
-              "id": 2634,
+              "id": 2982,
               "nodeType": "ParameterList",
               "parameters": [],
               "src": "110:2:12"
             },
             "returnParameters": {
-              "id": 2637,
+              "id": 2985,
               "nodeType": "ParameterList",
               "parameters": [
                 {
                   "constant": false,
-                  "id": 2636,
+                  "id": 2984,
                   "mutability": "mutable",
                   "name": "",
                   "nameLocation": "-1:-1:-1",
                   "nodeType": "VariableDeclaration",
-                  "scope": 2638,
+                  "scope": 2986,
                   "src": "155:7:12",
                   "stateVariable": false,
                   "storageLocation": "default",
@@ -89,7 +89,7 @@
                     "typeString": "address"
                   },
                   "typeName": {
-                    "id": 2635,
+                    "id": 2983,
                     "name": "address",
                     "nodeType": "ElementaryTypeName",
                     "src": "155:7:12",
@@ -104,16 +104,17 @@
               ],
               "src": "147:21:12"
             },
-            "scope": 2639,
+            "scope": 2987,
             "src": "91:78:12",
             "stateMutability": "view",
             "virtual": false,
             "visibility": "external"
           }
         ],
-        "scope": 2640,
+        "scope": 2988,
         "src": "57:114:12",
-        "usedErrors": []
+        "usedErrors": [],
+        "usedEvents": []
       }
     ],
     "src": "32:140:12"
@@ -126,7 +127,7 @@
       "enabled": true,
       "runs": 200
     },
-    "version": "0.8.16+commit.07a7930e"
+    "version": "0.8.31+commit.fd3a2265"
   },
   "contractName": "PointerInterface",
   "coverageMap": {

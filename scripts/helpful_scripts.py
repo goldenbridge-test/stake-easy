@@ -3,9 +3,9 @@ from brownie import (
     network,
     config,
     Contract,
-    MockV3Aggregator,
-    MockDAI,
-    MockWETH,
+    V3Aggregator,
+    USDC,
+    ETH,
     LinkToken,
 )
 import eth_utils
@@ -38,12 +38,12 @@ def get_account(index=None, id=None):
 
     
 contract_to_mock = {
-    "eth_usd_price_feed": MockV3Aggregator,
-    "dai_usd_price_feed": MockV3Aggregator,
-    "link_usd_price_feed": MockV3Aggregator,
-    "fau_token": MockDAI,
-    "weth_token": MockWETH,
-    "link_token": LinkToken,
+    "eth_usd_price_feed": V3Aggregator,
+    "usdc_usd_price_feed": V3Aggregator,
+    "usdt_usd_price_feed": V3Aggregator,
+    "usdc_token": USDC,
+    "eth_token": ETH,
+    "usdt_token": LinkToken,
 }
 
 def get_contract(contract_name):
@@ -92,22 +92,22 @@ def deploy_mocks(decimals=DECIMALS, initial_value=INITIAL_PRICE_FEED_VALUE):
     print("Deploying Mocks...")
     account = get_account()
     print("Deploying Mock Price Feed...")
-    mock_price_feed = MockV3Aggregator.deploy(
+    price_feed = V3Aggregator.deploy(
         decimals, initial_value, {"from": account}
     )
-    print(f"Deployed to {mock_price_feed.address}")
+    print(f"Deployed to {price_feed.address}")
 
     print("Deploying Link Token...")
     link_token = LinkToken.deploy({"from": account})
     print(f"Deployed to {link_token.address}")
 
     print("Deploying Mock DAI...")
-    mock_dai = MockDAI.deploy({"from": account})
-    print(f"Deployed to {mock_dai.address}")
-    print("Deploying Mock WETH...")
+    usdc = USDC.deploy({"from": account})
+    print(f"Deployed to {usdc.address}")
+    print("Deploying Mock ETH...")
 
-    mock_weth = MockWETH.deploy({"from": account})
-    print(f"Deployed to {mock_weth.address}")
+    eth = ETH.deploy({"from": account})
+    print(f"Deployed to {eth.address}")
     print("Mocks Deployed!")
 
 

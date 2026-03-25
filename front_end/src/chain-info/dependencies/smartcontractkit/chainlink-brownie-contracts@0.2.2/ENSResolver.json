@@ -27,15 +27,15 @@
     "absolutePath": "C:/Users/1K/.brownie/packages/smartcontractkit/chainlink-brownie-contracts@0.2.2/contracts/src/v0.8/vendor/ENSResolver.sol",
     "exportedSymbols": {
       "ENSResolver": [
-        2649
+        2997
       ]
     },
-    "id": 2650,
+    "id": 2998,
     "license": "MIT",
     "nodeType": "SourceUnit",
     "nodes": [
       {
-        "id": 2641,
+        "id": 2989,
         "literals": [
           "solidity",
           "^",
@@ -52,9 +52,9 @@
         "contractDependencies": [],
         "contractKind": "contract",
         "fullyImplemented": false,
-        "id": 2649,
+        "id": 2997,
         "linearizedBaseContracts": [
-          2649
+          2997
         ],
         "name": "ENSResolver",
         "nameLocation": "75:11:15",
@@ -62,7 +62,7 @@
         "nodes": [
           {
             "functionSelector": "3b3b57de",
-            "id": 2648,
+            "id": 2996,
             "implemented": false,
             "kind": "function",
             "modifiers": [],
@@ -70,17 +70,17 @@
             "nameLocation": "100:4:15",
             "nodeType": "FunctionDefinition",
             "parameters": {
-              "id": 2644,
+              "id": 2992,
               "nodeType": "ParameterList",
               "parameters": [
                 {
                   "constant": false,
-                  "id": 2643,
+                  "id": 2991,
                   "mutability": "mutable",
                   "name": "node",
                   "nameLocation": "118:4:15",
                   "nodeType": "VariableDeclaration",
-                  "scope": 2648,
+                  "scope": 2996,
                   "src": "110:12:15",
                   "stateVariable": false,
                   "storageLocation": "default",
@@ -89,7 +89,7 @@
                     "typeString": "bytes32"
                   },
                   "typeName": {
-                    "id": 2642,
+                    "id": 2990,
                     "name": "bytes32",
                     "nodeType": "ElementaryTypeName",
                     "src": "110:7:15",
@@ -104,17 +104,17 @@
               "src": "104:22:15"
             },
             "returnParameters": {
-              "id": 2647,
+              "id": 2995,
               "nodeType": "ParameterList",
               "parameters": [
                 {
                   "constant": false,
-                  "id": 2646,
+                  "id": 2994,
                   "mutability": "mutable",
                   "name": "",
                   "nameLocation": "-1:-1:-1",
                   "nodeType": "VariableDeclaration",
-                  "scope": 2648,
+                  "scope": 2996,
                   "src": "179:7:15",
                   "stateVariable": false,
                   "storageLocation": "default",
@@ -123,7 +123,7 @@
                     "typeString": "address"
                   },
                   "typeName": {
-                    "id": 2645,
+                    "id": 2993,
                     "name": "address",
                     "nodeType": "ElementaryTypeName",
                     "src": "179:7:15",
@@ -138,16 +138,17 @@
               ],
               "src": "171:21:15"
             },
-            "scope": 2649,
+            "scope": 2997,
             "src": "91:102:15",
             "stateMutability": "view",
             "virtual": true,
             "visibility": "public"
           }
         ],
-        "scope": 2650,
+        "scope": 2998,
         "src": "57:138:15",
-        "usedErrors": []
+        "usedErrors": [],
+        "usedEvents": []
       }
     ],
     "src": "32:164:15"
@@ -160,7 +161,7 @@
       "enabled": true,
       "runs": 200
     },
-    "version": "0.8.16+commit.07a7930e"
+    "version": "0.8.31+commit.fd3a2265"
   },
   "contractName": "ENSResolver",
   "coverageMap": {

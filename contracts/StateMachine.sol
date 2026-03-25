@@ -14,8 +14,7 @@ contract StateMachine {
   uint256 public end; // Timestamp when the loan term ends
   uint256 public duration; // Declare duration as a state variable
   address payable public borrower; // Updated to address payable
-  address payable public lender; // Updated to address payable
-  address payable public tokenFarm; // 👈 TokenFarm = lender logique
+  address payable public tokenFarm; // TokenFarm = lender logique
 
   constructor(
     uint256 _amount,
@@ -33,10 +32,10 @@ contract StateMachine {
   }
 
 
-  // ===== FUND (appelé UNIQUEMENT par TokenFarm via LoanFactory)
+  // ===== FUND (appel UNIQUEMENT par TokenFarm via LoanFactory)
 
   function fund() external payable onlyTokenFarm {
-    require(msg.sender == lender, "Only lender can fund the loan.");
+    require(msg.sender == tokenFarm, "Only lender can fund the loan."); // Only tokenFarm can call this function
     require(
       address(this).balance == amount,
       "Funding must match the loan amount exactly."
@@ -46,7 +45,7 @@ contract StateMachine {
   } // Transfer the loan amount to the borrower
 
 
-  // ===== REPAY (borrower rembourse, fonds retournent à TokenFarm)
+  // ===== REPAY (borrower rembourse, fonds retournent TokenFarm)
 
   function reimburse() external payable onlyBorrower {
     require(msg.sender == borrower, "Only borrower can reimburse the loan.");

@@ -6,7 +6,7 @@ import yaml
 import json
 from web3 import Web3
 
-KEPT_BALANCE = Web3.to_wei(100, "ether")  # CORRIGÉ
+KEPT_BALANCE = Web3.to_wei(1000000, "ether")  # CORRIGÉ
 
 
 def deploy_token_farm_and_golden_token(update_front_end_flag=False):
@@ -32,19 +32,20 @@ def deploy_token_farm_and_golden_token(update_front_end_flag=False):
     )
     tx.wait(1)
 
+
     # ===== Get mock tokens =====
-    fau_token = get_contract("fau_token")
-    weth_token = get_contract("weth_token")
-    link_token = get_contract("link_token")
+    usdc_token = get_contract("usdc_token")
+    eth_token = get_contract("eth_token")
+    usdt_token = get_contract("usdt_token")
 
     # ===== Add allowed tokens + price feeds =====
     add_allowed_tokens(
         token_farm,
         {
-            golden_token: get_contract("dai_usd_price_feed"),
-            fau_token: get_contract("dai_usd_price_feed"),
-            weth_token: get_contract("eth_usd_price_feed"),
-            link_token: get_contract("link_usd_price_feed"),
+            golden_token: get_contract("usdc_usd_price_feed"),
+            usdc_token: get_contract("usdc_usd_price_feed"),
+            eth_token: get_contract("eth_usd_price_feed"),
+            usdt_token: get_contract("usdt_usd_price_feed"),
         },
         account,
     )
@@ -62,6 +63,7 @@ def deploy_token_farm_and_golden_token(update_front_end_flag=False):
         {"from": account},
     )
     tx.wait(1)
+
 
     # ===== Update Frontend =====
     if update_front_end_flag:

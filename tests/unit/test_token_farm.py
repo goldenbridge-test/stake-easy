@@ -200,3 +200,154 @@ def test_issue_tokens(amount_staked):
         golden_token.balanceOf(account.address)
         == starting_balance + INITIAL_PRICE_FEED_VALUE
     )
+
+
+
+def test_issue_tokens_with_max_supply(amount_staked):
+    if network.show_active() not in LOCAL_BLOCKCHAIN_ENVIRONMENTS:
+        pytest.skip("Only for local testing")
+    account = get_account()
+    token_farm, golden_token = test_stake_tokens(amount_staked)
+    
+    # Simule un circulatingSupply proche du max
+    golden_token.mint(token_farm.address, golden_token.MAX_SUPPLY() - golden_token.circulatingSupply(), {"from": account})
+
+    starting_circulating = golden_token.circulatingSupply()
+    
+    # Act: Issue tokens via TokenFarm
+    token_farm.issueTokens({"from": account})
+    
+    # Assert: Circulating supply ne dépasse pas MAX_SUPPLY
+    assert golden_token.circulatingSupply() <= golden_token.MAX_SUPPLY()
+
+
+def test_burn_tokens():
+    if network.show_active() not in LOCAL_BLOCKCHAIN_ENVIRONMENTS:
+        pytest.skip("Only for local testing")
+    account = get_account()
+    token_farm, golden_token = deploy_token_farm_and_golden_token()
+
+    # Arrange: balance initiale
+    initial_balance = golden_token.balanceOf(account.address)
+    
+    burn_amount = 1_000 * 10**18
+    golden_token.burn(burn_amount, {"from": account})
+    
+    # Assert: balance diminue et circulatingSupply aussi
+    assert golden_token.balanceOf(account.address) == initial_balance - burn_amount
+    assert golden_token.circulatingSupply() == golden_token.circulatingSupply() - burn_amount
+
+
+
+def test_transfer_ownership_to_token_farm():
+    # Arrange
+    if network.show_active() not in LOCAL_BLOCKCHAIN_ENVIRONMENTS:
+        pytest.skip("Only for local testing")
+    account = get_account()
+    token_farm, golden_token = deploy_token_farm_and_golden_token()
+    
+    # Avant transfert, le propriétaire doit être le deployer
+    assert golden_token.owner() == account.address
+    
+    # Act: transférer la propriété du token à TokenFarm
+    golden_token.transferOwnership(token_farm.address, {"from": account})
+    
+    # Assert: le nouveau propriétaire est bien TokenFarm
+    assert golden_token.owner() == token_farm.address
+    
+    # Vérification que l'ancien owner ne peut plus mint
+    with pytest.raises(Exception):
+        golden_token.mint(account.address, 1_000 * 10**18, {"from": account})
+    
+    # Vérification que le nouveau propriétaire peut mint via TokenFarm
+    # Ici on simule un mint direct depuis TokenFarm pour test
+    token_farm_address = token_farm.address
+    golden_token.mint(token_farm_address, 1_000 * 10**18, {"from": token_farm_address})
+    
+    # Circulating supply augmente
+    assert golden_token.circulatingSupply() >= 10_000_000 * 10**18 + 1_000 * 10**18
+
+
+def test_distribute_loan_returns(amount_staked):
+    # Arrange
+    if network.show_active() not in LOCAL_BLOCKCHAIN_ENVIRONMENTS:
+        pytest.skip("Only for local testing")
+    account = get_account()
+    token_farm, golden_token = deploy_token_farm_and_golden_token()
+    
+    # Stake some tokens
+    golden_token.approve(token_farm.address, amount_staked, {"from": account})
+    token_farm.stakeTokens(amount_staked, golden_token.address, {"from": account})
+    
+    # Authorize a mock loan (use account as loan for testing)
+    token_farm.authorizeLoan(account.address, {"from": account})
+    
+    # Simulate receiving loan returns
+    return_amount = 100 * 10**18  # 100 tokens
+    token_farm.receiveLoanReturns({"from": account, "value": return_amount})
+    
+    # Check pendingReturns is set
+    assert token_farm.pendingReturns(account.address) == return_amount
+    
+    # Get initial balance
+    initial_balance = golden_token.balanceOf(account.address)
+    
+    # Act: Distribute loan returns
+    token_farm.distributeLoanReturns({"from": account})
+    
+    # Assert: pendingReturns reset to 0
+    assert token_farm.pendingReturns(account.address) == 0
+    
+    # Assert: User received the returns (since only one staker, gets all)
+    final_balance = golden_token.balanceOf(account.address)
+    assert final_balance == initial_balance + return_amount
+
+
+def test_allowed_tokens_mapping(amount_staked):
+    # Arrange
+    if network.show_active() not in LOCAL_BLOCKCHAIN_ENVIRONMENTS:
+        pytest.skip("Only for local testing")
+    account = get_account()
+    token_farm, golden_token = deploy_token_farm_and_golden_token()
+    random_erc20 = get_contract("fau_token")  # Assuming FAU is available
+
+    # Act: Add token
+    token_farm.addAllowedTokens(random_erc20.address, {"from": account})
+
+    # Assert: Mapping is true
+    assert token_farm.allowedTokensMapping(random_erc20.address) == True
+    assert token_farm.tokenIsAllowed(random_erc20.address) == True
+
+    # Act: Remove token
+    token_farm.removeAllowedToken(random_erc20.address, {"from": account})
+
+    # Assert: Mapping is false
+    assert token_farm.allowedTokensMapping(random_erc20.address) == False
+    assert token_farm.tokenIsAllowed(random_erc20.address) == False
+
+
+def test_staker_mapping_and_count(amount_staked):
+    # Arrange
+    if network.show_active() not in LOCAL_BLOCKCHAIN_ENVIRONMENTS:
+        pytest.skip("Only for local testing")
+    account = get_account()
+    token_farm, golden_token = deploy_token_farm_and_golden_token()
+
+    # Initial state
+    assert token_farm.stakerCount() == 0
+    assert token_farm.isStaker(account.address) == False
+
+    # Act: Stake tokens
+    golden_token.approve(token_farm.address, amount_staked, {"from": account})
+    token_farm.stakeTokens(amount_staked, golden_token.address, {"from": account})
+
+    # Assert: Staker added
+    assert token_farm.stakerCount() == 1
+    assert token_farm.isStaker(account.address) == True
+
+    # Act: Unstake all
+    token_farm.unstakeTokens(golden_token.address, {"from": account})
+
+    # Assert: Staker removed
+    assert token_farm.stakerCount() == 0
+    assert token_farm.isStaker(account.address) == False

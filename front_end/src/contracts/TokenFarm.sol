@@ -17,12 +17,16 @@ contract TokenFarm is ChainlinkClient, Ownable, ReentrancyGuard {
   mapping(address => mapping(address => uint256)) public stakingBalance;
   mapping(address => uint256) public uniqueTokensStaked;
   mapping(address => address) public tokenPriceFeedMapping;
+  mapping(address => bool) public allowedTokensMapping;
   address[] public allowedTokens;
   LoanFactory public loanFactory;
   
   // Pull-over-push : stocke les retours de chaque StateMachine
   mapping(address => uint256) public pendingReturns;
   mapping(address => bool) public authorizedLoans;
+  address[] public authorizedLoansArray;
+  mapping(address => bool) public isStaker;
+  uint256 public stakerCount;
 
   event TokenStaked(
     address indexed user,
@@ -39,7 +43,7 @@ contract TokenFarm is ChainlinkClient, Ownable, ReentrancyGuard {
   event LoanInvestment(uint256 loanId, uint256 amount);
   event LoanReturnsReceived(address indexed sender, uint256 amount);
   event AllowedTokenRemoved(address token);
-  // 🔔 Événement pour tracer la distribution
+  // Evenement pour tracer la distribution
   event LoanReturnsDistributed(uint256 totalAmount);
 
   constructor(address _goldenTokenAddress, address _loanFactory) {
@@ -48,13 +52,18 @@ contract TokenFarm is ChainlinkClient, Ownable, ReentrancyGuard {
   }
 
   function addAllowedTokens(address token) public onlyOwner {
-    allowedTokens.push(token);
+    require(token != address(0), "Invalid token address");
+    if (!allowedTokensMapping[token]) {
+      allowedTokensMapping[token] = true;
+      allowedTokens.push(token);
+    }
   }
 
   function setPriceFeedContract(
     address token,
     address priceFeed
   ) public onlyOwner {
+    require(token != address(0), "Invalid token address");
     tokenPriceFeedMapping[token] = priceFeed;
   }
 
@@ -68,8 +77,10 @@ contract TokenFarm is ChainlinkClient, Ownable, ReentrancyGuard {
     stakingBalance[token][msg.sender] =
       stakingBalance[token][msg.sender] +
       _amount;
-    if (uniqueTokensStaked[msg.sender] == 1) {
+    if (uniqueTokensStaked[msg.sender] == 1 && !isStaker[msg.sender]) {
       stakers.push(msg.sender);
+      isStaker[msg.sender] = true;
+      stakerCount++;
     }
     // EVENT
     emit TokenStaked(msg.sender, token, _amount);
@@ -87,7 +98,7 @@ contract TokenFarm is ChainlinkClient, Ownable, ReentrancyGuard {
 
     // The code below fixes a problem where stakers could not appear twice
     // in the stakers array, receiving twice the reward.
-    if (uniqueTokensStaked[msg.sender] == 0) {
+    if (uniqueTokensStaked[msg.sender] == 0 && isStaker[msg.sender]) {
       for (
         uint256 stakersIndex = 0;
         stakersIndex < stakers.length;
@@ -96,6 +107,9 @@ contract TokenFarm is ChainlinkClient, Ownable, ReentrancyGuard {
         if (stakers[stakersIndex] == msg.sender) {
           stakers[stakersIndex] = stakers[stakers.length - 1];
           stakers.pop();
+          isStaker[msg.sender] = false;
+          stakerCount--;
+          break;
         }
       }
     }
@@ -123,39 +137,28 @@ contract TokenFarm is ChainlinkClient, Ownable, ReentrancyGuard {
   }
 
   function tokenIsAllowed(address token) public view returns (bool) {
-    for (
-      uint256 allowedTokensIndex = 0;
-      allowedTokensIndex < allowedTokens.length;
-      allowedTokensIndex++
-    ) {
-      if (allowedTokens[allowedTokensIndex] == token) {
-        return true;
-      }
-    }
-    return false;
+    return allowedTokensMapping[token];
   }
 
   // Event pour tracer la suppression
 
   function removeAllowedToken(address token) public onlyOwner {
+    require(allowedTokensMapping[token], "Token not allowed");
+    allowedTokensMapping[token] = false;
     for (
       uint256 allowedTokensIndex = 0;
       allowedTokensIndex < allowedTokens.length;
       allowedTokensIndex++
     ) {
       if (allowedTokens[allowedTokensIndex] == token) {
-        // swap avec le dernier élément et pop
+        // swap avec le dernier élement et pop
         allowedTokens[allowedTokensIndex] = allowedTokens[
           allowedTokens.length - 1
         ];
         allowedTokens.pop();
-        require(!tokenIsAllowed(token), "Token removal failed");
-        emit AllowedTokenRemoved(token);
-        return; // on sort de la boucle dès qu'on supprime
+        break; // since mapping ensures uniqueness
       }
     }
-
-    revert("Token not found in allowedTokens");
   }
 
   function updateUniqueTokensStaked(address user, address token) internal {
@@ -184,7 +187,8 @@ contract TokenFarm is ChainlinkClient, Ownable, ReentrancyGuard {
       stakersIndex++
     ) {
       address recipient = stakers[stakersIndex];
-      goldenToken.transfer(recipient, getUserTotalValue(recipient));
+      uint256 totalStakedValue = getUserTotalValue(recipient);
+      goldenToken.transfer(recipient, totalStakedValue);
     }
   }
 
@@ -202,6 +206,10 @@ contract TokenFarm is ChainlinkClient, Ownable, ReentrancyGuard {
       uint80 answeredInRound
     ) = priceFeed.latestRoundData();
     return (uint256(price), priceFeed.decimals());
+  }
+
+  function getStakers() public view returns(address [] memory){
+    return stakers;
   }
 
   function setLoanFactory(address _loanFactory) external onlyOwner {
@@ -228,16 +236,17 @@ contract TokenFarm is ChainlinkClient, Ownable, ReentrancyGuard {
     emit LoanInvestment(loanId, amount);
   }
 
-  
-  modifier onlyLoanFactory() {
-    require(msg.sender == address(loanFactory), "Not LoanFactory");
-    _;
+  // =====================================
+  // Recevoir les retours d'un loan (pull-over-push)
+  // =====================================
+  function authorizeLoan(address loan) external onlyOwner {
+    require(loan != address(0), "Invalid loan address");
+    if (!authorizedLoans[loan]) {
+      authorizedLoans[loan] = true;
+      authorizedLoansArray.push(loan);
+    }
   }
-
-
-  // =====================================
-  // Recevoir les retours d’un loan (pull-over-push)
-  // =====================================
+  
   function receiveLoanReturns() external payable onlyOwner {
     require(authorizedLoans[msg.sender], "Unauthorized loan");
     require(msg.value > 0, "No funds sent");
@@ -256,25 +265,19 @@ contract TokenFarm is ChainlinkClient, Ownable, ReentrancyGuard {
   }
 
 
-  function authorizeLoan(address loan) external onlyOwner {
-    authorizedLoans[loan] = true;
-  }
-
-
-  // =====================================
   // Redistribuer les retours des loans
   // =====================================
   function distributeLoanReturns() external onlyOwner {
     uint256 totalReturns = 0;
 
-    // 1️⃣ Calculer le total des retours disponibles
-    for (uint256 stakersIndex = 0; stakersIndex < stakers.length; stakersIndex++) {
-      totalReturns += pendingReturns[stakers[stakersIndex]];
+    // 1 Calculer le total des retours disponibles
+    for (uint256 i = 0; i < authorizedLoansArray.length; i++) {
+      totalReturns += pendingReturns[authorizedLoansArray[i]];
     }
 
     require(totalReturns > 0, "No loan returns to distribute");
 
-    // 2️⃣ Calculer la valeur totale de tous les stakers pour le ratio
+    // 2 Calculer la valeur totale de tous les stakers pour le ratio
     uint256 totalStakedValue = 0;
     for (uint256 stakersIndex = 0; stakersIndex < stakers.length; stakersIndex++) {
       totalStakedValue += getUserTotalValue(stakers[stakersIndex]);
@@ -282,7 +285,7 @@ contract TokenFarm is ChainlinkClient, Ownable, ReentrancyGuard {
 
     require(totalStakedValue > 0, "No staking value to distribute against");
 
-    // 3️⃣ Redistribuer les retours proportionnellement
+    // 3 Redistribuer les retours proportionnellement
     for (uint256 stakersIndex = 0; stakersIndex < stakers.length; stakersIndex++) {
       address recipient = stakers[stakersIndex];
         uint256 userValue = getUserTotalValue(recipient);
@@ -296,6 +299,11 @@ contract TokenFarm is ChainlinkClient, Ownable, ReentrancyGuard {
 
       // Reset pendingReturns pour cet utilisateur
       pendingReturns[recipient] = 0;
+    }
+
+    // Reset pendingReturns for all loans
+    for (uint256 i = 0; i < authorizedLoansArray.length; i++) {
+      pendingReturns[authorizedLoansArray[i]] = 0;
     }
 
     emit LoanReturnsDistributed(totalReturns);
