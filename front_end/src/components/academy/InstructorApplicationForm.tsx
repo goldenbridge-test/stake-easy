@@ -10,6 +10,8 @@ const InstructorApplicationForm = () => {
     const [otherPlatforms, setOtherPlatforms] = useState('');
 
     // KYC Fields
+    const [firstName, setFirstName] = useState('');
+    const [lastName, setLastName] = useState('');
     const [ifu, setIfu] = useState('');
     const [address, setAddress] = useState('');
     const [country, setCountry] = useState('');
@@ -55,6 +57,8 @@ const InstructorApplicationForm = () => {
 
         try {
             const formData = new FormData();
+            formData.append('first_name', firstName);
+            formData.append('last_name', lastName);
             formData.append('youtube_channel', youtube);
             formData.append('other_platforms', otherPlatforms);
             formData.append('ifu', ifu);
@@ -139,6 +143,35 @@ const InstructorApplicationForm = () => {
                                         </div>
                                     )}
 
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="flex items-center gap-2 text-sm font-bold text-primary mb-2">
+                                                First Name
+                                            </label>
+                                            <input
+                                                type="text"
+                                                required
+                                                placeholder="John"
+                                                value={firstName}
+                                                onChange={(e) => setFirstName(e.target.value)}
+                                                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-gold focus:ring-1 focus:ring-gold outline-none transition"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="flex items-center gap-2 text-sm font-bold text-primary mb-2">
+                                                Last Name
+                                            </label>
+                                            <input
+                                                type="text"
+                                                required
+                                                placeholder="Doe"
+                                                value={lastName}
+                                                onChange={(e) => setLastName(e.target.value)}
+                                                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-gold focus:ring-1 focus:ring-gold outline-none transition"
+                                            />
+                                        </div>
+                                    </div>
+
                                     <div>
                                         <label className="flex items-center gap-2 text-sm font-bold text-primary mb-2">
                                             <Youtube className="w-4 h-4 text-red-600" />
@@ -159,11 +192,10 @@ const InstructorApplicationForm = () => {
                                         <div>
                                             <label className="flex items-center gap-2 text-sm font-bold text-primary mb-2">
                                                 <Hash className="w-4 h-4 text-gray-500" />
-                                                IFU (Tax ID)
+                                                IFU (Tax ID) <span className="text-gray-400 font-normal text-xs">(Optional)</span>
                                             </label>
                                             <input
                                                 type="text"
-                                                required
                                                 placeholder="Your IFU Number"
                                                 value={ifu}
                                                 onChange={(e) => setIfu(e.target.value)}

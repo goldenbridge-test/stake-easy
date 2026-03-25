@@ -81,13 +81,13 @@ const AdminInstructorApplications = () => {
                                 <div className="p-6 flex-grow border-b md:border-b-0 md:border-r border-gray-50">
                                     <div className="flex items-center gap-3 mb-4">
                                         <div className="w-10 h-10 bg-primary/5 rounded-full flex items-center justify-center text-primary font-bold">
-                                            {app.user_name?.[0].toUpperCase() || 'U'}
+                                            {app.username?.[0].toUpperCase() || 'U'}
                                         </div>
                                         <div>
                                             <h3 className="font-bold text-lg">
-                                                {app.first_name || app.last_name ? `${app.first_name || ''} ${app.last_name || ''}` : app.user_name}
+                                                {app.first_name || app.last_name ? `${app.first_name || ''} ${app.last_name || ''}` : app.username}
                                             </h3>
-                                            <p className="text-xs text-gray-400">@{app.user_name} • Applied on {new Date(app.created_at).toLocaleDateString()}</p>
+                                            <p className="text-xs text-gray-400">@{app.username} • Applied on {new Date(app.created_at).toLocaleDateString()}</p>
                                         </div>
                                     </div>
 
@@ -201,7 +201,7 @@ const AdminInstructorApplications = () => {
                                 {historyApps.map((app) => (
                                     <tr key={app.id}>
                                         <td className="px-6 py-4">
-                                            <span className="font-bold text-primary">{app.user_name}</span>
+                                            <span className="font-bold text-primary">{app.username}</span>
                                         </td>
                                         <td className="px-6 py-4">
                                             <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full uppercase ${app.status === 'approved' ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'
