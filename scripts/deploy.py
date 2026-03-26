@@ -1,4 +1,4 @@
-from brownie import GoldenToken, TokenFarm, LoanFactory, network, config
+from brownie import GoldenToken, TokenFarm, LoanFactory,GoldenPEFund, network, config
 from scripts.helpful_scripts import get_account, get_contract
 import shutil
 import os
@@ -64,7 +64,26 @@ def deploy_token_farm_and_golden_token(update_front_end_flag=False):
     )
     tx.wait(1)
 
+    # ===== Deploy GoldenPEFund =====
 
+    stablecoin = get_contract("usdc_token") # USDT ou BUSD sur BSC
+    fund_manager = "0x0000000000000000000000000000000000000000"
+
+    fund = GoldenPEFund.deploy(
+        stablecoin,
+        fund_manager,
+        200,   # entry fee 2%
+        100,   # exit fee 1%
+        2000,  # performance fee 20%
+        {"from": account},
+        publish_source=config["networks"][network.show_active()].get("verify")
+    )
+
+    print("GoldenPEFund deployed at:", fund.address)
+
+    # === set Fund Manager =====
+    tx = fund.setFundManager("0xD2e1EF32fE5D065c8470a41eA2f5817d55231cfA", {"from": account},)
+    tx.wait(1)
     # ===== Update Frontend =====
     if update_front_end_flag:
         update_front_end()
