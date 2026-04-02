@@ -1,9 +1,23 @@
 import { useState, useEffect } from 'react';
 import { ethers } from 'ethers';
+import networkMap from '../chain-info/map.json';
+import { walletApi, networksApi } from '../services/blockchainApi';
 
-// Adresses des contrats déployés sur Sepolia (chainId 11155111)
-const TOKEN_FARM_ADDRESS = "0x736Ee2066fd93601Cb86Ce4d8ce7109d014cbDE4";
-const DEFAULT_TOKEN_ADDRESS = "0x92e474EcD778406C8A101175E32cA9149C2c1499";
+// Lit dynamiquement la dernière paire TokenFarm/GoldenToken depuis map.json
+function getContractAddresses(chainId: number): { tokenFarm: string; goldenToken: string } {
+  const chainData = (networkMap as any)[String(chainId)];
+  const farms: string[] = chainData?.TokenFarm || [];
+  const tokens: string[] = chainData?.GoldenToken || [];
+  return {
+    tokenFarm: farms[0] || '0x328011A76260088494119a77940DD0C6E4DCdFfD',
+    goldenToken: tokens[0] || '0xD6592daDd49Dd401CD5dF8CC54dFe98cDB922E71',
+  };
+}
+
+// Fallback Sepolia (chainId 11155111) — mis à jour automatiquement au runtime
+const SEPOLIA_CHAIN_ID = 11155111;
+const { tokenFarm: TOKEN_FARM_ADDRESS, goldenToken: DEFAULT_TOKEN_ADDRESS } =
+  getContractAddresses(SEPOLIA_CHAIN_ID);
 
 // ABI standard ERC20 (pour lire balances, faire des approve, etc.)
 const ERC20_ABI = [
@@ -29,12 +43,14 @@ const TOKEN_FARM_ABI = [
   "function owner() public view returns (address)",
   "function stakingBalance(address token, address user) public view returns (uint256)",
   "function tokenIsAllowed(address token) public view returns (bool)",
+  "function allowedTokens(uint256 index) public view returns (address)",
   "function getUserTotalValue(address user) public view returns (uint256)",
   "function getUserTokenStakingBalanceEthValue(address user, address token) public view returns (uint256)",
   "function getTokenEthPrice(address token) public view returns (uint256, uint8)",
   "function uniqueTokensStaked(address user) public view returns (uint256)",
   "function goldenToken() public view returns (address)",
   "function name() public view returns (string)",
+  "function tokenPriceFeedMapping(address token) public view returns (address)",
 
   // --- Événements (logs enregistrés sur la blockchain) ---
   "event TokenStaked(address indexed user, address indexed token, uint256 amount)",
@@ -151,6 +167,25 @@ export const useWeb3 = () => {
       setChainId(network.chainId);
       setProvider(web3Provider);
       setAccount(address);
+
+      // Enregistrer le wallet dans Django (silencieux si non connecté ou déjà enregistré)
+      try {
+        const networksData = await networksApi.list();
+        const networksList = networksData.results || networksData || [];
+        const djangoNetwork = networksList.find((n: any) => n.chain_id === network.chainId);
+        if (djangoNetwork) {
+          await walletApi.register({
+            address,
+            chain_id: String(network.chainId),
+            network: djangoNetwork.id,
+            asset: 'ETH',
+          });
+          console.log("Wallet enregistré dans Django :", address);
+        }
+      } catch {
+        // Silencieux : wallet déjà enregistré ou utilisateur non connecté à Django
+      }
+
       return true;
     } catch (error) {
       console.error("Erreur connexion:", error);
@@ -163,8 +198,8 @@ export const useWeb3 = () => {
   // ==========================================
 
   // Staker des tokens : approve puis stakeTokens
-  const stakeTokens = async (amount: string, tokenAddress?: string) => {
-    if (!provider || !account) return false;
+  const stakeTokens = async (amount: string, tokenAddress?: string): Promise<{ success: boolean; txHash?: string }> => {
+    if (!provider || !account) return { success: false };
     setLoading(true);
 
     const targetToken = tokenAddress || DEFAULT_TOKEN_ADDRESS;
@@ -185,21 +220,21 @@ export const useWeb3 = () => {
       const txStake = await farmContract.stakeTokens(formattedAmount, targetToken);
       await txStake.wait();
 
-      console.log("Staking réussi !");
-      return true;
+      console.log("Staking réussi !", txStake.hash);
+      return { success: true, txHash: txStake.hash };
     } catch (error: any) {
       console.error("Erreur durant le staking:", error);
       const reason = error?.reason || error?.message || "Erreur inconnue";
       alert(`Erreur staking: ${reason}`);
-      return false;
+      return { success: false };
     } finally {
       setLoading(false);
     }
   };
 
   // Unstaker : retire TOUS les tokens stakés pour un token donné
-  const unstakeTokens = async (tokenAddress?: string) => {
-    if (!provider || !account) return false;
+  const unstakeTokens = async (tokenAddress?: string): Promise<{ success: boolean; txHash?: string }> => {
+    if (!provider || !account) return { success: false };
     setLoading(true);
 
     const targetToken = tokenAddress || DEFAULT_TOKEN_ADDRESS;
@@ -212,13 +247,13 @@ export const useWeb3 = () => {
       const tx = await farmContract.unstakeTokens(targetToken);
       await tx.wait();
 
-      console.log("Unstake réussi !");
-      return true;
+      console.log("Unstake réussi !", tx.hash);
+      return { success: true, txHash: tx.hash };
     } catch (error: any) {
       console.error("Erreur unstake:", error);
       const reason = error?.reason || error?.message || "Erreur inconnue";
       alert(`Erreur unstake: ${reason}`);
-      return false;
+      return { success: false };
     } finally {
       setLoading(false);
     }
@@ -293,6 +328,39 @@ export const useWeb3 = () => {
     } catch (error) {
       console.error("Erreur vérification token autorisé:", error);
       return false;
+    }
+  };
+
+  // Lire tous les tokens autorisés depuis le contrat (tableau public allowedTokens[])
+  const getAllowedTokens = async (): Promise<Array<{ address: string; symbol: string; name: string; priceFeed: string }>> => {
+    if (!provider) return [];
+
+    try {
+      const farmContract = new ethers.Contract(TOKEN_FARM_ADDRESS!, TOKEN_FARM_ABI, provider);
+      const result: Array<{ address: string; symbol: string; name: string; priceFeed: string }> = [];
+      let index = 0;
+
+      while (true) {
+        try {
+          const address: string = await farmContract.allowedTokens(index);
+          if (!address || address === ethers.constants.AddressZero) break;
+          const tokenContract = new ethers.Contract(address, ERC20_ABI, provider);
+          const [symbol, name, priceFeed] = await Promise.all([
+            tokenContract.symbol().catch(() => `TOKEN${index}`),
+            tokenContract.name().catch(() => `Unknown Token ${index}`),
+            farmContract.tokenPriceFeedMapping(address).catch(() => ethers.constants.AddressZero),
+          ]);
+          result.push({ address, symbol, name, priceFeed });
+          index++;
+        } catch {
+          break; // fin du tableau (index hors limites)
+        }
+      }
+
+      return result;
+    } catch (error) {
+      console.error('Erreur lecture allowedTokens:', error);
+      return [];
     }
   };
 
@@ -475,6 +543,7 @@ export const useWeb3 = () => {
     getStakingBalance,
     getUserTotalValue,
     checkTokenIsAllowed,
+    getAllowedTokens,
     getStakingEvents,
     // Admin
     checkIsAdmin,

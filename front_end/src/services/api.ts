@@ -172,6 +172,18 @@ export const coursesApi = {
         return res.json();
     },
 
+    async publish(id: number) {
+        const res = await apiFetch(`/api/courses/${id}/publish/`, { method: 'POST' });
+        if (!res.ok) throw new Error('Failed to publish course');
+        return res.json();
+    },
+
+    async unpublish(id: number) {
+        const res = await apiFetch(`/api/courses/${id}/unpublish/`, { method: 'POST' });
+        if (!res.ok) throw new Error('Failed to unpublish course');
+        return res.json();
+    },
+
     async delete(id: number) {
         const res = await apiFetch(`/api/courses/${id}/`, {
             method: 'DELETE',
@@ -222,6 +234,12 @@ export const enrollmentsApi = {
         if (!res.ok) throw new Error('Failed to fetch certificates');
         return res.json();
     },
+
+    async getCertificateDetail(id: number) {
+        const res = await apiFetch(`/api/enrollments/certificates/${id}/`);
+        if (!res.ok) throw new Error('Certificate not found');
+        return res.json();
+    },
 };
 
 // ─── Analytics ────────────────────────────────────────────────────────────────
@@ -235,6 +253,24 @@ export const analyticsApi = {
     async adminSummary() {
         const res = await apiFetch('/api/analytics/dashboard/admin-summary/');
         if (!res.ok) throw new Error('Failed to fetch admin analytics');
+        return res.json();
+    },
+
+    async dailyStats() {
+        const res = await apiFetch('/api/analytics/daily-stats/');
+        if (!res.ok) throw new Error('Failed to fetch daily stats');
+        return res.json();
+    },
+
+    async courseStats() {
+        const res = await apiFetch('/api/analytics/courses/');
+        if (!res.ok) throw new Error('Failed to fetch course stats');
+        return res.json();
+    },
+
+    async userStats() {
+        const res = await apiFetch('/api/analytics/users/');
+        if (!res.ok) throw new Error('Failed to fetch user stats');
         return res.json();
     },
 };
@@ -280,6 +316,48 @@ export const coachingApi = {
     },
 };
 
+// ─── Payments (FedaPay) ───────────────────────────────────────────────────────
+export const paymentsApi = {
+    async createCheckout(data: { type: 'course' | 'coaching'; item_id: number; provider: 'fedapay' }) {
+        const res = await apiFetch('/api/finance/payments/create-checkout/', {
+            method: 'POST',
+            body: JSON.stringify(data),
+        });
+        if (!res.ok) {
+            const err = await res.json();
+            throw new Error(err.detail || 'Payment initiation failed');
+        }
+        return res.json() as Promise<{ checkout_url: string; transaction_id: string }>;
+    },
+
+    async getStatus(transactionId: string) {
+        const res = await apiFetch(`/api/finance/payments/status/?transaction_id=${transactionId}`);
+        if (!res.ok) throw new Error('Failed to get payment status');
+        return res.json() as Promise<{ status: 'pending' | 'paid' | 'failed' | 'cancelled'; transaction_id: string }>;
+    },
+};
+
+// ─── Profile ──────────────────────────────────────────────────────────────────
+export const profileApi = {
+    async get() {
+        const res = await apiFetch('/api/accounts/profile/me/');
+        if (!res.ok) throw new Error('Failed to fetch profile');
+        return res.json();
+    },
+
+    async update(data: Partial<{ username: string; email: string; first_name: string; last_name: string }>) {
+        const user = getUser();
+        const id = user?.id;
+        if (!id) throw new Error('User ID not found');
+        const res = await apiFetch(`/api/accounts/profile/${id}/`, {
+            method: 'PATCH',
+            body: JSON.stringify(data),
+        });
+        if (!res.ok) throw new Error('Failed to update profile');
+        return res.json();
+    },
+};
+
 // ─── Users ────────────────────────────────────────────────────────────────────
 export const usersApi = {
     async list() {
@@ -299,15 +377,15 @@ export const modulesApi = {
     },
 
     // Get a secure streaming URL for a chapter video
-    async getVideoUrl(chapterId: number) {
-        const res = await apiFetch(`/api/courses/chapters/${chapterId}/video-url/`);
+    async getVideoUrl(courseId: number, moduleId: number, chapterId: number) {
+        const res = await apiFetch(`/api/courses/${courseId}/modules/${moduleId}/chapters/${chapterId}/video-url/`);
         if (!res.ok) throw new Error('Video not available');
         return res.json(); // Returns { url, token, expires_at }
     },
 
     // Mark a chapter as completed
-    async completeChapter(chapterId: number) {
-        const res = await apiFetch(`/api/courses/chapters/${chapterId}/complete/`, {
+    async completeChapter(courseId: number, moduleId: number, chapterId: number) {
+        const res = await apiFetch(`/api/courses/${courseId}/modules/${moduleId}/chapters/${chapterId}/complete/`, {
             method: 'POST',
         });
         if (!res.ok) throw new Error('Failed to mark chapter complete');
@@ -325,8 +403,8 @@ export const modulesApi = {
     },
 
     // Instructor: create a chapter inside a module
-    async createChapter(moduleId: number, data: any) {
-        const res = await apiFetch(`/api/courses/modules/${moduleId}/chapters/`, {
+    async createChapter(courseId: number, moduleId: number, data: any) {
+        const res = await apiFetch(`/api/courses/${courseId}/modules/${moduleId}/chapters/`, {
             method: 'POST',
             body: JSON.stringify(data),
         });
@@ -334,14 +412,14 @@ export const modulesApi = {
         return res.json();
     },
 
-    // Instructor: upload file (video or pdf) for a chapter
-    async uploadVideo(chapterId: number, file: File, onProgress?: (pct: number) => void) {
+    // Instructor: upload video for a chapter
+    async uploadVideo(courseId: number, moduleId: number, chapterId: number, file: File, onProgress?: (pct: number) => void) {
         const formData = new FormData();
         formData.append('file', file);
         const token = getAccessToken();
         return new Promise<any>((resolve, reject) => {
             const xhr = new XMLHttpRequest();
-            xhr.open('POST', `${API_BASE}/api/courses/chapters/${chapterId}/upload-file/`);
+            xhr.open('POST', `${API_BASE}/api/courses/${courseId}/modules/${moduleId}/chapters/${chapterId}/upload-video/`);
             if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`);
             xhr.upload.onprogress = (e) => { if (e.lengthComputable && onProgress) onProgress(Math.round((e.loaded / e.total) * 100)); };
             xhr.onload = () => xhr.status < 300 ? resolve(JSON.parse(xhr.responseText)) : reject(new Error('Upload failed'));
@@ -361,8 +439,8 @@ export const progressApi = {
     },
 
     // Save video watch position (for resume)
-    async savePosition(chapterId: number, positionSeconds: number) {
-        const res = await apiFetch(`/api/courses/chapters/${chapterId}/save-position/`, {
+    async savePosition(courseId: number, moduleId: number, chapterId: number, positionSeconds: number) {
+        const res = await apiFetch(`/api/courses/${courseId}/modules/${moduleId}/chapters/${chapterId}/save-position/`, {
             method: 'POST',
             body: JSON.stringify({ position_seconds: positionSeconds }),
         });
@@ -374,8 +452,8 @@ export const progressApi = {
 // ─── Quizzes ──────────────────────────────────────────────────────────────────
 export const quizApi = {
     // Get quiz for a chapter
-    async getForChapter(chapterId: number) {
-        const res = await apiFetch(`/api/courses/chapters/${chapterId}/quiz/`);
+    async getForChapter(courseId: number, moduleId: number, chapterId: number) {
+        const res = await apiFetch(`/api/courses/${courseId}/modules/${moduleId}/chapters/${chapterId}/quiz/`);
         if (!res.ok) return null;
         return res.json(); // Returns { id, questions: [{id, text, choices:[{id,text}]}] }
     },
@@ -409,6 +487,27 @@ export const reviewsApi = {
             throw new Error(err.detail || 'Failed to submit review');
         }
         return res.json();
+    },
+
+    async get(id: number) {
+        const res = await apiFetch(`/api/reviews/${id}/`);
+        if (!res.ok) throw new Error('Review not found');
+        return res.json();
+    },
+
+    async update(id: number, data: { rating?: number; comment?: string }) {
+        const res = await apiFetch(`/api/reviews/${id}/`, {
+            method: 'PATCH',
+            body: JSON.stringify(data),
+        });
+        if (!res.ok) throw new Error('Failed to update review');
+        return res.json();
+    },
+
+    async delete(id: number) {
+        const res = await apiFetch(`/api/reviews/${id}/`, { method: 'DELETE' });
+        if (!res.ok) throw new Error('Failed to delete review');
+        return true;
     },
 };
 

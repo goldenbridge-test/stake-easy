@@ -1,24 +1,22 @@
 import React, { useState } from "react";
-import { coachingApi } from "../../services/api";
+import { paymentsApi } from "../../services/api";
 import { Loader2, Calendar, Target, CheckCircle } from "lucide-react";
 
 interface CoachingSubscribeProps {
     instructorId: number;
     instructorName: string;
-    onSuccess: () => void;
     onCancel: () => void;
 }
 
 const CoachingSubscribe: React.FC<CoachingSubscribeProps> = ({
     instructorId,
     instructorName,
-    onSuccess,
     onCancel,
 }) => {
     const [sessions, setSessions] = useState(8);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
-    const [success, setSuccess] = useState(false);
+    const [success] = useState(false);
 
     const pricePerSession = 50;
     const totalPrice = sessions * pricePerSession;
@@ -27,14 +25,16 @@ const CoachingSubscribe: React.FC<CoachingSubscribeProps> = ({
         try {
             setLoading(true);
             setError("");
-            await coachingApi.subscribe(instructorId, sessions, totalPrice.toFixed(2));
-            setSuccess(true);
-            setTimeout(() => {
-                onSuccess();
-            }, 2000);
+            const { checkout_url, transaction_id } = await paymentsApi.createCheckout({
+                type: "coaching",
+                item_id: instructorId,
+                provider: "fedapay",
+            });
+            localStorage.setItem("pending_transaction_id", transaction_id);
+            localStorage.setItem("payment_redirect", "/academy/coaching");
+            window.location.href = checkout_url;
         } catch (err: any) {
-            setError(err.message || "Failed to subscribe to coaching");
-        } finally {
+            setError(err.message || "Failed to initiate payment");
             setLoading(false);
         }
     };

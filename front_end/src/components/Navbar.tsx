@@ -23,7 +23,7 @@ const Navbar = () => {
   const baseLinks = [
     { name: "Accueil", href: "/" },
     { name: "Academy", href: "/academy" },
-    { name: "Staking", href: "/staking" },
+    { name: "Earn", href: "/earn" },
   ];
 
   // Links for authenticated students
@@ -45,7 +45,7 @@ const Navbar = () => {
       className={`fixed w-full z-50 transition-all duration-300 ${isScrolled ? "bg-white/95 backdrop-blur-md shadow-sm py-3" : "bg-white py-5"
         }`}
     >
-      <div className="max-w-7xl mx-auto px-6 flex justify-between items-center">
+      <div className="max-w-7xl mx-auto px-8 flex justify-between items-center gap-8">
         {/* LOGO */}
         <Link
           to="/"
@@ -56,7 +56,7 @@ const Navbar = () => {
         </Link>
 
         {/* MENU DESKTOP */}
-        <div className="hidden lg:flex items-center space-x-6">
+        <div className="hidden lg:flex items-center space-x-5 flex-1 justify-center">
           {baseLinks.map((link) => (
             <Link
               key={link.name}

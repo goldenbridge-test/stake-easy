@@ -12,7 +12,10 @@ import CallToAction from './components/CallToAction';
 import Footer from './components/Footer';
 import SignIn from './components/SignIn';
 import SignUp from './components/SignUp';
-import Staking from './components/Staking';
+import EarnHub from './components/earn/EarnHub';
+import GldStaking from './components/earn/GldStaking';
+import StakingDashboard from './components/earn/StakingDashboard';
+import ApiDebug from './components/earn/ApiDebug';
 import AdminDashboard from './components/AdminDashboard';
 import AcademyHome from './components/academy/AcademyHome';
 import AcademyCatalog from './components/academy/AcademyCatalog';
@@ -23,7 +26,9 @@ import CoursePlayer from './components/academy/CoursePlayer';
 import CourseCertificate from './components/academy/CourseCertificate';
 import CourseUploadForm from './components/academy/CourseUploadForm';
 import InstructorDashboard from './components/academy/InstructorDashboard';
+import CertificateVerify from './components/academy/CertificateVerify';
 import ForgotPassword from './components/ForgotPassword';
+import PaymentReturn from './components/PaymentReturn';
 import ResetPassword from './components/ResetPassword';
 import InstructorApplicationForm from './components/academy/InstructorApplicationForm';
 
@@ -57,7 +62,10 @@ function App() {
             {/* Route pour l'inscription */}
             <Route path="/signup" element={<SignUp />} />
 
-            <Route path="/staking" element={<Staking />} />
+            <Route path="/earn" element={<EarnHub />} />
+            <Route path="/earn/staking" element={<GldStaking />} />
+            <Route path="/earn/dashboard" element={<StakingDashboard />} />
+            <Route path="/earn/debug" element={<ApiDebug />} />
 
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password" element={<ResetPassword />} />
@@ -75,6 +83,8 @@ function App() {
             <Route path="/academy/coaching" element={<CoachingPrograms />} />
             <Route path="/academy/become-instructor" element={<InstructorApplicationForm />} />
             <Route path="/instructor" element={<InstructorDashboard />} />
+            <Route path="/verify/:code" element={<CertificateVerify />} />
+            <Route path="/payment/return" element={<PaymentReturn />} />
           </Routes>
         </div>
       </Router>

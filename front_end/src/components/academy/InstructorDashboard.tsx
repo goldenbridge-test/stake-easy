@@ -124,6 +124,19 @@ const InstructorDashboard = () => {
         setShowForm(true);
     };
 
+    const handleTogglePublish = async (course: any) => {
+        const isPublished = course.status === "published";
+        if (!confirm(isPublished ? "Dépublier ce cours ?" : "Publier ce cours ?")) return;
+        try {
+            await (isPublished ? coursesApi.unpublish(course.id) : coursesApi.publish(course.id));
+            setCourses((prev) =>
+                prev.map((c) => c.id === course.id ? { ...c, status: isPublished ? "draft" : "published" } : c)
+            );
+        } catch {
+            alert("Action failed. Please try again.");
+        }
+    };
+
     const handleDelete = async (id: number) => {
         if (!confirm("Supprimer ce cours définitivement ?")) return;
         try {
@@ -259,7 +272,7 @@ const InstructorDashboard = () => {
                                             {/* Price */}
                                             <div>
                                                 <div className="flex items-center justify-between mb-2">
-                                                    <label className="text-[10px] uppercase font-bold text-gray-500 tracking-widest">Prix (USDT)</label>
+                                                    <label className="text-[10px] uppercase font-bold text-gray-500 tracking-widest">Prix (FCFA)</label>
                                                     <label className="flex items-center gap-2 cursor-pointer">
                                                         <div className={`w-10 h-5 rounded-full transition ${form.is_free ? "bg-gold" : "bg-white/10"}`}
                                                             onClick={() => patchForm({ is_free: !form.is_free, price: !form.is_free ? "0" : form.price })}>
@@ -297,7 +310,7 @@ const InstructorDashboard = () => {
                                                 </div>
                                                 {form.has_coaching && (
                                                     <div>
-                                                        <label className="block text-[10px] uppercase font-bold text-gray-500 tracking-widest mb-2">Prix par session (USDT)</label>
+                                                        <label className="block text-[10px] uppercase font-bold text-gray-500 tracking-widest mb-2">Prix par session (FCFA)</label>
                                                         <input type="number" value={form.coaching_price_per_session}
                                                             onChange={e => patchForm({ coaching_price_per_session: e.target.value })} min="0"
                                                             className="w-full md:w-80 bg-white/5 border border-white/10 rounded-xl px-5 py-3 text-white focus:outline-none focus:border-gold/50 text-sm"
@@ -355,7 +368,7 @@ const InstructorDashboard = () => {
                                                 </div>
                                                 <div className="absolute top-4 right-4">
                                                     <span className="text-[10px] font-bold px-3 py-1 rounded-full bg-gold/10 border border-gold/20 text-gold">
-                                                        {course.is_free ? "Gratuit" : `${course.price} USDT`}
+                                                        {course.is_free ? "Free" : `${Number(course.price).toLocaleString("fr-FR")} FCFA`}
                                                     </span>
                                                 </div>
                                             </div>
@@ -385,6 +398,16 @@ const InstructorDashboard = () => {
                                                         className="flex-1 flex items-center justify-center gap-2 bg-gold/10 border border-gold/20 text-gold font-bold py-2.5 rounded-xl hover:bg-gold/20 transition text-xs">
                                                         <Video className="w-3.5 h-3.5" /> Vidéos
                                                     </Link>
+                                                    <button
+                                                        onClick={() => handleTogglePublish(course)}
+                                                        title={course.status === "published" ? "Dépublier" : "Publier"}
+                                                        className={`p-2.5 border rounded-xl transition text-xs font-bold ${
+                                                            course.status === "published"
+                                                                ? "bg-green-500/10 border-green-500/20 text-green-400 hover:bg-red-500/10 hover:border-red-500/20 hover:text-red-400"
+                                                                : "bg-white/5 border-white/10 text-gray-400 hover:border-green-500/30 hover:text-green-400"
+                                                        }`}>
+                                                        {course.status === "published" ? "Live" : "Draft"}
+                                                    </button>
                                                     <button onClick={() => handleEdit(course)}
                                                         className="p-2.5 bg-white/5 border border-white/10 rounded-xl hover:border-white/30 transition text-gray-400 hover:text-white">
                                                         <Edit3 className="w-4 h-4" />

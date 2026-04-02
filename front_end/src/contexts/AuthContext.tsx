@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { authApi, getUser, getAccessToken, clearTokens } from '../services/api';
+import { authApi, profileApi, setUser as saveUser, getUser, getAccessToken, clearTokens } from '../services/api';
 
 interface AuthUser {
     id: number;
@@ -26,13 +26,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     useEffect(() => {
         if (getAccessToken()) {
             const stored = getUser();
-            if (stored) setUser(stored);
+            if (stored) {
+                setUser(stored);
+            } else {
+                profileApi.get().then((profile) => {
+                    saveUser(profile);
+                    setUser(profile);
+                }).catch(() => clearTokens());
+            }
         }
     }, []);
 
     const login = async (username: string, password: string) => {
-        const data = await authApi.login(username, password);
-        if (data.user) setUser(data.user);
+        await authApi.login(username, password);
+        const profile = await profileApi.get();
+        saveUser(profile);
+        setUser(profile);
     };
 
     const register = async (username: string, email: string, password: string, firstName?: string, lastName?: string) => {

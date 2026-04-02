@@ -36,8 +36,9 @@ import AdminInstructorApplications from "./AdminInstructorApplications";
 // ==========================================
 
 type AllowedToken = {
-  id: number;
   address: string;
+  symbol: string;
+  name: string;
   priceFeed: string;
 };
 
@@ -72,6 +73,9 @@ const AdminDashboard = () => {
     setPriceFeed,
     removeAllowedToken,
     distributeRewardsToAll,
+    checkTokenIsAllowed,
+    getAllowedTokens,
+    chainId,
   } = useWeb3();
 
   const [isAdmin, setIsAdmin] = useState(false);
@@ -124,20 +128,25 @@ const AdminDashboard = () => {
   }, [account, isConnected, user]);
 
   const fetchDashboardData = async () => {
-    try {
-      const [stats, coursesData, categoriesData, usersData] = await Promise.all([
-        analyticsApi.adminSummary(),
-        coursesApi.list(),
-        coursesApi.categories(),
-        usersApi.list()
-      ]);
-      setPlatformStats(stats);
-      setCourses(coursesData.results || coursesData);
-      setCategories(categoriesData);
-      setUsers(usersData.results || usersData);
-    } catch (err) {
-      console.error("Failed to fetch admin data", err);
-    }
+    const [stats, coursesData, categoriesData, usersData, onchainTokens] = await Promise.all([
+      analyticsApi.adminSummary().catch(() => null),
+      coursesApi.list().catch(() => ({ results: [] })),
+      coursesApi.categories().catch(() => []),
+      usersApi.list().catch(() => ({ results: [] })),
+      getAllowedTokens(),
+    ]);
+    if (stats) setPlatformStats(stats);
+    setCourses((coursesData as any).results || coursesData || []);
+    setCategories(categoriesData || []);
+    setUsers((usersData as any).results || usersData || []);
+    // Dédupliquer par adresse
+    const seen = new Set<string>();
+    setTokens(onchainTokens.filter(t => {
+      const addr = t.address.toLowerCase();
+      if (seen.has(addr)) return false;
+      seen.add(addr);
+      return true;
+    }));
   };
 
 
@@ -170,9 +179,17 @@ const AdminDashboard = () => {
       return;
     }
 
-    setTokens([...tokens, { id: Date.now(), address: newTokenAddress, priceFeed: newPriceFeed }]);
     setNewTokenAddress("");
     setNewPriceFeed("");
+    // Recharger depuis le contrat pour avoir symbole + price feed à jour
+    const fresh = await getAllowedTokens();
+    const seen = new Set<string>();
+    setTokens(fresh.filter(t => {
+      const addr = t.address.toLowerCase();
+      if (seen.has(addr)) return false;
+      seen.add(addr);
+      return true;
+    }));
     setIsLoading(false);
   };
 
@@ -325,10 +342,30 @@ const AdminDashboard = () => {
               </p>
             </div>
             {account && (
-              <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-4 py-2">
-                <div className="w-2 h-2 rounded-full bg-green-400"></div>
-                <span className="text-xs font-mono text-gray-500">{truncate(account)}</span>
-                <span className="text-[10px] bg-red-50 text-red-600 px-1.5 py-0.5 rounded font-bold uppercase">Admin</span>
+              <div className="flex items-center gap-2 flex-wrap">
+                {/* Network badge */}
+                {chainId && (() => {
+                  const networks: Record<number, { label: string; color: string; dot: string }> = {
+                    1:        { label: "Ethereum",   color: "bg-blue-50 text-blue-700 border-blue-200",     dot: "bg-blue-500" },
+                    11155111: { label: "Sepolia",     color: "bg-purple-50 text-purple-700 border-purple-200", dot: "bg-purple-500" },
+                    56:       { label: "BNB Chain",   color: "bg-yellow-50 text-yellow-700 border-yellow-200", dot: "bg-yellow-500" },
+                    97:       { label: "BNB Testnet", color: "bg-orange-50 text-orange-700 border-orange-200", dot: "bg-orange-400" },
+                    137:      { label: "Polygon",     color: "bg-indigo-50 text-indigo-700 border-indigo-200", dot: "bg-indigo-500" },
+                  };
+                  const net = networks[chainId] ?? { label: `Chain ${chainId}`, color: "bg-gray-50 text-gray-600 border-gray-200", dot: "bg-gray-400" };
+                  return (
+                    <div className={`flex items-center gap-1.5 border rounded-lg px-3 py-2 ${net.color}`}>
+                      <div className={`w-2 h-2 rounded-full animate-pulse ${net.dot}`}></div>
+                      <span className="text-xs font-semibold">{net.label}</span>
+                    </div>
+                  );
+                })()}
+                {/* Wallet + role */}
+                <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-4 py-2">
+                  <div className="w-2 h-2 rounded-full bg-green-400"></div>
+                  <span className="text-xs font-mono text-gray-500">{truncate(account)}</span>
+                  <span className="text-[10px] bg-red-50 text-red-600 px-1.5 py-0.5 rounded font-bold uppercase">Admin</span>
+                </div>
               </div>
             )}
           </div>
@@ -496,21 +533,40 @@ const AdminDashboard = () => {
                       <thead className="bg-gray-50 text-gray-400 text-[11px] uppercase tracking-wider">
                         <tr>
                           <th className="px-6 py-3 font-semibold">Token Address</th>
+                          <th className="px-6 py-3 font-semibold">Network</th>
                           <th className="px-6 py-3 font-semibold">Price Feed</th>
                           <th className="px-6 py-3 font-semibold">Status</th>
                           <th className="px-6 py-3 font-semibold text-right">Action</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-50">
-                        {tokens.map((token) => (
-                          <tr key={token.id} className="hover:bg-gray-50/50 transition">
+                        {tokens.map((token) => {
+                          const networkMap: Record<number, { label: string; color: string; dot: string }> = {
+                            1:        { label: "Ethereum",   color: "bg-blue-50 text-blue-700 border-blue-200",     dot: "bg-blue-500" },
+                            11155111: { label: "Sepolia",     color: "bg-purple-50 text-purple-700 border-purple-200", dot: "bg-purple-500" },
+                            56:       { label: "BNB Chain",   color: "bg-yellow-50 text-yellow-700 border-yellow-200", dot: "bg-yellow-500" },
+                            97:       { label: "BNB Testnet", color: "bg-orange-50 text-orange-700 border-orange-200", dot: "bg-orange-400" },
+                            137:      { label: "Polygon",     color: "bg-indigo-50 text-indigo-700 border-indigo-200", dot: "bg-indigo-500" },
+                          };
+                          const net = chainId
+                            ? (networkMap[chainId] ?? { label: `Chain ${chainId}`, color: "bg-gray-50 text-gray-600 border-gray-200", dot: "bg-gray-400" })
+                            : { label: "—", color: "bg-gray-50 text-gray-400 border-gray-100", dot: "bg-gray-300" };
+                          return (
+                          <tr key={token.address} className="hover:bg-gray-50/50 transition">
                             <td className="px-6 py-4">
                               <div className="flex items-center gap-2">
+                                <span className="font-bold text-xs text-primary mr-1">{token.symbol}</span>
                                 <span className="font-mono text-xs text-gray-600">{truncate(token.address)}</span>
                                 <button onClick={() => copyToClipboard(token.address)} className="text-gray-300 hover:text-primary">
                                   <Copy className="w-3 h-3" />
                                 </button>
                               </div>
+                            </td>
+                            <td className="px-6 py-4">
+                              <span className={`inline-flex items-center gap-1.5 border rounded-md px-2 py-0.5 text-xs font-semibold ${net.color}`}>
+                                <span className={`w-1.5 h-1.5 rounded-full ${net.dot}`}></span>
+                                {net.label}
+                              </span>
                             </td>
                             <td className="px-6 py-4 font-mono text-xs text-gray-400">
                               {token.priceFeed.startsWith("0x") ? truncate(token.priceFeed) : token.priceFeed}
@@ -526,7 +582,8 @@ const AdminDashboard = () => {
                               </button>
                             </td>
                           </tr>
-                        ))}
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>

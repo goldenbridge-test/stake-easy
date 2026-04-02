@@ -1,5 +1,4 @@
-import React from "react";
-import { Play, CheckCircle, Users, Award } from "lucide-react";
+import { Play, CheckCircle, Users, Award, BookOpen, GraduationCap, Brain, TrendingUp } from "lucide-react";
 import { Link } from "react-router-dom";
 import Navbar from "../../components/Navbar";
 import Footer from "../../components/Footer";
@@ -43,11 +42,19 @@ const AcademyHome = () => {
             <div className="hidden md:flex justify-center">
               <div className="relative">
                 <div className="w-80 h-80 bg-gradient-to-tr from-gold to-orange-500 rounded-full blur-[100px] opacity-20 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"></div>
-                <img
-                  src="https://cdni.iconscout.com/illustration/premium/thumb/online-education-4390779-3641772.png"
-                  alt="Learning"
-                  className="relative z-10 w-full max-w-md drop-shadow-2xl"
-                />
+                <div className="relative z-10 w-full max-w-md grid grid-cols-2 gap-4 p-4">
+                  {[
+                    { icon: <GraduationCap className="w-10 h-10 text-gold" />, label: "Certifications" },
+                    { icon: <BookOpen className="w-10 h-10 text-blue-300" />, label: "100+ Courses" },
+                    { icon: <Brain className="w-10 h-10 text-purple-300" />, label: "DeFi & Web3" },
+                    { icon: <TrendingUp className="w-10 h-10 text-green-300" />, label: "Investing" },
+                  ].map(({ icon, label }) => (
+                    <div key={label} className="bg-white/10 backdrop-blur border border-white/20 rounded-2xl p-6 flex flex-col items-center gap-3 hover:bg-white/20 transition">
+                      {icon}
+                      <span className="text-white text-sm font-semibold">{label}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
