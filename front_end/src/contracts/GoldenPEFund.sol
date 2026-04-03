@@ -2,18 +2,19 @@
 pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {ERC4626} from "@openzeppelin/contracts/token/ERC20/extensions/ERC4626.sol";
-import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/extensions/ERC4626.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/utils/math/Math.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
-contract GoldenPEFund is ERC4626, ReentrancyGuard, Ownable {
+contract GoldenPEFund is ERC4626, Ownable, ReentrancyGuard {
     using SafeERC20 for IERC20;
     using Math for uint256;
 
     uint256 private constant BASIS_POINT_SCALE = 1e4;
+    uint256 private constant INITIAL_DEPOSIT = 1e6; // Prévention contre inflation attack
 
     address public fundManager;
 
@@ -23,10 +24,18 @@ contract GoldenPEFund is ERC4626, ReentrancyGuard, Ownable {
 
     uint256 public highWaterMark;
     uint256 public assetsInStrategy;
+    
+    // NOUVELLES VARIABLES
+    uint256 public maxDepositLimit; // Limite de dépôt maximum
+    mapping(address => bool) public whitelistedStablecoins; // Stablecoins acceptés
+    bool private initialized; // Flag pour initialisation unique
 
     event StrategyWithdrawal(uint256 amount);
     event StrategyReturn(uint256 amount);
     event PerformanceCrystallized(uint256 profit, uint256 fee);
+    event StablecoinWhitelisted(address indexed token, bool status);
+    event MaxDepositLimitUpdated(uint256 newLimit);
+    event FundManagerUpdated(address indexed newManager);
 
     // =========================
     // Constructor
@@ -37,16 +46,114 @@ contract GoldenPEFund is ERC4626, ReentrancyGuard, Ownable {
         address _fundManager,
         uint256 _entryFeeBp,
         uint256 _exitFeeBp,
-        uint256 _performanceFeeBp
+        uint256 _performanceFeeBp,
+        uint256 _maxDepositLimit
     )
         ERC4626(_asset)
         ERC20("Golden Private Equity Fund Share", "GPEF")
     {
+        require(_fundManager != address(0), "Invalid fund manager");
+        require(_entryFeeBp <= 10000 && _exitFeeBp <= 10000 && _performanceFeeBp <= 10000, "Invalid fee");
+        require(_maxDepositLimit > 0, "Max deposit must be > 0");
+
         fundManager = _fundManager;
         entryFeeBasisPoints = _entryFeeBp;
         exitFeeBasisPoints = _exitFeeBp;
         performanceFeeBasisPoints = _performanceFeeBp;
+        maxDepositLimit = _maxDepositLimit;
+        
+        // Whitelist asset par défaut
+        whitelistedStablecoins[address(_asset)] = true;
+        
+        // Initialisation pour prévention inflation attack
+        _initializeFund();
     }
+
+    // =========================
+    // Initialisation
+    // =========================
+
+    function _initializeFund() private {
+        if (!initialized) {
+            initialized = true;
+            // Deposit initial de 1e6 unités pour prévenir l'inflation attack
+            // (ce montant est brûlé et reste dans le vault)
+            try IERC20(asset()).transferFrom(msg.sender, address(this), INITIAL_DEPOSIT) {
+                _mint(address(0x000000000000000000000000000000000000dEaD), INITIAL_DEPOSIT);
+            } catch {
+                // Si le transfert échoue au déploiement, l'owner devra faire un premier dépôt
+            }
+        }
+    }
+
+    // =========================
+    // Stablecoin Whitelist Management
+    // =========================
+
+    function addWhitelistedStablecoin(address token) external onlyOwner {
+        require(token != address(0), "Invalid token address");
+        require(!whitelistedStablecoins[token], "Already whitelisted");
+        whitelistedStablecoins[token] = true;
+        emit StablecoinWhitelisted(token, true);
+    }
+
+    function removeWhitelistedStablecoin(address token) external onlyOwner {
+        require(whitelistedStablecoins[token], "Not whitelisted");
+        require(token != address(asset()), "Cannot remove primary asset");
+        whitelistedStablecoins[token] = false;
+        emit StablecoinWhitelisted(token, false);
+    }
+
+    function isStablecoinWhitelisted(address token) external view returns (bool) {
+        return whitelistedStablecoins[token];
+    }
+
+    // =========================
+    // Max Deposit Limit Management
+    // =========================
+
+    function setMaxDepositLimit(uint256 _maxDepositLimit) external onlyOwner {
+        require(_maxDepositLimit > 0, "Max deposit must be > 0");
+        maxDepositLimit = _maxDepositLimit;
+        emit MaxDepositLimitUpdated(_maxDepositLimit);
+    }
+
+    function maxDeposit(address) public view override returns (uint256) {
+        if (paused()) return 0;
+        uint256 currentTotal = totalAssets();
+        if (currentTotal >= maxDepositLimit) return 0;
+        return maxDepositLimit - currentTotal;
+    }
+
+    function maxMint(address) public view override returns (uint256) {
+        uint256 maxDepositAmount = maxDeposit(msg.sender);
+        if (maxDepositAmount == 0) return 0;
+        return convertToShares(maxDepositAmount);
+    }
+
+    // =========================
+    // Pause mechanism
+    // =========================
+
+    bool private _paused;
+
+    function pause() external onlyOwner {
+        _paused = true;
+    }
+
+    function unpause() external onlyOwner {
+        _paused = false;
+    }
+
+    function paused() public view returns (bool) {
+        return _paused;
+    }
+
+    modifier whenNotPaused() {
+        require(!_paused, "Vault is paused");
+        _;
+    }
+
     // =========================
     // Preview overrides with fees
     // =========================
@@ -91,13 +198,52 @@ contract GoldenPEFund is ERC4626, ReentrancyGuard, Ownable {
         return assets - _feeOnTotal(assets, exitFeeBasisPoints);
     }
 
+    // =========================
+    // Deposit / Withdraw overrides with fees
+    // =========================
+
+    function _deposit(
+        address caller,
+        address receiver,
+        uint256 assets,
+        uint256 shares
+    ) internal override nonReentrant whenNotPaused {
+        // Vérifier que le dépôt ne dépasse pas la limite
+        require(totalAssets() + assets <= maxDepositLimit, "Deposit exceeds max limit");
+        
+        uint256 fee = _feeOnTotal(assets, entryFeeBasisPoints);
+
+        super._deposit(caller, receiver, assets, shares);
+
+        if (fee > 0) {
+            IERC20(asset()).safeTransfer(fundManager, fee);
+        }
+    }
+
+    function _withdraw(
+        address caller,
+        address receiver,
+        address owner,
+        uint256 assets,
+        uint256 shares
+    ) internal override nonReentrant {
+        uint256 fee = _feeOnRaw(assets, exitFeeBasisPoints);
+
+        super._withdraw(caller, receiver, owner, assets, shares);
+
+        if (fee > 0) {
+            IERC20(asset()).safeTransfer(fundManager, fee);
+        }
+    }
 
     // =========================
     // Admin functions
     // =========================
 
     function setFundManager(address newManager) external onlyOwner {
+        require(newManager != address(0), "Invalid fund manager");
         fundManager = newManager;
+        emit FundManagerUpdated(newManager);
     }
 
     function setFees(
@@ -105,6 +251,7 @@ contract GoldenPEFund is ERC4626, ReentrancyGuard, Ownable {
         uint256 _exitFeeBp,
         uint256 _performanceFeeBp
     ) external onlyOwner {
+        require(_entryFeeBp <= 10000 && _exitFeeBp <= 10000 && _performanceFeeBp <= 10000, "Invalid fee");
         entryFeeBasisPoints = _entryFeeBp;
         exitFeeBasisPoints = _exitFeeBp;
         performanceFeeBasisPoints = _performanceFeeBp;
@@ -114,8 +261,13 @@ contract GoldenPEFund is ERC4626, ReentrancyGuard, Ownable {
     // Off-chain strategy control
     // =========================
 
-    function withdrawForStrategy(uint256 amount) external nonReentrant{
-        require(msg.sender == fundManager, "Not manager");
+    function withdrawForStrategy(uint256 amount) 
+        external 
+        onlyFundManager 
+        nonReentrant 
+        whenNotPaused
+    {
+        require(amount > 0, "Amount must be > 0");
         require(amount <= IERC20(asset()).balanceOf(address(this)), "Insufficient vault liquidity");
 
         assetsInStrategy += amount;
@@ -125,8 +277,13 @@ contract GoldenPEFund is ERC4626, ReentrancyGuard, Ownable {
         emit StrategyWithdrawal(amount);
     }
 
-    function returnFromStrategy(uint256 amount) external nonReentrant{
-        require(msg.sender == fundManager, "Not manager");
+    function returnFromStrategy(uint256 amount) 
+        external 
+        onlyFundManager 
+        nonReentrant 
+    {
+        require(amount > 0, "Amount must be > 0");
+        require(assetsInStrategy >= amount, "Return exceeds assets in strategy");
 
         IERC20(asset()).safeTransferFrom(msg.sender, address(this), amount);
 
@@ -149,16 +306,23 @@ contract GoldenPEFund is ERC4626, ReentrancyGuard, Ownable {
     // Performance Fee with HWM
     // =========================
 
-    function crystallizePerformance(uint256 newTotalAssets) external nonReentrant{
-        require(msg.sender == fundManager, "Not manager");
+    function crystallizePerformance(uint256 newTotalAssets) 
+        external 
+        onlyFundManager 
+        nonReentrant
+    {
+        require(newTotalAssets > 0, "Invalid total assets");
 
         if (newTotalAssets > highWaterMark) {
             uint256 profit = newTotalAssets - highWaterMark;
 
             uint256 fee = profit.mulDiv(
                 performanceFeeBasisPoints,
-                BASIS_POINT_SCALE
+                BASIS_POINT_SCALE,
+                Math.Rounding.Up
             );
+
+            require(fee <= IERC20(asset()).balanceOf(address(this)), "Insufficient balance for fee");
 
             highWaterMark = newTotalAssets;
 
@@ -193,37 +357,11 @@ contract GoldenPEFund is ERC4626, ReentrancyGuard, Ownable {
     }
 
     // =========================
-    // Deposit / Withdraw overrides with fees
+    // Modifiers
     // =========================
 
-    function _deposit(
-        address caller,
-        address receiver,
-        uint256 assets,
-        uint256 shares
-    ) internal override nonReentrant{
-        uint256 fee = _feeOnTotal(assets, entryFeeBasisPoints);
-
-        super._deposit(caller, receiver, assets, shares);
-
-        if (fee > 0) {
-            IERC20(asset()).safeTransfer(fundManager, fee);
-        }
-    }
-
-    function _withdraw(
-        address caller,
-        address receiver,
-        address owner,
-        uint256 assets,
-        uint256 shares
-    ) internal override nonReentrant{
-        uint256 fee = _feeOnRaw(assets, exitFeeBasisPoints);
-
-        super._withdraw(caller, receiver, owner, assets, shares);
-
-        if (fee > 0) {
-            IERC20(asset()).safeTransfer(fundManager, fee);
-        }
+    modifier onlyFundManager() {
+        require(msg.sender == fundManager, "Not manager");
+        _;
     }
 }
