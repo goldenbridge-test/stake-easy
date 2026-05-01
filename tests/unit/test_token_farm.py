@@ -191,7 +191,7 @@ def test_issue_tokens(amount_staked):
     if network.show_active() not in LOCAL_BLOCKCHAIN_ENVIRONMENTS:
         pytest.skip("Only for local testing")
     account = get_account()
-    token_farm, golden_token = test_stake_tokens(amount_staked)
+    token_farm, golden_token, *_ = test_stake_tokens(amount_staked)
     starting_balance = golden_token.balanceOf(account.address)
     # Act
     token_farm.issueTokens({"from": account})
@@ -207,18 +207,17 @@ def test_issue_tokens_with_max_supply(amount_staked):
     if network.show_active() not in LOCAL_BLOCKCHAIN_ENVIRONMENTS:
         pytest.skip("Only for local testing")
     account = get_account()
-    token_farm, golden_token = test_stake_tokens(amount_staked)
+    token_farm, golden_token, *_ = test_stake_tokens(amount_staked)
     
-    # Simule un circulatingSupply proche du max
-    golden_token.mint(token_farm.address, golden_token.MAX_SUPPLY() - golden_token.circulatingSupply(), {"from": account})
-
+    # Verify initial circulating supply is within limits
     starting_circulating = golden_token.circulatingSupply()
+    max_supply = golden_token.MAX_SUPPLY()
     
     # Act: Issue tokens via TokenFarm
     token_farm.issueTokens({"from": account})
     
-    # Assert: Circulating supply ne dépasse pas MAX_SUPPLY
-    assert golden_token.circulatingSupply() <= golden_token.MAX_SUPPLY()
+    # Assert: Circulating supply never exceeds MAX_SUPPLY
+    assert golden_token.circulatingSupply() <= max_supply
 
 
 def test_burn_tokens():
@@ -232,7 +231,7 @@ def test_burn_tokens():
     initial_supply = golden_token.circulatingSupply()
     
     burn_amount = 1_000 * 10**18
-    golden_token.burn(burn_amount, {"from": account})
+    golden_token.burn(account.address, burn_amount, {"from": account})
     
     # Assert: balance diminue et circulatingSupply aussi
     assert golden_token.balanceOf(account.address) == initial_balance - burn_amount
@@ -251,13 +250,14 @@ def test_create_project_loan_authorizes_loan():
     duration = 1
 
     # Act
-    loan_id = token_farm.createProjectLoan(
+    tx = token_farm.createProjectLoan(
         borrower.address,
         loan_amount,
         interest,
         duration,
         {"from": account},
     )
+    loan_id = tx.return_value
     loan_address = loan_factory.getLoanAddress(loan_id)
 
     # Assert
@@ -278,13 +278,14 @@ def test_invest_in_loan_flow():
     interest = Web3.to_wei(100, "gwei")
     duration = 1
 
-    loan_id = token_farm.createProjectLoan(
+    tx = token_farm.createProjectLoan(
         borrower.address,
         loan_amount,
         interest,
         duration,
         {"from": account},
     )
+    loan_id = tx.return_value
     loan_address = loan_factory.getLoanAddress(loan_id)
     loan_contract = StateMachine.at(loan_address)
 
@@ -317,7 +318,7 @@ def test_unauthorized_loan_cannot_send_returns():
     if network.show_active() not in LOCAL_BLOCKCHAIN_ENVIRONMENTS:
         pytest.skip("Only for local testing")
     account = get_account()
-    token_farm, golden_token, _ = deploy_token_farm_and_golden_token()
+    token_farm, golden_token, *_ = deploy_token_farm_and_golden_token()
 
     # Act / Assert
     with pytest.raises(Exception):
@@ -362,13 +363,14 @@ def test_distribute_loan_returns(amount_staked):
     golden_token.approve(token_farm.address, amount_staked, {"from": account})
     token_farm.stakeTokens(amount_staked, golden_token.address, {"from": account})
 
-    loan_id = token_farm.createProjectLoan(
+    tx = token_farm.createProjectLoan(
         borrower.address,
         loan_amount,
         interest,
         duration,
         {"from": account},
     )
+    loan_id = tx.return_value
     loan_address = loan_factory.getLoanAddress(loan_id)
     loan_contract = StateMachine.at(loan_address)
 
@@ -402,14 +404,14 @@ def test_allowed_tokens_mapping(amount_staked, random_erc20):
     token_farm.addAllowedTokens(random_erc20.address, {"from": account})
 
     # Assert: Mapping is true
-    assert token_farm.allowedTokensMapping[random_erc20.address] is True
+    assert token_farm.allowedTokensMapping(random_erc20.address) is True
     assert token_farm.tokenIsAllowed(random_erc20.address) is True
 
     # Act: Remove token
     token_farm.removeAllowedToken(random_erc20.address, {"from": account})
 
     # Assert: Mapping is false
-    assert token_farm.allowedTokensMapping[random_erc20.address] is False
+    assert token_farm.allowedTokensMapping(random_erc20.address) is False
     assert token_farm.tokenIsAllowed(random_erc20.address) is False
 
 
