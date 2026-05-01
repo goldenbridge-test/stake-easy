@@ -12,7 +12,7 @@ def test_stake_and_issue_correct_amounts(amount_staked):
     # Arrange
     if network.show_active() in LOCAL_BLOCKCHAIN_ENVIRONMENTS:
         pytest.skip("Only for integration testing")
-    token_farm, golden_token = deploy_token_farm_and_golden_token()
+    token_farm, golden_token, *_ = deploy_token_farm_and_golden_token()
     account = get_account()
     golden_token.approve(token_farm.address, amount_staked, {"from": account})
     token_farm.stakeTokens(amount_staked, golden_token.address, {"from": account})

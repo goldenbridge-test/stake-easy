@@ -16,7 +16,7 @@ def create_loan():
     print(f"Admin account: {account}")
 
     # ============================
-    # 1️⃣ Récupérer les contrats déployés
+    # Récupérer les contrats déployés
     # ============================
     token_farm = TokenFarm[-1]
     loan_factory = LoanFactory[-1]
@@ -25,7 +25,7 @@ def create_loan():
     print(f"LoanFactory: {loan_factory.address}")
 
     # ============================
-    # 2️⃣ Paramètres du prêt
+    # Paramètres du prêt
     # ============================
     loan_amount = Web3.to_wei(5, "ether")      # capital
     interest = Web3.to_wei(1, "ether")         # intérêts
@@ -33,7 +33,7 @@ def create_loan():
     borrower = account[2]                       # pour test local
 
     # ============================
-    # 3️⃣ Créer le prêt via TokenFarm
+    # Créer le prêt via TokenFarm
     # ============================
     print("Création du prêt...")
     tx = token_farm.createProjectLoan(

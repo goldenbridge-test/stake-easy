@@ -14,7 +14,7 @@ def deploy_token_farm_and_golden_token(update_front_end_flag=False):
 
     # ===== Deploy GoldenToken =====
     golden_token = GoldenToken.deploy({"from": account})
-    print(f"✅ GoldenToken deployed at: {golden_token.address}")
+    print(f"ldenToken deployed at: {golden_token.address}")
 
     # ===== Deploy TokenFarm =====
     token_farm = TokenFarm.deploy(
@@ -23,7 +23,7 @@ def deploy_token_farm_and_golden_token(update_front_end_flag=False):
         {"from": account},
         publish_source=config["networks"][network.show_active()].get("verify"),
     )
-    print(f"✅ TokenFarm deployed at: {token_farm.address}")
+    print(f"kenFarm deployed at: {token_farm.address}")
 
     # ===== Fund TokenFarm =====
     tx = golden_token.transfer(
@@ -32,7 +32,7 @@ def deploy_token_farm_and_golden_token(update_front_end_flag=False):
         {"from": account},
     )
     tx.wait(1)
-    print(f"✅ TokenFarm funded with {golden_token.totalSupply() - KEPT_BALANCE} tokens")
+    print(f"TokenFarm funded with {golden_token.totalSupply() - KEPT_BALANCE} tokens")
 
     # ===== Get mock tokens =====
     usdc_token = get_contract("usdc_token")
@@ -57,15 +57,15 @@ def deploy_token_farm_and_golden_token(update_front_end_flag=False):
         {"from": account},
         publish_source=config["networks"][network.show_active()].get("verify"),
     )
-    print(f"✅ LoanFactory deployed at: {loan_factory.address}")
+    print(f"Done LoanFactory deployed at: {loan_factory.address}")
 
-    # ===== Link TokenFarm ↔ LoanFactory =====
+    # ===== Link TokenFarm <-> LoanFactory =====
     tx = token_farm.setLoanFactory(
         loan_factory.address,
         {"from": account},
     )
     tx.wait(1)
-    print(f"✅ TokenFarm linked with LoanFactory")
+    print(f"TokenFarm linked with LoanFactory")
 
     # ===== Deploy GoldenPEFund =====
     fund = deploy_golden_pe_fund(account)
@@ -99,7 +99,7 @@ def deploy_golden_pe_fund(account, update_front_end_flag=False):
     # Limite de dépôt maximum: 10,000,000 USDC (6 décimales)
     max_deposit_limit = Web3.to_wei(10_000_000, "mwei")  # 10M USDC
     
-    print(f"\n🚀 Déploiement GoldenPEFund...")
+    print(f"\nDeployingenPEFund...")
     print(f"   Stablecoin: {stablecoin.address}")
     print(f"   Fund Manager: {fund_manager}")
     print(f"   Entry Fee: {entry_fee_bp / 100}%")
@@ -107,7 +107,7 @@ def deploy_golden_pe_fund(account, update_front_end_flag=False):
     print(f"   Performance Fee: {performance_fee_bp / 100}%")
     print(f"   Max Deposit: {max_deposit_limit / 1e6} USDC")
 
-    # Déploiement du GoldenPEFund
+    # Deployment of GoldenPEFund
     fund = GoldenPEFund.deploy(
         stablecoin.address,
         fund_manager,
@@ -119,51 +119,51 @@ def deploy_golden_pe_fund(account, update_front_end_flag=False):
         publish_source=config["networks"][network.show_active()].get("verify")
     )
     
-    print(f"✅ GoldenPEFund deployed at: {fund.address}")
+    print(f"Done GoldenPEFund deployed at: {fund.address}")
 
     # ===== Configuration initiale =====
     
     # 1. Whitelist des stablecoins acceptés
-    print(f"\n📋 Configuration des stablecoins acceptés...")
-    
+    print("\nConfiguring whitelisted stablecoin")
+
     usdc_token = get_contract("usdc_token")
     usdt_token = get_contract("usdt_token")
-    
+
     try:
         # USDC est déjà whitelisté par défaut, mais on peut confirmer
         tx = fund.addWhitelistedStablecoin(usdt_token.address, {"from": account})
         tx.wait(1)
-        print(f"   ✅ USDT whitelisted: {usdt_token.address}")
+        print(f"   Done USDT whitelisted: {usdt_token.address}")
     except Exception as e:
-        print(f"   ⚠️  Erreur lors du whitelist de USDT: {e}")
-    
+        print(f"   Warning: USDT whitelisting failed: {e}")
+
     # Vous pouvez ajouter d'autres stablecoins selon vos besoins
     # try:
     #     busd_token = get_contract("busd_token")
     #     tx = fund.addWhitelistedStablecoin(busd_token.address, {"from": account})
     #     tx.wait(1)
-    #     print(f"   ✅ BUSD whitelisted: {busd_token.address}")
+    #     print(f"   Done BUSD whitelisted: {busd_token.address}")
     # except:
-    #     print(f"   ⚠️  BUSD non disponible")
+    #     print(f"   Warning  BUSD non disponible")
     
-    # 2. Vérifier la limite de dépôt
-    print(f"\n💰 Vérification de la limite de dépôt...")
+    # 2. Verify deposit limit
+    print("\nChecking max deposit limit")
     current_max = fund.maxDepositLimit()
     print(f"   Max Deposit Limit: {current_max / 1e6} USDC")
     
-    # 3. Vérifier le gestionnaire de fonds
-    print(f"\n👤 Vérification du gestionnaire...")
+    # 3. Verify the fund manager
+    print("\nVerifying fund manager")
     current_manager = fund.fundManager()
     print(f"   Fund Manager: {current_manager}")
     
     # 4. Vérifier les frais
-    print(f"\n⚙️  Configuration des frais...")
+    print(f"\nConfiguring fees...")
     print(f"   Entry Fee: {fund.entryFeeBasisPoints() / 100}%")
     print(f"   Exit Fee: {fund.exitFeeBasisPoints() / 100}%")
     print(f"   Performance Fee: {fund.performanceFeeBasisPoints() / 100}%")
     
     # 5. Vérifier l'état initial du vault
-    print(f"\n📊 État initial du vault...")
+    print(f"\nInitial vault state...")
     print(f"   Total Assets: {fund.totalAssets() / 1e6} USDC")
     print(f"   Total Supply: {fund.totalSupply() / 1e18} shares")
     print(f"   High Water Mark: {fund.highWaterMark() / 1e6} USDC")
@@ -177,7 +177,7 @@ def deploy_golden_pe_fund(account, update_front_end_flag=False):
 
 def add_allowed_tokens(token_farm, dict_of_allowed_token, account):
     """Ajoute les tokens acceptés au TokenFarm avec leurs price feeds"""
-    print("\n📊 Ajout des tokens acceptés...")
+    print("\nInfo Ajout des tokens acceptés...")
     
     for token in dict_of_allowed_token:
         try:
@@ -186,9 +186,9 @@ def add_allowed_tokens(token_farm, dict_of_allowed_token, account):
                 token.address, dict_of_allowed_token[token], {"from": account}
             )
             tx.wait(1)
-            print(f"   ✅ Token ajouté: {token.address}")
+            print(f"   Done Token ajouté: {token.address}")
         except Exception as e:
-            print(f"   ⚠️  Erreur lors de l'ajout du token: {e}")
+            print(f"   Warning  Erreur lors de l'ajout du token: {e}")
     
     return token_farm
 
@@ -216,7 +216,7 @@ def copy_files_to_front_end(src, dest):
 
 def update_front_end():
     """Met à jour les fichiers du front-end avec les contrats compilés"""
-    print("\n📦 Mise à jour du front-end...")
+    print("\n Mise à jour du front-end...")
     
     # Crée le dossier chain-info s'il n'existe pas
     os.makedirs("./front_end/src/chain-info", exist_ok=True)
@@ -224,16 +224,16 @@ def update_front_end():
     # The Build
     try:
         copy_folders_to_front_end("./build/contracts", "./front_end/src/chain-info")
-        print("   ✅ Contrats ABIs copiés")
+        print("   Done Contrats ABIs copiés")
     except Exception as e:
-        print(f"   ⚠️  Erreur lors de la copie des ABIs: {e}")
+        print(f"   Warning  Erreur lors de la copie des ABIs: {e}")
 
     # The Contracts
     try:
         copy_folders_to_front_end("./contracts", "./front_end/src/contracts")
-        print("   ✅ Code source des contrats copié")
+        print("   Done Code source des contrats copié")
     except Exception as e:
-        print(f"   ⚠️  Erreur lors de la copie du code source: {e}")
+        print(f"   Warning  Erreur lors de la copie du code source: {e}")
 
     # The ERC20
     try:
@@ -241,18 +241,18 @@ def update_front_end():
             "./build/contracts/dependencies/OpenZeppelin/openzeppelin-contracts@4.3.2/ERC20.json",
             "./front_end/src/chain-info/ERC20.json",
         )
-        print("   ✅ ERC20 ABI copié")
+        print("   Done ERC20 ABI copié")
     except Exception as e:
-        print(f"   ⚠️  Erreur lors de la copie d'ERC20: {e}")
+        print(f"   Warning  Erreur lors de la copie d'ERC20: {e}")
     
     # The Map - Vérifie d'abord s'il existe
     map_src = "./build/deployments/map.json"
     try:
         if os.path.exists(map_src):
             copy_files_to_front_end(map_src, "./front_end/src/chain-info/map.json")
-            print("   ✅ Deployment map copié")
+            print("   Done Deployment map copié")
         else:
-            print("   ⚠️  map.json non trouvé, création d'un fichier vide...")
+            print("   Warning  map.json non trouvé, création d'un fichier vide...")
             basic_map = {
                 "1337": {
                     "GoldenToken": ["0x3194cBDC3dbcd3E11a07892e7bA5c3394048Cc87"],
@@ -263,9 +263,9 @@ def update_front_end():
             os.makedirs("./front_end/src/chain-info", exist_ok=True)
             with open("./front_end/src/chain-info/map.json", "w") as f:
                 json.dump(basic_map, f, indent=2)
-            print("   ✅ Deployment map créé")
+            print("   Done Deployment map créé")
     except Exception as e:
-        print(f"   ⚠️  Erreur lors du traitement de la map: {e}")
+        print(f"   Warning  Erreur lors du traitement de la map: {e}")
 
     # The Config
     try:
@@ -273,26 +273,26 @@ def update_front_end():
             config_dict = yaml.load(brownie_config, Loader=yaml.FullLoader)
             with open("./front_end/src/brownie-config-json.json", "w") as brownie_config_json:
                 json.dump(config_dict, brownie_config_json, indent=2)
-        print("   ✅ Configuration Brownie copiée")
+        print("   Done Configuration Brownie copiée")
     except Exception as e:
-        print(f"   ⚠️  Erreur lors de la copie de la configuration: {e}")
+        print(f"   Warning  Erreur lors de la copie de la configuration: {e}")
     
-    print("✅ Front-end mis à jour avec succès!")
+    print("Done Front-end mis à jour avec succès!")
 
 
 def main():
     """Fonction principale - Déploie tous les contrats"""
     print("\n" + "="*60)
-    print("🚀 DÉBUT DU DÉPLOIEMENT")
+    print("Start DÉBUT DU DÉPLOIEMENT")
     print("="*60)
     
     try:
         deploy_token_farm_and_golden_token(update_front_end_flag=True)
         print("\n" + "="*60)
-        print("✅ DÉPLOIEMENT TERMINÉ AVEC SUCCÈS!")
+        print("Done DÉPLOIEMENT TERMINÉ AVEC SUCCÈS!")
         print("="*60 + "\n")
     except Exception as e:
         print("\n" + "="*60)
-        print(f"❌ ERREUR LORS DU DÉPLOIEMENT: {e}")
+        print(f"ERROR ERREUR LORS DU DÉPLOIEMENT: {e}")
         print("="*60 + "\n")
         raise

@@ -50,12 +50,17 @@ contract LoanFactory is Ownable, ReentrancyGuard {
     uint256 _duration,
     address payable _borrower
   ) external onlyTokenFarm returns (uint256) {
+    require(_borrower != address(0), "Invalid borrower");
+    require(_amount > 0, "Loan amount must be > 0");
+    require(_duration > 0, "Loan duration must be > 0");
+
     StateMachine loan = new StateMachine(
       _amount,
       _interest,
       _duration,
       _borrower,
-      tokenFarm // lender = TokenFarm // Updated to payable(address(this)
+      payable(address(this)),
+      tokenFarm
     );
 
     loans.push(
@@ -88,8 +93,10 @@ contract LoanFactory is Ownable, ReentrancyGuard {
 
   // ===== FUND LOAN ===== FUND LOAN (appelÃ© par TokenFarm)
   function fundLoan(uint256 loanId) external payable onlyTokenFarm nonReentrant{
+    require(loanId < loans.length, "Invalid loan id");
     LoanInfo storage loanInfo = loans[loanId]; // Access the loan info
     require(!loanInfo.funded, "Loan already funded");
+    require(!loanInfo.closed, "Loan already closed");
     require(msg.value == loanInfo.amount, "Incorrect funding amount");
 
     StateMachine loan = StateMachine(payable(loanInfo.loanAddress)); // Cast to StateMachine
@@ -107,7 +114,10 @@ contract LoanFactory is Ownable, ReentrancyGuard {
     require(!loanInfo.closed, "Loan already closed");
     StateMachine loan = StateMachine(payable(loanInfo.loanAddress));
 
-    loan.reimburse();
+    require(
+      loan.state() == StateMachine.State.CLOSED,
+      "Loan not closed yet"
+    );
 
     loanInfo.closed = true;
 
@@ -123,6 +133,11 @@ contract LoanFactory is Ownable, ReentrancyGuard {
     address borrower
   ) external view returns (uint256[] memory) {
     return borrowerLoans[borrower];
+  }
+
+  function getLoanAddress(uint256 loanId) external view returns (address) {
+    require(loanId < loans.length, "Invalid loan ID");
+    return loans[loanId].loanAddress;
   }
 
   function setTokenFarm(address payable _tokenFarm) external onlyOwner {

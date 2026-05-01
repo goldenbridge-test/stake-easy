@@ -54,7 +54,7 @@ contract GoldenPEFund is ERC4626, Ownable, ReentrancyGuard {
     {
         require(_fundManager != address(0), "Invalid fund manager");
         require(_entryFeeBp <= 10000 && _exitFeeBp <= 10000 && _performanceFeeBp <= 10000, "Invalid fee");
-        require(_maxDepositLimit > 0, "Max deposit must be > 0");
+        require(_maxDepositLimit >= INITIAL_DEPOSIT, "Max deposit must be >= initial deposit");
 
         fundManager = _fundManager;
         entryFeeBasisPoints = _entryFeeBp;
@@ -75,15 +75,24 @@ contract GoldenPEFund is ERC4626, Ownable, ReentrancyGuard {
 
     function _initializeFund() private {
         if (!initialized) {
-            initialized = true;
-            // Deposit initial de 1e6 unités pour prévenir l'inflation attack
-            // (ce montant est brûlé et reste dans le vault)
-            try IERC20(asset()).transferFrom(msg.sender, address(this), INITIAL_DEPOSIT) {
-                _mint(address(0x000000000000000000000000000000000000dEaD), INITIAL_DEPOSIT);
+            try IERC20(asset()).transferFrom(msg.sender, address(this), INITIAL_DEPOSIT) returns (bool success) {
+                if (success) {
+                    _mint(address(0x000000000000000000000000000000000000dEaD), INITIAL_DEPOSIT);
+                    initialized = true;
+                    highWaterMark = totalAssets();
+                }
             } catch {
                 // Si le transfert échoue au déploiement, l'owner devra faire un premier dépôt
             }
         }
+    }
+
+    function initializeFund() external onlyOwner {
+        require(!initialized, "Already initialized");
+        IERC20(asset()).safeTransferFrom(msg.sender, address(this), INITIAL_DEPOSIT);
+        _mint(address(0x000000000000000000000000000000000000dEaD), INITIAL_DEPOSIT);
+        initialized = true;
+        highWaterMark = totalAssets();
     }
 
     // =========================
@@ -208,15 +217,18 @@ contract GoldenPEFund is ERC4626, Ownable, ReentrancyGuard {
         uint256 assets,
         uint256 shares
     ) internal override nonReentrant whenNotPaused {
-        // Vérifier que le dépôt ne dépasse pas la limite
-        require(totalAssets() + assets <= maxDepositLimit, "Deposit exceeds max limit");
-        
         uint256 fee = _feeOnTotal(assets, entryFeeBasisPoints);
+        require(assets > fee, "Deposit amount too small after fee");
+        require(totalAssets() + assets - fee <= maxDepositLimit, "Deposit exceeds max limit");
 
         super._deposit(caller, receiver, assets, shares);
 
         if (fee > 0) {
             IERC20(asset()).safeTransfer(fundManager, fee);
+        }
+
+        if (highWaterMark == 0) {
+            highWaterMark = totalAssets();
         }
     }
 
@@ -228,12 +240,14 @@ contract GoldenPEFund is ERC4626, Ownable, ReentrancyGuard {
         uint256 shares
     ) internal override nonReentrant {
         uint256 fee = _feeOnRaw(assets, exitFeeBasisPoints);
+        uint256 grossAssets = assets + fee;
 
-        super._withdraw(caller, receiver, owner, assets, shares);
+        super._withdraw(caller, address(this), owner, grossAssets, shares);
 
         if (fee > 0) {
             IERC20(asset()).safeTransfer(fundManager, fee);
         }
+        IERC20(asset()).safeTransfer(receiver, assets);
     }
 
     // =========================
@@ -306,30 +320,37 @@ contract GoldenPEFund is ERC4626, Ownable, ReentrancyGuard {
     // Performance Fee with HWM
     // =========================
 
-    function crystallizePerformance(uint256 newTotalAssets) 
+    function crystallizePerformance() 
         external 
         onlyFundManager 
         nonReentrant
     {
+        uint256 newTotalAssets = totalAssets();
         require(newTotalAssets > 0, "Invalid total assets");
 
-        if (newTotalAssets > highWaterMark) {
-            uint256 profit = newTotalAssets - highWaterMark;
-
-            uint256 fee = profit.mulDiv(
-                performanceFeeBasisPoints,
-                BASIS_POINT_SCALE,
-                Math.Rounding.Up
-            );
-
-            require(fee <= IERC20(asset()).balanceOf(address(this)), "Insufficient balance for fee");
-
+        if (highWaterMark == 0) {
             highWaterMark = newTotalAssets;
-
-            IERC20(asset()).safeTransfer(fundManager, fee);
-
-            emit PerformanceCrystallized(profit, fee);
+            return;
         }
+
+        require(newTotalAssets > highWaterMark, "No performance to crystallize");
+
+        uint256 profit = newTotalAssets - highWaterMark;
+
+        uint256 fee = profit.mulDiv(
+            performanceFeeBasisPoints,
+            BASIS_POINT_SCALE,
+            Math.Rounding.Up
+        );
+
+        require(fee <= IERC20(asset()).balanceOf(address(this)), "Insufficient balance for fee");
+
+        uint256 newHighWaterMark = newTotalAssets - fee;
+        highWaterMark = newHighWaterMark;
+
+        IERC20(asset()).safeTransfer(fundManager, fee);
+
+        emit PerformanceCrystallized(profit, fee);
     }
 
     // =========================
