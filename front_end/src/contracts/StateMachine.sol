@@ -1,6 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.7;
 
+interface ITokenFarm {
+  function receiveLoanReturns() external payable;
+}
+
 contract StateMachine {
   enum State {
     PENDING,
@@ -14,6 +18,7 @@ contract StateMachine {
   uint256 public end; // Timestamp when the loan term ends
   uint256 public duration; // Declare duration as a state variable
   address payable public borrower; // Updated to address payable
+  address payable public loanFactory; // LoanFactory that funds the loan
   address payable public tokenFarm; // TokenFarm = lender logique
 
   constructor(
@@ -21,6 +26,7 @@ contract StateMachine {
     uint256 _interest,
     uint256 _duration,
     address payable _borrower,
+    address payable _loanFactory,
     address payable _tokenFarm
   ) {
     amount = _amount; // Assign the amount to the state variable
@@ -28,14 +34,14 @@ contract StateMachine {
     duration = _duration; // Assign the duration to the state variable
     end = block.timestamp + _duration; // Initialize the end time
     borrower = _borrower; // Updated to address payable
+    loanFactory = _loanFactory;
     tokenFarm = _tokenFarm;
   }
 
 
-  // ===== FUND (appel UNIQUEMENT par TokenFarm via LoanFactory)
+  // ===== FUND (appel UNIQUEMENT par LoanFactory)
 
-  function fund() external payable onlyTokenFarm {
-    require(msg.sender == tokenFarm, "Only lender can fund the loan."); // Only tokenFarm can call this function
+  function fund() external payable onlyLoanFactory {
     require(
       address(this).balance == amount,
       "Funding must match the loan amount exactly."
@@ -48,13 +54,12 @@ contract StateMachine {
   // ===== REPAY (borrower rembourse, fonds retournent TokenFarm)
 
   function reimburse() external payable onlyBorrower {
-    require(msg.sender == borrower, "Only borrower can reimburse the loan.");
     require(
       msg.value == amount + interest,
       "Reimbursement must match the loan amount plus interest."
     );
     _transitionTo(State.CLOSED); // Transition to CLOSED state
-    tokenFarm.transfer(amount + interest); // Transfer the reimbursement to the lender
+    ITokenFarm(tokenFarm).receiveLoanReturns{ value: msg.value }();
   }
 
   function _transitionTo(State to) internal {
@@ -79,8 +84,8 @@ contract StateMachine {
     _;
   }
 
-  modifier onlyTokenFarm() {
-    require(msg.sender == tokenFarm, "Only TokenFarm");
+  modifier onlyLoanFactory() {
+    require(msg.sender == loanFactory, "Only LoanFactory");
     _;
   }
 

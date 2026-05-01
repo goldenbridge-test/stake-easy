@@ -1,0 +1,3074 @@
+{
+  "abi": [
+    {
+      "inputs": [],
+      "name": "receiveLoanReturns",
+      "outputs": [],
+      "stateMutability": "payable",
+      "type": "function"
+    }
+  ],
+  "allSourcePaths": {
+    "20": "contracts/StateMachine.sol"
+  },
+  "ast": {
+    "absolutePath": "contracts/StateMachine.sol",
+    "exportedSymbols": {
+      "ITokenFarm": [
+        3819
+      ],
+      "StateMachine": [
+        4047
+      ]
+    },
+    "id": 4048,
+    "license": "MIT",
+    "nodeType": "SourceUnit",
+    "nodes": [
+      {
+        "id": 3815,
+        "literals": [
+          "solidity",
+          "^",
+          "0.8",
+          ".7"
+        ],
+        "nodeType": "PragmaDirective",
+        "src": "33:23:20"
+      },
+      {
+        "abstract": false,
+        "baseContracts": [],
+        "canonicalName": "ITokenFarm",
+        "contractDependencies": [],
+        "contractKind": "interface",
+        "fullyImplemented": false,
+        "id": 3819,
+        "linearizedBaseContracts": [
+          3819
+        ],
+        "name": "ITokenFarm",
+        "nameLocation": "70:10:20",
+        "nodeType": "ContractDefinition",
+        "nodes": [
+          {
+            "functionSelector": "ebc46dbb",
+            "id": 3818,
+            "implemented": false,
+            "kind": "function",
+            "modifiers": [],
+            "name": "receiveLoanReturns",
+            "nameLocation": "95:18:20",
+            "nodeType": "FunctionDefinition",
+            "parameters": {
+              "id": 3816,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "113:2:20"
+            },
+            "returnParameters": {
+              "id": 3817,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "132:0:20"
+            },
+            "scope": 3819,
+            "src": "86:47:20",
+            "stateMutability": "payable",
+            "virtual": false,
+            "visibility": "external"
+          }
+        ],
+        "scope": 4048,
+        "src": "60:76:20",
+        "usedErrors": [],
+        "usedEvents": []
+      },
+      {
+        "abstract": false,
+        "baseContracts": [],
+        "canonicalName": "StateMachine",
+        "contractDependencies": [],
+        "contractKind": "contract",
+        "fullyImplemented": true,
+        "id": 4047,
+        "linearizedBaseContracts": [
+          4047
+        ],
+        "name": "StateMachine",
+        "nameLocation": "149:12:20",
+        "nodeType": "ContractDefinition",
+        "nodes": [
+          {
+            "canonicalName": "StateMachine.State",
+            "id": 3823,
+            "members": [
+              {
+                "id": 3820,
+                "name": "PENDING",
+                "nameLocation": "185:7:20",
+                "nodeType": "EnumValue",
+                "src": "185:7:20"
+              },
+              {
+                "id": 3821,
+                "name": "ACTIVE",
+                "nameLocation": "199:6:20",
+                "nodeType": "EnumValue",
+                "src": "199:6:20"
+              },
+              {
+                "id": 3822,
+                "name": "CLOSED",
+                "nameLocation": "212:6:20",
+                "nodeType": "EnumValue",
+                "src": "212:6:20"
+              }
+            ],
+            "name": "State",
+            "nameLocation": "172:5:20",
+            "nodeType": "EnumDefinition",
+            "src": "167:56:20"
+          },
+          {
+            "constant": false,
+            "functionSelector": "c19d93fb",
+            "id": 3828,
+            "mutability": "mutable",
+            "name": "state",
+            "nameLocation": "268:5:20",
+            "nodeType": "VariableDeclaration",
+            "scope": 4047,
+            "src": "255:34:20",
+            "stateVariable": true,
+            "storageLocation": "default",
+            "typeDescriptions": {
+              "typeIdentifier": "t_enum$_State_$3823",
+              "typeString": "enum StateMachine.State"
+            },
+            "typeName": {
+              "id": 3825,
+              "nodeType": "UserDefinedTypeName",
+              "pathNode": {
+                "id": 3824,
+                "name": "State",
+                "nameLocations": [
+                  "255:5:20"
+                ],
+                "nodeType": "IdentifierPath",
+                "referencedDeclaration": 3823,
+                "src": "255:5:20"
+              },
+              "referencedDeclaration": 3823,
+              "src": "255:5:20",
+              "typeDescriptions": {
+                "typeIdentifier": "t_enum$_State_$3823",
+                "typeString": "enum StateMachine.State"
+              }
+            },
+            "value": {
+              "expression": {
+                "id": 3826,
+                "name": "State",
+                "nodeType": "Identifier",
+                "overloadedDeclarations": [],
+                "referencedDeclaration": 3823,
+                "src": "276:5:20",
+                "typeDescriptions": {
+                  "typeIdentifier": "t_type$_t_enum$_State_$3823_$",
+                  "typeString": "type(enum StateMachine.State)"
+                }
+              },
+              "id": 3827,
+              "isConstant": false,
+              "isLValue": false,
+              "isPure": true,
+              "lValueRequested": false,
+              "memberLocation": "282:7:20",
+              "memberName": "PENDING",
+              "nodeType": "MemberAccess",
+              "referencedDeclaration": 3820,
+              "src": "276:13:20",
+              "typeDescriptions": {
+                "typeIdentifier": "t_enum$_State_$3823",
+                "typeString": "enum StateMachine.State"
+              }
+            },
+            "visibility": "public"
+          },
+          {
+            "constant": false,
+            "functionSelector": "aa8c217c",
+            "id": 3830,
+            "mutability": "mutable",
+            "name": "amount",
+            "nameLocation": "337:6:20",
+            "nodeType": "VariableDeclaration",
+            "scope": 4047,
+            "src": "322:21:20",
+            "stateVariable": true,
+            "storageLocation": "default",
+            "typeDescriptions": {
+              "typeIdentifier": "t_uint256",
+              "typeString": "uint256"
+            },
+            "typeName": {
+              "id": 3829,
+              "name": "uint256",
+              "nodeType": "ElementaryTypeName",
+              "src": "322:7:20",
+              "typeDescriptions": {
+                "typeIdentifier": "t_uint256",
+                "typeString": "uint256"
+              }
+            },
+            "visibility": "public"
+          },
+          {
+            "constant": false,
+            "functionSelector": "c392f766",
+            "id": 3832,
+            "mutability": "mutable",
+            "name": "interest",
+            "nameLocation": "393:8:20",
+            "nodeType": "VariableDeclaration",
+            "scope": 4047,
+            "src": "378:23:20",
+            "stateVariable": true,
+            "storageLocation": "default",
+            "typeDescriptions": {
+              "typeIdentifier": "t_uint256",
+              "typeString": "uint256"
+            },
+            "typeName": {
+              "id": 3831,
+              "name": "uint256",
+              "nodeType": "ElementaryTypeName",
+              "src": "378:7:20",
+              "typeDescriptions": {
+                "typeIdentifier": "t_uint256",
+                "typeString": "uint256"
+              }
+            },
+            "visibility": "public"
+          },
+          {
+            "constant": false,
+            "functionSelector": "efbe1c1c",
+            "id": 3834,
+            "mutability": "mutable",
+            "name": "end",
+            "nameLocation": "467:3:20",
+            "nodeType": "VariableDeclaration",
+            "scope": 4047,
+            "src": "452:18:20",
+            "stateVariable": true,
+            "storageLocation": "default",
+            "typeDescriptions": {
+              "typeIdentifier": "t_uint256",
+              "typeString": "uint256"
+            },
+            "typeName": {
+              "id": 3833,
+              "name": "uint256",
+              "nodeType": "ElementaryTypeName",
+              "src": "452:7:20",
+              "typeDescriptions": {
+                "typeIdentifier": "t_uint256",
+                "typeString": "uint256"
+              }
+            },
+            "visibility": "public"
+          },
+          {
+            "constant": false,
+            "functionSelector": "0fb5a6b4",
+            "id": 3836,
+            "mutability": "mutable",
+            "name": "duration",
+            "nameLocation": "527:8:20",
+            "nodeType": "VariableDeclaration",
+            "scope": 4047,
+            "src": "512:23:20",
+            "stateVariable": true,
+            "storageLocation": "default",
+            "typeDescriptions": {
+              "typeIdentifier": "t_uint256",
+              "typeString": "uint256"
+            },
+            "typeName": {
+              "id": 3835,
+              "name": "uint256",
+              "nodeType": "ElementaryTypeName",
+              "src": "512:7:20",
+              "typeDescriptions": {
+                "typeIdentifier": "t_uint256",
+                "typeString": "uint256"
+              }
+            },
+            "visibility": "public"
+          },
+          {
+            "constant": false,
+            "functionSelector": "7df1f1b9",
+            "id": 3838,
+            "mutability": "mutable",
+            "name": "borrower",
+            "nameLocation": "603:8:20",
+            "nodeType": "VariableDeclaration",
+            "scope": 4047,
+            "src": "580:31:20",
+            "stateVariable": true,
+            "storageLocation": "default",
+            "typeDescriptions": {
+              "typeIdentifier": "t_address_payable",
+              "typeString": "address payable"
+            },
+            "typeName": {
+              "id": 3837,
+              "name": "address",
+              "nodeType": "ElementaryTypeName",
+              "src": "580:15:20",
+              "stateMutability": "payable",
+              "typeDescriptions": {
+                "typeIdentifier": "t_address_payable",
+                "typeString": "address payable"
+              }
+            },
+            "visibility": "public"
+          },
+          {
+            "constant": false,
+            "functionSelector": "b37ed8cd",
+            "id": 3840,
+            "mutability": "mutable",
+            "name": "loanFactory",
+            "nameLocation": "669:11:20",
+            "nodeType": "VariableDeclaration",
+            "scope": 4047,
+            "src": "646:34:20",
+            "stateVariable": true,
+            "storageLocation": "default",
+            "typeDescriptions": {
+              "typeIdentifier": "t_address_payable",
+              "typeString": "address payable"
+            },
+            "typeName": {
+              "id": 3839,
+              "name": "address",
+              "nodeType": "ElementaryTypeName",
+              "src": "646:15:20",
+              "stateMutability": "payable",
+              "typeDescriptions": {
+                "typeIdentifier": "t_address_payable",
+                "typeString": "address payable"
+              }
+            },
+            "visibility": "public"
+          },
+          {
+            "constant": false,
+            "functionSelector": "3db3aef7",
+            "id": 3842,
+            "mutability": "mutable",
+            "name": "tokenFarm",
+            "nameLocation": "743:9:20",
+            "nodeType": "VariableDeclaration",
+            "scope": 4047,
+            "src": "720:32:20",
+            "stateVariable": true,
+            "storageLocation": "default",
+            "typeDescriptions": {
+              "typeIdentifier": "t_address_payable",
+              "typeString": "address payable"
+            },
+            "typeName": {
+              "id": 3841,
+              "name": "address",
+              "nodeType": "ElementaryTypeName",
+              "src": "720:15:20",
+              "stateMutability": "payable",
+              "typeDescriptions": {
+                "typeIdentifier": "t_address_payable",
+                "typeString": "address payable"
+              }
+            },
+            "visibility": "public"
+          },
+          {
+            "body": {
+              "id": 3888,
+              "nodeType": "Block",
+              "src": "976:402:20",
+              "statements": [
+                {
+                  "expression": {
+                    "id": 3859,
+                    "isConstant": false,
+                    "isLValue": false,
+                    "isPure": false,
+                    "lValueRequested": false,
+                    "leftHandSide": {
+                      "id": 3857,
+                      "name": "amount",
+                      "nodeType": "Identifier",
+                      "overloadedDeclarations": [],
+                      "referencedDeclaration": 3830,
+                      "src": "983:6:20",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_uint256",
+                        "typeString": "uint256"
+                      }
+                    },
+                    "nodeType": "Assignment",
+                    "operator": "=",
+                    "rightHandSide": {
+                      "id": 3858,
+                      "name": "_amount",
+                      "nodeType": "Identifier",
+                      "overloadedDeclarations": [],
+                      "referencedDeclaration": 3844,
+                      "src": "992:7:20",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_uint256",
+                        "typeString": "uint256"
+                      }
+                    },
+                    "src": "983:16:20",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "id": 3860,
+                  "nodeType": "ExpressionStatement",
+                  "src": "983:16:20"
+                },
+                {
+                  "expression": {
+                    "id": 3863,
+                    "isConstant": false,
+                    "isLValue": false,
+                    "isPure": false,
+                    "lValueRequested": false,
+                    "leftHandSide": {
+                      "id": 3861,
+                      "name": "interest",
+                      "nodeType": "Identifier",
+                      "overloadedDeclarations": [],
+                      "referencedDeclaration": 3832,
+                      "src": "1049:8:20",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_uint256",
+                        "typeString": "uint256"
+                      }
+                    },
+                    "nodeType": "Assignment",
+                    "operator": "=",
+                    "rightHandSide": {
+                      "id": 3862,
+                      "name": "_interest",
+                      "nodeType": "Identifier",
+                      "overloadedDeclarations": [],
+                      "referencedDeclaration": 3846,
+                      "src": "1060:9:20",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_uint256",
+                        "typeString": "uint256"
+                      }
+                    },
+                    "src": "1049:20:20",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "id": 3864,
+                  "nodeType": "ExpressionStatement",
+                  "src": "1049:20:20"
+                },
+                {
+                  "expression": {
+                    "id": 3867,
+                    "isConstant": false,
+                    "isLValue": false,
+                    "isPure": false,
+                    "lValueRequested": false,
+                    "leftHandSide": {
+                      "id": 3865,
+                      "name": "duration",
+                      "nodeType": "Identifier",
+                      "overloadedDeclarations": [],
+                      "referencedDeclaration": 3836,
+                      "src": "1121:8:20",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_uint256",
+                        "typeString": "uint256"
+                      }
+                    },
+                    "nodeType": "Assignment",
+                    "operator": "=",
+                    "rightHandSide": {
+                      "id": 3866,
+                      "name": "_duration",
+                      "nodeType": "Identifier",
+                      "overloadedDeclarations": [],
+                      "referencedDeclaration": 3848,
+                      "src": "1132:9:20",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_uint256",
+                        "typeString": "uint256"
+                      }
+                    },
+                    "src": "1121:20:20",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "id": 3868,
+                  "nodeType": "ExpressionStatement",
+                  "src": "1121:20:20"
+                },
+                {
+                  "expression": {
+                    "id": 3874,
+                    "isConstant": false,
+                    "isLValue": false,
+                    "isPure": false,
+                    "lValueRequested": false,
+                    "leftHandSide": {
+                      "id": 3869,
+                      "name": "end",
+                      "nodeType": "Identifier",
+                      "overloadedDeclarations": [],
+                      "referencedDeclaration": 3834,
+                      "src": "1193:3:20",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_uint256",
+                        "typeString": "uint256"
+                      }
+                    },
+                    "nodeType": "Assignment",
+                    "operator": "=",
+                    "rightHandSide": {
+                      "commonType": {
+                        "typeIdentifier": "t_uint256",
+                        "typeString": "uint256"
+                      },
+                      "id": 3873,
+                      "isConstant": false,
+                      "isLValue": false,
+                      "isPure": false,
+                      "lValueRequested": false,
+                      "leftExpression": {
+                        "expression": {
+                          "id": 3870,
+                          "name": "block",
+                          "nodeType": "Identifier",
+                          "overloadedDeclarations": [],
+                          "referencedDeclaration": -4,
+                          "src": "1199:5:20",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_magic_block",
+                            "typeString": "block"
+                          }
+                        },
+                        "id": 3871,
+                        "isConstant": false,
+                        "isLValue": false,
+                        "isPure": false,
+                        "lValueRequested": false,
+                        "memberLocation": "1205:9:20",
+                        "memberName": "timestamp",
+                        "nodeType": "MemberAccess",
+                        "src": "1199:15:20",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_uint256",
+                          "typeString": "uint256"
+                        }
+                      },
+                      "nodeType": "BinaryOperation",
+                      "operator": "+",
+                      "rightExpression": {
+                        "id": 3872,
+                        "name": "_duration",
+                        "nodeType": "Identifier",
+                        "overloadedDeclarations": [],
+                        "referencedDeclaration": 3848,
+                        "src": "1217:9:20",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_uint256",
+                          "typeString": "uint256"
+                        }
+                      },
+                      "src": "1199:27:20",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_uint256",
+                        "typeString": "uint256"
+                      }
+                    },
+                    "src": "1193:33:20",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "id": 3875,
+                  "nodeType": "ExpressionStatement",
+                  "src": "1193:33:20"
+                },
+                {
+                  "expression": {
+                    "id": 3878,
+                    "isConstant": false,
+                    "isLValue": false,
+                    "isPure": false,
+                    "lValueRequested": false,
+                    "leftHandSide": {
+                      "id": 3876,
+                      "name": "borrower",
+                      "nodeType": "Identifier",
+                      "overloadedDeclarations": [],
+                      "referencedDeclaration": 3838,
+                      "src": "1260:8:20",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_address_payable",
+                        "typeString": "address payable"
+                      }
+                    },
+                    "nodeType": "Assignment",
+                    "operator": "=",
+                    "rightHandSide": {
+                      "id": 3877,
+                      "name": "_borrower",
+                      "nodeType": "Identifier",
+                      "overloadedDeclarations": [],
+                      "referencedDeclaration": 3850,
+                      "src": "1271:9:20",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_address_payable",
+                        "typeString": "address payable"
+                      }
+                    },
+                    "src": "1260:20:20",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_address_payable",
+                      "typeString": "address payable"
+                    }
+                  },
+                  "id": 3879,
+                  "nodeType": "ExpressionStatement",
+                  "src": "1260:20:20"
+                },
+                {
+                  "expression": {
+                    "id": 3882,
+                    "isConstant": false,
+                    "isLValue": false,
+                    "isPure": false,
+                    "lValueRequested": false,
+                    "leftHandSide": {
+                      "id": 3880,
+                      "name": "loanFactory",
+                      "nodeType": "Identifier",
+                      "overloadedDeclarations": [],
+                      "referencedDeclaration": 3840,
+                      "src": "1317:11:20",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_address_payable",
+                        "typeString": "address payable"
+                      }
+                    },
+                    "nodeType": "Assignment",
+                    "operator": "=",
+                    "rightHandSide": {
+                      "id": 3881,
+                      "name": "_loanFactory",
+                      "nodeType": "Identifier",
+                      "overloadedDeclarations": [],
+                      "referencedDeclaration": 3852,
+                      "src": "1331:12:20",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_address_payable",
+                        "typeString": "address payable"
+                      }
+                    },
+                    "src": "1317:26:20",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_address_payable",
+                      "typeString": "address payable"
+                    }
+                  },
+                  "id": 3883,
+                  "nodeType": "ExpressionStatement",
+                  "src": "1317:26:20"
+                },
+                {
+                  "expression": {
+                    "id": 3886,
+                    "isConstant": false,
+                    "isLValue": false,
+                    "isPure": false,
+                    "lValueRequested": false,
+                    "leftHandSide": {
+                      "id": 3884,
+                      "name": "tokenFarm",
+                      "nodeType": "Identifier",
+                      "overloadedDeclarations": [],
+                      "referencedDeclaration": 3842,
+                      "src": "1350:9:20",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_address_payable",
+                        "typeString": "address payable"
+                      }
+                    },
+                    "nodeType": "Assignment",
+                    "operator": "=",
+                    "rightHandSide": {
+                      "id": 3885,
+                      "name": "_tokenFarm",
+                      "nodeType": "Identifier",
+                      "overloadedDeclarations": [],
+                      "referencedDeclaration": 3854,
+                      "src": "1362:10:20",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_address_payable",
+                        "typeString": "address payable"
+                      }
+                    },
+                    "src": "1350:22:20",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_address_payable",
+                      "typeString": "address payable"
+                    }
+                  },
+                  "id": 3887,
+                  "nodeType": "ExpressionStatement",
+                  "src": "1350:22:20"
+                }
+              ]
+            },
+            "id": 3889,
+            "implemented": true,
+            "kind": "constructor",
+            "modifiers": [],
+            "name": "",
+            "nameLocation": "-1:-1:-1",
+            "nodeType": "FunctionDefinition",
+            "parameters": {
+              "id": 3855,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 3844,
+                  "mutability": "mutable",
+                  "name": "_amount",
+                  "nameLocation": "815:7:20",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3889,
+                  "src": "807:15:20",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 3843,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "807:7:20",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 3846,
+                  "mutability": "mutable",
+                  "name": "_interest",
+                  "nameLocation": "837:9:20",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3889,
+                  "src": "829:17:20",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 3845,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "829:7:20",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 3848,
+                  "mutability": "mutable",
+                  "name": "_duration",
+                  "nameLocation": "861:9:20",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3889,
+                  "src": "853:17:20",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 3847,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "853:7:20",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 3850,
+                  "mutability": "mutable",
+                  "name": "_borrower",
+                  "nameLocation": "893:9:20",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3889,
+                  "src": "877:25:20",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_address_payable",
+                    "typeString": "address payable"
+                  },
+                  "typeName": {
+                    "id": 3849,
+                    "name": "address",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "877:15:20",
+                    "stateMutability": "payable",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_address_payable",
+                      "typeString": "address payable"
+                    }
+                  },
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 3852,
+                  "mutability": "mutable",
+                  "name": "_loanFactory",
+                  "nameLocation": "925:12:20",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3889,
+                  "src": "909:28:20",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_address_payable",
+                    "typeString": "address payable"
+                  },
+                  "typeName": {
+                    "id": 3851,
+                    "name": "address",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "909:15:20",
+                    "stateMutability": "payable",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_address_payable",
+                      "typeString": "address payable"
+                    }
+                  },
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 3854,
+                  "mutability": "mutable",
+                  "name": "_tokenFarm",
+                  "nameLocation": "960:10:20",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 3889,
+                  "src": "944:26:20",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_address_payable",
+                    "typeString": "address payable"
+                  },
+                  "typeName": {
+                    "id": 3853,
+                    "name": "address",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "944:15:20",
+                    "stateMutability": "payable",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_address_payable",
+                      "typeString": "address payable"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "800:175:20"
+            },
+            "returnParameters": {
+              "id": 3856,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "976:0:20"
+            },
+            "scope": 4047,
+            "src": "789:589:20",
+            "stateMutability": "nonpayable",
+            "virtual": false,
+            "visibility": "public"
+          },
+          {
+            "body": {
+              "id": 3916,
+              "nodeType": "Block",
+              "src": "1489:187:20",
+              "statements": [
+                {
+                  "expression": {
+                    "arguments": [
+                      {
+                        "commonType": {
+                          "typeIdentifier": "t_uint256",
+                          "typeString": "uint256"
+                        },
+                        "id": 3901,
+                        "isConstant": false,
+                        "isLValue": false,
+                        "isPure": false,
+                        "lValueRequested": false,
+                        "leftExpression": {
+                          "expression": {
+                            "arguments": [
+                              {
+                                "id": 3897,
+                                "name": "this",
+                                "nodeType": "Identifier",
+                                "overloadedDeclarations": [],
+                                "referencedDeclaration": -28,
+                                "src": "1520:4:20",
+                                "typeDescriptions": {
+                                  "typeIdentifier": "t_contract$_StateMachine_$4047",
+                                  "typeString": "contract StateMachine"
+                                }
+                              }
+                            ],
+                            "expression": {
+                              "argumentTypes": [
+                                {
+                                  "typeIdentifier": "t_contract$_StateMachine_$4047",
+                                  "typeString": "contract StateMachine"
+                                }
+                              ],
+                              "id": 3896,
+                              "isConstant": false,
+                              "isLValue": false,
+                              "isPure": true,
+                              "lValueRequested": false,
+                              "nodeType": "ElementaryTypeNameExpression",
+                              "src": "1512:7:20",
+                              "typeDescriptions": {
+                                "typeIdentifier": "t_type$_t_address_$",
+                                "typeString": "type(address)"
+                              },
+                              "typeName": {
+                                "id": 3895,
+                                "name": "address",
+                                "nodeType": "ElementaryTypeName",
+                                "src": "1512:7:20",
+                                "typeDescriptions": {}
+                              }
+                            },
+                            "id": 3898,
+                            "isConstant": false,
+                            "isLValue": false,
+                            "isPure": false,
+                            "kind": "typeConversion",
+                            "lValueRequested": false,
+                            "nameLocations": [],
+                            "names": [],
+                            "nodeType": "FunctionCall",
+                            "src": "1512:13:20",
+                            "tryCall": false,
+                            "typeDescriptions": {
+                              "typeIdentifier": "t_address",
+                              "typeString": "address"
+                            }
+                          },
+                          "id": 3899,
+                          "isConstant": false,
+                          "isLValue": false,
+                          "isPure": false,
+                          "lValueRequested": false,
+                          "memberLocation": "1526:7:20",
+                          "memberName": "balance",
+                          "nodeType": "MemberAccess",
+                          "src": "1512:21:20",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_uint256",
+                            "typeString": "uint256"
+                          }
+                        },
+                        "nodeType": "BinaryOperation",
+                        "operator": "==",
+                        "rightExpression": {
+                          "id": 3900,
+                          "name": "amount",
+                          "nodeType": "Identifier",
+                          "overloadedDeclarations": [],
+                          "referencedDeclaration": 3830,
+                          "src": "1537:6:20",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_uint256",
+                            "typeString": "uint256"
+                          }
+                        },
+                        "src": "1512:31:20",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_bool",
+                          "typeString": "bool"
+                        }
+                      },
+                      {
+                        "hexValue": "46756e64696e67206d757374206d6174636820746865206c6f616e20616d6f756e742065786163746c792e",
+                        "id": 3902,
+                        "isConstant": false,
+                        "isLValue": false,
+                        "isPure": true,
+                        "kind": "string",
+                        "lValueRequested": false,
+                        "nodeType": "Literal",
+                        "src": "1552:45:20",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_stringliteral_188ce5648455902b663c39dfb2ab16359a1f4042fab71e5c50eaff3dde40346d",
+                          "typeString": "literal_string \"Funding must match the loan amount exactly.\""
+                        },
+                        "value": "Funding must match the loan amount exactly."
+                      }
+                    ],
+                    "expression": {
+                      "argumentTypes": [
+                        {
+                          "typeIdentifier": "t_bool",
+                          "typeString": "bool"
+                        },
+                        {
+                          "typeIdentifier": "t_stringliteral_188ce5648455902b663c39dfb2ab16359a1f4042fab71e5c50eaff3dde40346d",
+                          "typeString": "literal_string \"Funding must match the loan amount exactly.\""
+                        }
+                      ],
+                      "id": 3894,
+                      "name": "require",
+                      "nodeType": "Identifier",
+                      "overloadedDeclarations": [
+                        -18,
+                        -18,
+                        -18
+                      ],
+                      "referencedDeclaration": -18,
+                      "src": "1496:7:20",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_function_require_pure$_t_bool_$_t_string_memory_ptr_$returns$__$",
+                        "typeString": "function (bool,string memory) pure"
+                      }
+                    },
+                    "id": 3903,
+                    "isConstant": false,
+                    "isLValue": false,
+                    "isPure": false,
+                    "kind": "functionCall",
+                    "lValueRequested": false,
+                    "nameLocations": [],
+                    "names": [],
+                    "nodeType": "FunctionCall",
+                    "src": "1496:108:20",
+                    "tryCall": false,
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_tuple$__$",
+                      "typeString": "tuple()"
+                    }
+                  },
+                  "id": 3904,
+                  "nodeType": "ExpressionStatement",
+                  "src": "1496:108:20"
+                },
+                {
+                  "expression": {
+                    "arguments": [
+                      {
+                        "expression": {
+                          "id": 3906,
+                          "name": "State",
+                          "nodeType": "Identifier",
+                          "overloadedDeclarations": [],
+                          "referencedDeclaration": 3823,
+                          "src": "1625:5:20",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_type$_t_enum$_State_$3823_$",
+                            "typeString": "type(enum StateMachine.State)"
+                          }
+                        },
+                        "id": 3907,
+                        "isConstant": false,
+                        "isLValue": false,
+                        "isPure": true,
+                        "lValueRequested": false,
+                        "memberLocation": "1631:6:20",
+                        "memberName": "ACTIVE",
+                        "nodeType": "MemberAccess",
+                        "referencedDeclaration": 3821,
+                        "src": "1625:12:20",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_enum$_State_$3823",
+                          "typeString": "enum StateMachine.State"
+                        }
+                      }
+                    ],
+                    "expression": {
+                      "argumentTypes": [
+                        {
+                          "typeIdentifier": "t_enum$_State_$3823",
+                          "typeString": "enum StateMachine.State"
+                        }
+                      ],
+                      "id": 3905,
+                      "name": "_transitionTo",
+                      "nodeType": "Identifier",
+                      "overloadedDeclarations": [],
+                      "referencedDeclaration": 4022,
+                      "src": "1611:13:20",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_function_internal_nonpayable$_t_enum$_State_$3823_$returns$__$",
+                        "typeString": "function (enum StateMachine.State)"
+                      }
+                    },
+                    "id": 3908,
+                    "isConstant": false,
+                    "isLValue": false,
+                    "isPure": false,
+                    "kind": "functionCall",
+                    "lValueRequested": false,
+                    "nameLocations": [],
+                    "names": [],
+                    "nodeType": "FunctionCall",
+                    "src": "1611:27:20",
+                    "tryCall": false,
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_tuple$__$",
+                      "typeString": "tuple()"
+                    }
+                  },
+                  "id": 3909,
+                  "nodeType": "ExpressionStatement",
+                  "src": "1611:27:20"
+                },
+                {
+                  "expression": {
+                    "arguments": [
+                      {
+                        "id": 3913,
+                        "name": "amount",
+                        "nodeType": "Identifier",
+                        "overloadedDeclarations": [],
+                        "referencedDeclaration": 3830,
+                        "src": "1663:6:20",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_uint256",
+                          "typeString": "uint256"
+                        }
+                      }
+                    ],
+                    "expression": {
+                      "argumentTypes": [
+                        {
+                          "typeIdentifier": "t_uint256",
+                          "typeString": "uint256"
+                        }
+                      ],
+                      "expression": {
+                        "id": 3910,
+                        "name": "borrower",
+                        "nodeType": "Identifier",
+                        "overloadedDeclarations": [],
+                        "referencedDeclaration": 3838,
+                        "src": "1645:8:20",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_address_payable",
+                          "typeString": "address payable"
+                        }
+                      },
+                      "id": 3912,
+                      "isConstant": false,
+                      "isLValue": false,
+                      "isPure": false,
+                      "lValueRequested": false,
+                      "memberLocation": "1654:8:20",
+                      "memberName": "transfer",
+                      "nodeType": "MemberAccess",
+                      "src": "1645:17:20",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_function_transfer_nonpayable$_t_uint256_$returns$__$",
+                        "typeString": "function (uint256)"
+                      }
+                    },
+                    "id": 3914,
+                    "isConstant": false,
+                    "isLValue": false,
+                    "isPure": false,
+                    "kind": "functionCall",
+                    "lValueRequested": false,
+                    "nameLocations": [],
+                    "names": [],
+                    "nodeType": "FunctionCall",
+                    "src": "1645:25:20",
+                    "tryCall": false,
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_tuple$__$",
+                      "typeString": "tuple()"
+                    }
+                  },
+                  "id": 3915,
+                  "nodeType": "ExpressionStatement",
+                  "src": "1645:25:20"
+                }
+              ]
+            },
+            "functionSelector": "b60d4288",
+            "id": 3917,
+            "implemented": true,
+            "kind": "function",
+            "modifiers": [
+              {
+                "id": 3892,
+                "kind": "modifierInvocation",
+                "modifierName": {
+                  "id": 3891,
+                  "name": "onlyLoanFactory",
+                  "nameLocations": [
+                    "1473:15:20"
+                  ],
+                  "nodeType": "IdentifierPath",
+                  "referencedDeclaration": 4046,
+                  "src": "1473:15:20"
+                },
+                "nodeType": "ModifierInvocation",
+                "src": "1473:15:20"
+              }
+            ],
+            "name": "fund",
+            "nameLocation": "1449:4:20",
+            "nodeType": "FunctionDefinition",
+            "parameters": {
+              "id": 3890,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "1453:2:20"
+            },
+            "returnParameters": {
+              "id": 3893,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "1489:0:20"
+            },
+            "scope": 4047,
+            "src": "1440:236:20",
+            "stateMutability": "payable",
+            "virtual": false,
+            "visibility": "external"
+          },
+          {
+            "body": {
+              "id": 3946,
+              "nodeType": "Block",
+              "src": "1848:265:20",
+              "statements": [
+                {
+                  "expression": {
+                    "arguments": [
+                      {
+                        "commonType": {
+                          "typeIdentifier": "t_uint256",
+                          "typeString": "uint256"
+                        },
+                        "id": 3928,
+                        "isConstant": false,
+                        "isLValue": false,
+                        "isPure": false,
+                        "lValueRequested": false,
+                        "leftExpression": {
+                          "expression": {
+                            "id": 3923,
+                            "name": "msg",
+                            "nodeType": "Identifier",
+                            "overloadedDeclarations": [],
+                            "referencedDeclaration": -15,
+                            "src": "1871:3:20",
+                            "typeDescriptions": {
+                              "typeIdentifier": "t_magic_message",
+                              "typeString": "msg"
+                            }
+                          },
+                          "id": 3924,
+                          "isConstant": false,
+                          "isLValue": false,
+                          "isPure": false,
+                          "lValueRequested": false,
+                          "memberLocation": "1875:5:20",
+                          "memberName": "value",
+                          "nodeType": "MemberAccess",
+                          "src": "1871:9:20",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_uint256",
+                            "typeString": "uint256"
+                          }
+                        },
+                        "nodeType": "BinaryOperation",
+                        "operator": "==",
+                        "rightExpression": {
+                          "commonType": {
+                            "typeIdentifier": "t_uint256",
+                            "typeString": "uint256"
+                          },
+                          "id": 3927,
+                          "isConstant": false,
+                          "isLValue": false,
+                          "isPure": false,
+                          "lValueRequested": false,
+                          "leftExpression": {
+                            "id": 3925,
+                            "name": "amount",
+                            "nodeType": "Identifier",
+                            "overloadedDeclarations": [],
+                            "referencedDeclaration": 3830,
+                            "src": "1884:6:20",
+                            "typeDescriptions": {
+                              "typeIdentifier": "t_uint256",
+                              "typeString": "uint256"
+                            }
+                          },
+                          "nodeType": "BinaryOperation",
+                          "operator": "+",
+                          "rightExpression": {
+                            "id": 3926,
+                            "name": "interest",
+                            "nodeType": "Identifier",
+                            "overloadedDeclarations": [],
+                            "referencedDeclaration": 3832,
+                            "src": "1893:8:20",
+                            "typeDescriptions": {
+                              "typeIdentifier": "t_uint256",
+                              "typeString": "uint256"
+                            }
+                          },
+                          "src": "1884:17:20",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_uint256",
+                            "typeString": "uint256"
+                          }
+                        },
+                        "src": "1871:30:20",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_bool",
+                          "typeString": "bool"
+                        }
+                      },
+                      {
+                        "hexValue": "5265696d62757273656d656e74206d757374206d6174636820746865206c6f616e20616d6f756e7420706c757320696e7465726573742e",
+                        "id": 3929,
+                        "isConstant": false,
+                        "isLValue": false,
+                        "isPure": true,
+                        "kind": "string",
+                        "lValueRequested": false,
+                        "nodeType": "Literal",
+                        "src": "1910:57:20",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_stringliteral_fa9b928e539204298178f7054c37e030560b6afff611b86e8379a725746bc80d",
+                          "typeString": "literal_string \"Reimbursement must match the loan amount plus interest.\""
+                        },
+                        "value": "Reimbursement must match the loan amount plus interest."
+                      }
+                    ],
+                    "expression": {
+                      "argumentTypes": [
+                        {
+                          "typeIdentifier": "t_bool",
+                          "typeString": "bool"
+                        },
+                        {
+                          "typeIdentifier": "t_stringliteral_fa9b928e539204298178f7054c37e030560b6afff611b86e8379a725746bc80d",
+                          "typeString": "literal_string \"Reimbursement must match the loan amount plus interest.\""
+                        }
+                      ],
+                      "id": 3922,
+                      "name": "require",
+                      "nodeType": "Identifier",
+                      "overloadedDeclarations": [
+                        -18,
+                        -18,
+                        -18
+                      ],
+                      "referencedDeclaration": -18,
+                      "src": "1855:7:20",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_function_require_pure$_t_bool_$_t_string_memory_ptr_$returns$__$",
+                        "typeString": "function (bool,string memory) pure"
+                      }
+                    },
+                    "id": 3930,
+                    "isConstant": false,
+                    "isLValue": false,
+                    "isPure": false,
+                    "kind": "functionCall",
+                    "lValueRequested": false,
+                    "nameLocations": [],
+                    "names": [],
+                    "nodeType": "FunctionCall",
+                    "src": "1855:119:20",
+                    "tryCall": false,
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_tuple$__$",
+                      "typeString": "tuple()"
+                    }
+                  },
+                  "id": 3931,
+                  "nodeType": "ExpressionStatement",
+                  "src": "1855:119:20"
+                },
+                {
+                  "expression": {
+                    "arguments": [
+                      {
+                        "expression": {
+                          "id": 3933,
+                          "name": "State",
+                          "nodeType": "Identifier",
+                          "overloadedDeclarations": [],
+                          "referencedDeclaration": 3823,
+                          "src": "1995:5:20",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_type$_t_enum$_State_$3823_$",
+                            "typeString": "type(enum StateMachine.State)"
+                          }
+                        },
+                        "id": 3934,
+                        "isConstant": false,
+                        "isLValue": false,
+                        "isPure": true,
+                        "lValueRequested": false,
+                        "memberLocation": "2001:6:20",
+                        "memberName": "CLOSED",
+                        "nodeType": "MemberAccess",
+                        "referencedDeclaration": 3822,
+                        "src": "1995:12:20",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_enum$_State_$3823",
+                          "typeString": "enum StateMachine.State"
+                        }
+                      }
+                    ],
+                    "expression": {
+                      "argumentTypes": [
+                        {
+                          "typeIdentifier": "t_enum$_State_$3823",
+                          "typeString": "enum StateMachine.State"
+                        }
+                      ],
+                      "id": 3932,
+                      "name": "_transitionTo",
+                      "nodeType": "Identifier",
+                      "overloadedDeclarations": [],
+                      "referencedDeclaration": 4022,
+                      "src": "1981:13:20",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_function_internal_nonpayable$_t_enum$_State_$3823_$returns$__$",
+                        "typeString": "function (enum StateMachine.State)"
+                      }
+                    },
+                    "id": 3935,
+                    "isConstant": false,
+                    "isLValue": false,
+                    "isPure": false,
+                    "kind": "functionCall",
+                    "lValueRequested": false,
+                    "nameLocations": [],
+                    "names": [],
+                    "nodeType": "FunctionCall",
+                    "src": "1981:27:20",
+                    "tryCall": false,
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_tuple$__$",
+                      "typeString": "tuple()"
+                    }
+                  },
+                  "id": 3936,
+                  "nodeType": "ExpressionStatement",
+                  "src": "1981:27:20"
+                },
+                {
+                  "expression": {
+                    "arguments": [],
+                    "expression": {
+                      "argumentTypes": [],
+                      "expression": {
+                        "argumentTypes": [],
+                        "expression": {
+                          "arguments": [
+                            {
+                              "id": 3938,
+                              "name": "tokenFarm",
+                              "nodeType": "Identifier",
+                              "overloadedDeclarations": [],
+                              "referencedDeclaration": 3842,
+                              "src": "2056:9:20",
+                              "typeDescriptions": {
+                                "typeIdentifier": "t_address_payable",
+                                "typeString": "address payable"
+                              }
+                            }
+                          ],
+                          "expression": {
+                            "argumentTypes": [
+                              {
+                                "typeIdentifier": "t_address_payable",
+                                "typeString": "address payable"
+                              }
+                            ],
+                            "id": 3937,
+                            "name": "ITokenFarm",
+                            "nodeType": "Identifier",
+                            "overloadedDeclarations": [],
+                            "referencedDeclaration": 3819,
+                            "src": "2045:10:20",
+                            "typeDescriptions": {
+                              "typeIdentifier": "t_type$_t_contract$_ITokenFarm_$3819_$",
+                              "typeString": "type(contract ITokenFarm)"
+                            }
+                          },
+                          "id": 3939,
+                          "isConstant": false,
+                          "isLValue": false,
+                          "isPure": false,
+                          "kind": "typeConversion",
+                          "lValueRequested": false,
+                          "nameLocations": [],
+                          "names": [],
+                          "nodeType": "FunctionCall",
+                          "src": "2045:21:20",
+                          "tryCall": false,
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_contract$_ITokenFarm_$3819",
+                            "typeString": "contract ITokenFarm"
+                          }
+                        },
+                        "id": 3940,
+                        "isConstant": false,
+                        "isLValue": false,
+                        "isPure": false,
+                        "lValueRequested": false,
+                        "memberLocation": "2067:18:20",
+                        "memberName": "receiveLoanReturns",
+                        "nodeType": "MemberAccess",
+                        "referencedDeclaration": 3818,
+                        "src": "2045:40:20",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_function_external_payable$__$returns$__$",
+                          "typeString": "function () payable external"
+                        }
+                      },
+                      "id": 3943,
+                      "isConstant": false,
+                      "isLValue": false,
+                      "isPure": false,
+                      "lValueRequested": false,
+                      "names": [
+                        "value"
+                      ],
+                      "nodeType": "FunctionCallOptions",
+                      "options": [
+                        {
+                          "expression": {
+                            "id": 3941,
+                            "name": "msg",
+                            "nodeType": "Identifier",
+                            "overloadedDeclarations": [],
+                            "referencedDeclaration": -15,
+                            "src": "2094:3:20",
+                            "typeDescriptions": {
+                              "typeIdentifier": "t_magic_message",
+                              "typeString": "msg"
+                            }
+                          },
+                          "id": 3942,
+                          "isConstant": false,
+                          "isLValue": false,
+                          "isPure": false,
+                          "lValueRequested": false,
+                          "memberLocation": "2098:5:20",
+                          "memberName": "value",
+                          "nodeType": "MemberAccess",
+                          "src": "2094:9:20",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_uint256",
+                            "typeString": "uint256"
+                          }
+                        }
+                      ],
+                      "src": "2045:60:20",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_function_external_payable$__$returns$__$value",
+                        "typeString": "function () payable external"
+                      }
+                    },
+                    "id": 3944,
+                    "isConstant": false,
+                    "isLValue": false,
+                    "isPure": false,
+                    "kind": "functionCall",
+                    "lValueRequested": false,
+                    "nameLocations": [],
+                    "names": [],
+                    "nodeType": "FunctionCall",
+                    "src": "2045:62:20",
+                    "tryCall": false,
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_tuple$__$",
+                      "typeString": "tuple()"
+                    }
+                  },
+                  "id": 3945,
+                  "nodeType": "ExpressionStatement",
+                  "src": "2045:62:20"
+                }
+              ]
+            },
+            "functionSelector": "d3927c15",
+            "id": 3947,
+            "implemented": true,
+            "kind": "function",
+            "modifiers": [
+              {
+                "id": 3920,
+                "kind": "modifierInvocation",
+                "modifierName": {
+                  "id": 3919,
+                  "name": "onlyBorrower",
+                  "nameLocations": [
+                    "1835:12:20"
+                  ],
+                  "nodeType": "IdentifierPath",
+                  "referencedDeclaration": 4034,
+                  "src": "1835:12:20"
+                },
+                "nodeType": "ModifierInvocation",
+                "src": "1835:12:20"
+              }
+            ],
+            "name": "reimburse",
+            "nameLocation": "1806:9:20",
+            "nodeType": "FunctionDefinition",
+            "parameters": {
+              "id": 3918,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "1815:2:20"
+            },
+            "returnParameters": {
+              "id": 3921,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "1848:0:20"
+            },
+            "scope": 4047,
+            "src": "1797:316:20",
+            "stateMutability": "payable",
+            "virtual": false,
+            "visibility": "external"
+          },
+          {
+            "body": {
+              "id": 4021,
+              "nodeType": "Block",
+              "src": "2161:727:20",
+              "statements": [
+                {
+                  "expression": {
+                    "arguments": [
+                      {
+                        "commonType": {
+                          "typeIdentifier": "t_enum$_State_$3823",
+                          "typeString": "enum StateMachine.State"
+                        },
+                        "id": 3957,
+                        "isConstant": false,
+                        "isLValue": false,
+                        "isPure": false,
+                        "lValueRequested": false,
+                        "leftExpression": {
+                          "id": 3954,
+                          "name": "to",
+                          "nodeType": "Identifier",
+                          "overloadedDeclarations": [],
+                          "referencedDeclaration": 3950,
+                          "src": "2176:2:20",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_enum$_State_$3823",
+                            "typeString": "enum StateMachine.State"
+                          }
+                        },
+                        "nodeType": "BinaryOperation",
+                        "operator": "!=",
+                        "rightExpression": {
+                          "expression": {
+                            "id": 3955,
+                            "name": "State",
+                            "nodeType": "Identifier",
+                            "overloadedDeclarations": [],
+                            "referencedDeclaration": 3823,
+                            "src": "2182:5:20",
+                            "typeDescriptions": {
+                              "typeIdentifier": "t_type$_t_enum$_State_$3823_$",
+                              "typeString": "type(enum StateMachine.State)"
+                            }
+                          },
+                          "id": 3956,
+                          "isConstant": false,
+                          "isLValue": false,
+                          "isPure": true,
+                          "lValueRequested": false,
+                          "memberLocation": "2188:7:20",
+                          "memberName": "PENDING",
+                          "nodeType": "MemberAccess",
+                          "referencedDeclaration": 3820,
+                          "src": "2182:13:20",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_enum$_State_$3823",
+                            "typeString": "enum StateMachine.State"
+                          }
+                        },
+                        "src": "2176:19:20",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_bool",
+                          "typeString": "bool"
+                        }
+                      },
+                      {
+                        "hexValue": "43616e6e6f742072657665727420746f2050454e44494e472073746174652e",
+                        "id": 3958,
+                        "isConstant": false,
+                        "isLValue": false,
+                        "isPure": true,
+                        "kind": "string",
+                        "lValueRequested": false,
+                        "nodeType": "Literal",
+                        "src": "2197:33:20",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_stringliteral_912426c515b85dbac5164aa6ec15d9bebb41c96e79fb403acf8fceca4eaa5708",
+                          "typeString": "literal_string \"Cannot revert to PENDING state.\""
+                        },
+                        "value": "Cannot revert to PENDING state."
+                      }
+                    ],
+                    "expression": {
+                      "argumentTypes": [
+                        {
+                          "typeIdentifier": "t_bool",
+                          "typeString": "bool"
+                        },
+                        {
+                          "typeIdentifier": "t_stringliteral_912426c515b85dbac5164aa6ec15d9bebb41c96e79fb403acf8fceca4eaa5708",
+                          "typeString": "literal_string \"Cannot revert to PENDING state.\""
+                        }
+                      ],
+                      "id": 3953,
+                      "name": "require",
+                      "nodeType": "Identifier",
+                      "overloadedDeclarations": [
+                        -18,
+                        -18,
+                        -18
+                      ],
+                      "referencedDeclaration": -18,
+                      "src": "2168:7:20",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_function_require_pure$_t_bool_$_t_string_memory_ptr_$returns$__$",
+                        "typeString": "function (bool,string memory) pure"
+                      }
+                    },
+                    "id": 3959,
+                    "isConstant": false,
+                    "isLValue": false,
+                    "isPure": false,
+                    "kind": "functionCall",
+                    "lValueRequested": false,
+                    "nameLocations": [],
+                    "names": [],
+                    "nodeType": "FunctionCall",
+                    "src": "2168:63:20",
+                    "tryCall": false,
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_tuple$__$",
+                      "typeString": "tuple()"
+                    }
+                  },
+                  "id": 3960,
+                  "nodeType": "ExpressionStatement",
+                  "src": "2168:63:20"
+                },
+                {
+                  "expression": {
+                    "arguments": [
+                      {
+                        "commonType": {
+                          "typeIdentifier": "t_enum$_State_$3823",
+                          "typeString": "enum StateMachine.State"
+                        },
+                        "id": 3964,
+                        "isConstant": false,
+                        "isLValue": false,
+                        "isPure": false,
+                        "lValueRequested": false,
+                        "leftExpression": {
+                          "id": 3962,
+                          "name": "to",
+                          "nodeType": "Identifier",
+                          "overloadedDeclarations": [],
+                          "referencedDeclaration": 3950,
+                          "src": "2284:2:20",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_enum$_State_$3823",
+                            "typeString": "enum StateMachine.State"
+                          }
+                        },
+                        "nodeType": "BinaryOperation",
+                        "operator": "!=",
+                        "rightExpression": {
+                          "id": 3963,
+                          "name": "state",
+                          "nodeType": "Identifier",
+                          "overloadedDeclarations": [],
+                          "referencedDeclaration": 3828,
+                          "src": "2290:5:20",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_enum$_State_$3823",
+                            "typeString": "enum StateMachine.State"
+                          }
+                        },
+                        "src": "2284:11:20",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_bool",
+                          "typeString": "bool"
+                        }
+                      },
+                      {
+                        "hexValue": "43616e6e6f74207472616e736974696f6e20746f207468652073616d652073746174652e",
+                        "id": 3965,
+                        "isConstant": false,
+                        "isLValue": false,
+                        "isPure": true,
+                        "kind": "string",
+                        "lValueRequested": false,
+                        "nodeType": "Literal",
+                        "src": "2297:38:20",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_stringliteral_da2e8a1a24aabfb64ffbd652b4ecb0bbb55acaf488c0d6873719fcbf7203c8a5",
+                          "typeString": "literal_string \"Cannot transition to the same state.\""
+                        },
+                        "value": "Cannot transition to the same state."
+                      }
+                    ],
+                    "expression": {
+                      "argumentTypes": [
+                        {
+                          "typeIdentifier": "t_bool",
+                          "typeString": "bool"
+                        },
+                        {
+                          "typeIdentifier": "t_stringliteral_da2e8a1a24aabfb64ffbd652b4ecb0bbb55acaf488c0d6873719fcbf7203c8a5",
+                          "typeString": "literal_string \"Cannot transition to the same state.\""
+                        }
+                      ],
+                      "id": 3961,
+                      "name": "require",
+                      "nodeType": "Identifier",
+                      "overloadedDeclarations": [
+                        -18,
+                        -18,
+                        -18
+                      ],
+                      "referencedDeclaration": -18,
+                      "src": "2276:7:20",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_function_require_pure$_t_bool_$_t_string_memory_ptr_$returns$__$",
+                        "typeString": "function (bool,string memory) pure"
+                      }
+                    },
+                    "id": 3966,
+                    "isConstant": false,
+                    "isLValue": false,
+                    "isPure": false,
+                    "kind": "functionCall",
+                    "lValueRequested": false,
+                    "nameLocations": [],
+                    "names": [],
+                    "nodeType": "FunctionCall",
+                    "src": "2276:60:20",
+                    "tryCall": false,
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_tuple$__$",
+                      "typeString": "tuple()"
+                    }
+                  },
+                  "id": 3967,
+                  "nodeType": "ExpressionStatement",
+                  "src": "2276:60:20"
+                },
+                {
+                  "condition": {
+                    "commonType": {
+                      "typeIdentifier": "t_enum$_State_$3823",
+                      "typeString": "enum StateMachine.State"
+                    },
+                    "id": 3971,
+                    "isConstant": false,
+                    "isLValue": false,
+                    "isPure": false,
+                    "lValueRequested": false,
+                    "leftExpression": {
+                      "id": 3968,
+                      "name": "to",
+                      "nodeType": "Identifier",
+                      "overloadedDeclarations": [],
+                      "referencedDeclaration": 3950,
+                      "src": "2392:2:20",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_enum$_State_$3823",
+                        "typeString": "enum StateMachine.State"
+                      }
+                    },
+                    "nodeType": "BinaryOperation",
+                    "operator": "==",
+                    "rightExpression": {
+                      "expression": {
+                        "id": 3969,
+                        "name": "State",
+                        "nodeType": "Identifier",
+                        "overloadedDeclarations": [],
+                        "referencedDeclaration": 3823,
+                        "src": "2398:5:20",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_type$_t_enum$_State_$3823_$",
+                          "typeString": "type(enum StateMachine.State)"
+                        }
+                      },
+                      "id": 3970,
+                      "isConstant": false,
+                      "isLValue": false,
+                      "isPure": true,
+                      "lValueRequested": false,
+                      "memberLocation": "2404:6:20",
+                      "memberName": "ACTIVE",
+                      "nodeType": "MemberAccess",
+                      "referencedDeclaration": 3821,
+                      "src": "2398:12:20",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_enum$_State_$3823",
+                        "typeString": "enum StateMachine.State"
+                      }
+                    },
+                    "src": "2392:18:20",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_bool",
+                      "typeString": "bool"
+                    }
+                  },
+                  "id": 3993,
+                  "nodeType": "IfStatement",
+                  "src": "2388:218:20",
+                  "trueBody": {
+                    "id": 3992,
+                    "nodeType": "Block",
+                    "src": "2412:194:20",
+                    "statements": [
+                      {
+                        "expression": {
+                          "arguments": [
+                            {
+                              "commonType": {
+                                "typeIdentifier": "t_enum$_State_$3823",
+                                "typeString": "enum StateMachine.State"
+                              },
+                              "id": 3976,
+                              "isConstant": false,
+                              "isLValue": false,
+                              "isPure": false,
+                              "lValueRequested": false,
+                              "leftExpression": {
+                                "id": 3973,
+                                "name": "state",
+                                "nodeType": "Identifier",
+                                "overloadedDeclarations": [],
+                                "referencedDeclaration": 3828,
+                                "src": "2429:5:20",
+                                "typeDescriptions": {
+                                  "typeIdentifier": "t_enum$_State_$3823",
+                                  "typeString": "enum StateMachine.State"
+                                }
+                              },
+                              "nodeType": "BinaryOperation",
+                              "operator": "==",
+                              "rightExpression": {
+                                "expression": {
+                                  "id": 3974,
+                                  "name": "State",
+                                  "nodeType": "Identifier",
+                                  "overloadedDeclarations": [],
+                                  "referencedDeclaration": 3823,
+                                  "src": "2438:5:20",
+                                  "typeDescriptions": {
+                                    "typeIdentifier": "t_type$_t_enum$_State_$3823_$",
+                                    "typeString": "type(enum StateMachine.State)"
+                                  }
+                                },
+                                "id": 3975,
+                                "isConstant": false,
+                                "isLValue": false,
+                                "isPure": true,
+                                "lValueRequested": false,
+                                "memberLocation": "2444:7:20",
+                                "memberName": "PENDING",
+                                "nodeType": "MemberAccess",
+                                "referencedDeclaration": 3820,
+                                "src": "2438:13:20",
+                                "typeDescriptions": {
+                                  "typeIdentifier": "t_enum$_State_$3823",
+                                  "typeString": "enum StateMachine.State"
+                                }
+                              },
+                              "src": "2429:22:20",
+                              "typeDescriptions": {
+                                "typeIdentifier": "t_bool",
+                                "typeString": "bool"
+                              }
+                            },
+                            {
+                              "hexValue": "43616e206f6e6c792061637469766174652066726f6d2050454e44494e472073746174652e",
+                              "id": 3977,
+                              "isConstant": false,
+                              "isLValue": false,
+                              "isPure": true,
+                              "kind": "string",
+                              "lValueRequested": false,
+                              "nodeType": "Literal",
+                              "src": "2453:39:20",
+                              "typeDescriptions": {
+                                "typeIdentifier": "t_stringliteral_64900001ef28570a7bc84fbb032377d72e459c3e914b275a86b03a0fca125811",
+                                "typeString": "literal_string \"Can only activate from PENDING state.\""
+                              },
+                              "value": "Can only activate from PENDING state."
+                            }
+                          ],
+                          "expression": {
+                            "argumentTypes": [
+                              {
+                                "typeIdentifier": "t_bool",
+                                "typeString": "bool"
+                              },
+                              {
+                                "typeIdentifier": "t_stringliteral_64900001ef28570a7bc84fbb032377d72e459c3e914b275a86b03a0fca125811",
+                                "typeString": "literal_string \"Can only activate from PENDING state.\""
+                              }
+                            ],
+                            "id": 3972,
+                            "name": "require",
+                            "nodeType": "Identifier",
+                            "overloadedDeclarations": [
+                              -18,
+                              -18,
+                              -18
+                            ],
+                            "referencedDeclaration": -18,
+                            "src": "2421:7:20",
+                            "typeDescriptions": {
+                              "typeIdentifier": "t_function_require_pure$_t_bool_$_t_string_memory_ptr_$returns$__$",
+                              "typeString": "function (bool,string memory) pure"
+                            }
+                          },
+                          "id": 3978,
+                          "isConstant": false,
+                          "isLValue": false,
+                          "isPure": false,
+                          "kind": "functionCall",
+                          "lValueRequested": false,
+                          "nameLocations": [],
+                          "names": [],
+                          "nodeType": "FunctionCall",
+                          "src": "2421:72:20",
+                          "tryCall": false,
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_tuple$__$",
+                            "typeString": "tuple()"
+                          }
+                        },
+                        "id": 3979,
+                        "nodeType": "ExpressionStatement",
+                        "src": "2421:72:20"
+                      },
+                      {
+                        "expression": {
+                          "id": 3983,
+                          "isConstant": false,
+                          "isLValue": false,
+                          "isPure": false,
+                          "lValueRequested": false,
+                          "leftHandSide": {
+                            "id": 3980,
+                            "name": "state",
+                            "nodeType": "Identifier",
+                            "overloadedDeclarations": [],
+                            "referencedDeclaration": 3828,
+                            "src": "2502:5:20",
+                            "typeDescriptions": {
+                              "typeIdentifier": "t_enum$_State_$3823",
+                              "typeString": "enum StateMachine.State"
+                            }
+                          },
+                          "nodeType": "Assignment",
+                          "operator": "=",
+                          "rightHandSide": {
+                            "expression": {
+                              "id": 3981,
+                              "name": "State",
+                              "nodeType": "Identifier",
+                              "overloadedDeclarations": [],
+                              "referencedDeclaration": 3823,
+                              "src": "2510:5:20",
+                              "typeDescriptions": {
+                                "typeIdentifier": "t_type$_t_enum$_State_$3823_$",
+                                "typeString": "type(enum StateMachine.State)"
+                              }
+                            },
+                            "id": 3982,
+                            "isConstant": false,
+                            "isLValue": false,
+                            "isPure": true,
+                            "lValueRequested": false,
+                            "memberLocation": "2516:6:20",
+                            "memberName": "ACTIVE",
+                            "nodeType": "MemberAccess",
+                            "referencedDeclaration": 3821,
+                            "src": "2510:12:20",
+                            "typeDescriptions": {
+                              "typeIdentifier": "t_enum$_State_$3823",
+                              "typeString": "enum StateMachine.State"
+                            }
+                          },
+                          "src": "2502:20:20",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_enum$_State_$3823",
+                            "typeString": "enum StateMachine.State"
+                          }
+                        },
+                        "id": 3984,
+                        "nodeType": "ExpressionStatement",
+                        "src": "2502:20:20"
+                      },
+                      {
+                        "expression": {
+                          "id": 3990,
+                          "isConstant": false,
+                          "isLValue": false,
+                          "isPure": false,
+                          "lValueRequested": false,
+                          "leftHandSide": {
+                            "id": 3985,
+                            "name": "end",
+                            "nodeType": "Identifier",
+                            "overloadedDeclarations": [],
+                            "referencedDeclaration": 3834,
+                            "src": "2531:3:20",
+                            "typeDescriptions": {
+                              "typeIdentifier": "t_uint256",
+                              "typeString": "uint256"
+                            }
+                          },
+                          "nodeType": "Assignment",
+                          "operator": "=",
+                          "rightHandSide": {
+                            "commonType": {
+                              "typeIdentifier": "t_uint256",
+                              "typeString": "uint256"
+                            },
+                            "id": 3989,
+                            "isConstant": false,
+                            "isLValue": false,
+                            "isPure": false,
+                            "lValueRequested": false,
+                            "leftExpression": {
+                              "expression": {
+                                "id": 3986,
+                                "name": "block",
+                                "nodeType": "Identifier",
+                                "overloadedDeclarations": [],
+                                "referencedDeclaration": -4,
+                                "src": "2537:5:20",
+                                "typeDescriptions": {
+                                  "typeIdentifier": "t_magic_block",
+                                  "typeString": "block"
+                                }
+                              },
+                              "id": 3987,
+                              "isConstant": false,
+                              "isLValue": false,
+                              "isPure": false,
+                              "lValueRequested": false,
+                              "memberLocation": "2543:9:20",
+                              "memberName": "timestamp",
+                              "nodeType": "MemberAccess",
+                              "src": "2537:15:20",
+                              "typeDescriptions": {
+                                "typeIdentifier": "t_uint256",
+                                "typeString": "uint256"
+                              }
+                            },
+                            "nodeType": "BinaryOperation",
+                            "operator": "+",
+                            "rightExpression": {
+                              "id": 3988,
+                              "name": "duration",
+                              "nodeType": "Identifier",
+                              "overloadedDeclarations": [],
+                              "referencedDeclaration": 3836,
+                              "src": "2555:8:20",
+                              "typeDescriptions": {
+                                "typeIdentifier": "t_uint256",
+                                "typeString": "uint256"
+                              }
+                            },
+                            "src": "2537:26:20",
+                            "typeDescriptions": {
+                              "typeIdentifier": "t_uint256",
+                              "typeString": "uint256"
+                            }
+                          },
+                          "src": "2531:32:20",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_uint256",
+                            "typeString": "uint256"
+                          }
+                        },
+                        "id": 3991,
+                        "nodeType": "ExpressionStatement",
+                        "src": "2531:32:20"
+                      }
+                    ]
+                  }
+                },
+                {
+                  "condition": {
+                    "commonType": {
+                      "typeIdentifier": "t_enum$_State_$3823",
+                      "typeString": "enum StateMachine.State"
+                    },
+                    "id": 3997,
+                    "isConstant": false,
+                    "isLValue": false,
+                    "isPure": false,
+                    "lValueRequested": false,
+                    "leftExpression": {
+                      "id": 3994,
+                      "name": "to",
+                      "nodeType": "Identifier",
+                      "overloadedDeclarations": [],
+                      "referencedDeclaration": 3950,
+                      "src": "2648:2:20",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_enum$_State_$3823",
+                        "typeString": "enum StateMachine.State"
+                      }
+                    },
+                    "nodeType": "BinaryOperation",
+                    "operator": "==",
+                    "rightExpression": {
+                      "expression": {
+                        "id": 3995,
+                        "name": "State",
+                        "nodeType": "Identifier",
+                        "overloadedDeclarations": [],
+                        "referencedDeclaration": 3823,
+                        "src": "2654:5:20",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_type$_t_enum$_State_$3823_$",
+                          "typeString": "type(enum StateMachine.State)"
+                        }
+                      },
+                      "id": 3996,
+                      "isConstant": false,
+                      "isLValue": false,
+                      "isPure": true,
+                      "lValueRequested": false,
+                      "memberLocation": "2660:6:20",
+                      "memberName": "CLOSED",
+                      "nodeType": "MemberAccess",
+                      "referencedDeclaration": 3822,
+                      "src": "2654:12:20",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_enum$_State_$3823",
+                        "typeString": "enum StateMachine.State"
+                      }
+                    },
+                    "src": "2648:18:20",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_bool",
+                      "typeString": "bool"
+                    }
+                  },
+                  "id": 4020,
+                  "nodeType": "IfStatement",
+                  "src": "2644:209:20",
+                  "trueBody": {
+                    "id": 4019,
+                    "nodeType": "Block",
+                    "src": "2668:185:20",
+                    "statements": [
+                      {
+                        "expression": {
+                          "arguments": [
+                            {
+                              "commonType": {
+                                "typeIdentifier": "t_enum$_State_$3823",
+                                "typeString": "enum StateMachine.State"
+                              },
+                              "id": 4002,
+                              "isConstant": false,
+                              "isLValue": false,
+                              "isPure": false,
+                              "lValueRequested": false,
+                              "leftExpression": {
+                                "id": 3999,
+                                "name": "state",
+                                "nodeType": "Identifier",
+                                "overloadedDeclarations": [],
+                                "referencedDeclaration": 3828,
+                                "src": "2685:5:20",
+                                "typeDescriptions": {
+                                  "typeIdentifier": "t_enum$_State_$3823",
+                                  "typeString": "enum StateMachine.State"
+                                }
+                              },
+                              "nodeType": "BinaryOperation",
+                              "operator": "==",
+                              "rightExpression": {
+                                "expression": {
+                                  "id": 4000,
+                                  "name": "State",
+                                  "nodeType": "Identifier",
+                                  "overloadedDeclarations": [],
+                                  "referencedDeclaration": 3823,
+                                  "src": "2694:5:20",
+                                  "typeDescriptions": {
+                                    "typeIdentifier": "t_type$_t_enum$_State_$3823_$",
+                                    "typeString": "type(enum StateMachine.State)"
+                                  }
+                                },
+                                "id": 4001,
+                                "isConstant": false,
+                                "isLValue": false,
+                                "isPure": true,
+                                "lValueRequested": false,
+                                "memberLocation": "2700:6:20",
+                                "memberName": "ACTIVE",
+                                "nodeType": "MemberAccess",
+                                "referencedDeclaration": 3821,
+                                "src": "2694:12:20",
+                                "typeDescriptions": {
+                                  "typeIdentifier": "t_enum$_State_$3823",
+                                  "typeString": "enum StateMachine.State"
+                                }
+                              },
+                              "src": "2685:21:20",
+                              "typeDescriptions": {
+                                "typeIdentifier": "t_bool",
+                                "typeString": "bool"
+                              }
+                            },
+                            {
+                              "hexValue": "43616e206f6e6c7920636c6f73652066726f6d204143544956452073746174652e",
+                              "id": 4003,
+                              "isConstant": false,
+                              "isLValue": false,
+                              "isPure": true,
+                              "kind": "string",
+                              "lValueRequested": false,
+                              "nodeType": "Literal",
+                              "src": "2708:35:20",
+                              "typeDescriptions": {
+                                "typeIdentifier": "t_stringliteral_39d177b32e021d8b898c361f35c001f2f3f22321d439ed316989b28b987e7891",
+                                "typeString": "literal_string \"Can only close from ACTIVE state.\""
+                              },
+                              "value": "Can only close from ACTIVE state."
+                            }
+                          ],
+                          "expression": {
+                            "argumentTypes": [
+                              {
+                                "typeIdentifier": "t_bool",
+                                "typeString": "bool"
+                              },
+                              {
+                                "typeIdentifier": "t_stringliteral_39d177b32e021d8b898c361f35c001f2f3f22321d439ed316989b28b987e7891",
+                                "typeString": "literal_string \"Can only close from ACTIVE state.\""
+                              }
+                            ],
+                            "id": 3998,
+                            "name": "require",
+                            "nodeType": "Identifier",
+                            "overloadedDeclarations": [
+                              -18,
+                              -18,
+                              -18
+                            ],
+                            "referencedDeclaration": -18,
+                            "src": "2677:7:20",
+                            "typeDescriptions": {
+                              "typeIdentifier": "t_function_require_pure$_t_bool_$_t_string_memory_ptr_$returns$__$",
+                              "typeString": "function (bool,string memory) pure"
+                            }
+                          },
+                          "id": 4004,
+                          "isConstant": false,
+                          "isLValue": false,
+                          "isPure": false,
+                          "kind": "functionCall",
+                          "lValueRequested": false,
+                          "nameLocations": [],
+                          "names": [],
+                          "nodeType": "FunctionCall",
+                          "src": "2677:67:20",
+                          "tryCall": false,
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_tuple$__$",
+                            "typeString": "tuple()"
+                          }
+                        },
+                        "id": 4005,
+                        "nodeType": "ExpressionStatement",
+                        "src": "2677:67:20"
+                      },
+                      {
+                        "expression": {
+                          "arguments": [
+                            {
+                              "commonType": {
+                                "typeIdentifier": "t_uint256",
+                                "typeString": "uint256"
+                              },
+                              "id": 4010,
+                              "isConstant": false,
+                              "isLValue": false,
+                              "isPure": false,
+                              "lValueRequested": false,
+                              "leftExpression": {
+                                "expression": {
+                                  "id": 4007,
+                                  "name": "block",
+                                  "nodeType": "Identifier",
+                                  "overloadedDeclarations": [],
+                                  "referencedDeclaration": -4,
+                                  "src": "2761:5:20",
+                                  "typeDescriptions": {
+                                    "typeIdentifier": "t_magic_block",
+                                    "typeString": "block"
+                                  }
+                                },
+                                "id": 4008,
+                                "isConstant": false,
+                                "isLValue": false,
+                                "isPure": false,
+                                "lValueRequested": false,
+                                "memberLocation": "2767:9:20",
+                                "memberName": "timestamp",
+                                "nodeType": "MemberAccess",
+                                "src": "2761:15:20",
+                                "typeDescriptions": {
+                                  "typeIdentifier": "t_uint256",
+                                  "typeString": "uint256"
+                                }
+                              },
+                              "nodeType": "BinaryOperation",
+                              "operator": ">=",
+                              "rightExpression": {
+                                "id": 4009,
+                                "name": "end",
+                                "nodeType": "Identifier",
+                                "overloadedDeclarations": [],
+                                "referencedDeclaration": 3834,
+                                "src": "2780:3:20",
+                                "typeDescriptions": {
+                                  "typeIdentifier": "t_uint256",
+                                  "typeString": "uint256"
+                                }
+                              },
+                              "src": "2761:22:20",
+                              "typeDescriptions": {
+                                "typeIdentifier": "t_bool",
+                                "typeString": "bool"
+                              }
+                            },
+                            {
+                              "hexValue": "4c6f616e207465726d20686173206e6f7420656e646564207965742e",
+                              "id": 4011,
+                              "isConstant": false,
+                              "isLValue": false,
+                              "isPure": true,
+                              "kind": "string",
+                              "lValueRequested": false,
+                              "nodeType": "Literal",
+                              "src": "2785:30:20",
+                              "typeDescriptions": {
+                                "typeIdentifier": "t_stringliteral_9507a0d594fe81294ddc6fdd1f5d7458f78eb62967c6b50d0c8d8a10f29f3a26",
+                                "typeString": "literal_string \"Loan term has not ended yet.\""
+                              },
+                              "value": "Loan term has not ended yet."
+                            }
+                          ],
+                          "expression": {
+                            "argumentTypes": [
+                              {
+                                "typeIdentifier": "t_bool",
+                                "typeString": "bool"
+                              },
+                              {
+                                "typeIdentifier": "t_stringliteral_9507a0d594fe81294ddc6fdd1f5d7458f78eb62967c6b50d0c8d8a10f29f3a26",
+                                "typeString": "literal_string \"Loan term has not ended yet.\""
+                              }
+                            ],
+                            "id": 4006,
+                            "name": "require",
+                            "nodeType": "Identifier",
+                            "overloadedDeclarations": [
+                              -18,
+                              -18,
+                              -18
+                            ],
+                            "referencedDeclaration": -18,
+                            "src": "2753:7:20",
+                            "typeDescriptions": {
+                              "typeIdentifier": "t_function_require_pure$_t_bool_$_t_string_memory_ptr_$returns$__$",
+                              "typeString": "function (bool,string memory) pure"
+                            }
+                          },
+                          "id": 4012,
+                          "isConstant": false,
+                          "isLValue": false,
+                          "isPure": false,
+                          "kind": "functionCall",
+                          "lValueRequested": false,
+                          "nameLocations": [],
+                          "names": [],
+                          "nodeType": "FunctionCall",
+                          "src": "2753:63:20",
+                          "tryCall": false,
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_tuple$__$",
+                            "typeString": "tuple()"
+                          }
+                        },
+                        "id": 4013,
+                        "nodeType": "ExpressionStatement",
+                        "src": "2753:63:20"
+                      },
+                      {
+                        "expression": {
+                          "id": 4017,
+                          "isConstant": false,
+                          "isLValue": false,
+                          "isPure": false,
+                          "lValueRequested": false,
+                          "leftHandSide": {
+                            "id": 4014,
+                            "name": "state",
+                            "nodeType": "Identifier",
+                            "overloadedDeclarations": [],
+                            "referencedDeclaration": 3828,
+                            "src": "2825:5:20",
+                            "typeDescriptions": {
+                              "typeIdentifier": "t_enum$_State_$3823",
+                              "typeString": "enum StateMachine.State"
+                            }
+                          },
+                          "nodeType": "Assignment",
+                          "operator": "=",
+                          "rightHandSide": {
+                            "expression": {
+                              "id": 4015,
+                              "name": "State",
+                              "nodeType": "Identifier",
+                              "overloadedDeclarations": [],
+                              "referencedDeclaration": 3823,
+                              "src": "2833:5:20",
+                              "typeDescriptions": {
+                                "typeIdentifier": "t_type$_t_enum$_State_$3823_$",
+                                "typeString": "type(enum StateMachine.State)"
+                              }
+                            },
+                            "id": 4016,
+                            "isConstant": false,
+                            "isLValue": false,
+                            "isPure": true,
+                            "lValueRequested": false,
+                            "memberLocation": "2839:6:20",
+                            "memberName": "CLOSED",
+                            "nodeType": "MemberAccess",
+                            "referencedDeclaration": 3822,
+                            "src": "2833:12:20",
+                            "typeDescriptions": {
+                              "typeIdentifier": "t_enum$_State_$3823",
+                              "typeString": "enum StateMachine.State"
+                            }
+                          },
+                          "src": "2825:20:20",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_enum$_State_$3823",
+                            "typeString": "enum StateMachine.State"
+                          }
+                        },
+                        "id": 4018,
+                        "nodeType": "ExpressionStatement",
+                        "src": "2825:20:20"
+                      }
+                    ]
+                  }
+                }
+              ]
+            },
+            "id": 4022,
+            "implemented": true,
+            "kind": "function",
+            "modifiers": [],
+            "name": "_transitionTo",
+            "nameLocation": "2128:13:20",
+            "nodeType": "FunctionDefinition",
+            "parameters": {
+              "id": 3951,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 3950,
+                  "mutability": "mutable",
+                  "name": "to",
+                  "nameLocation": "2148:2:20",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 4022,
+                  "src": "2142:8:20",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_enum$_State_$3823",
+                    "typeString": "enum StateMachine.State"
+                  },
+                  "typeName": {
+                    "id": 3949,
+                    "nodeType": "UserDefinedTypeName",
+                    "pathNode": {
+                      "id": 3948,
+                      "name": "State",
+                      "nameLocations": [
+                        "2142:5:20"
+                      ],
+                      "nodeType": "IdentifierPath",
+                      "referencedDeclaration": 3823,
+                      "src": "2142:5:20"
+                    },
+                    "referencedDeclaration": 3823,
+                    "src": "2142:5:20",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_enum$_State_$3823",
+                      "typeString": "enum StateMachine.State"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "2141:10:20"
+            },
+            "returnParameters": {
+              "id": 3952,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "2161:0:20"
+            },
+            "scope": 4047,
+            "src": "2119:769:20",
+            "stateMutability": "nonpayable",
+            "virtual": false,
+            "visibility": "internal"
+          },
+          {
+            "body": {
+              "id": 4033,
+              "nodeType": "Block",
+              "src": "2918:69:20",
+              "statements": [
+                {
+                  "expression": {
+                    "arguments": [
+                      {
+                        "commonType": {
+                          "typeIdentifier": "t_address",
+                          "typeString": "address"
+                        },
+                        "id": 4028,
+                        "isConstant": false,
+                        "isLValue": false,
+                        "isPure": false,
+                        "lValueRequested": false,
+                        "leftExpression": {
+                          "expression": {
+                            "id": 4025,
+                            "name": "msg",
+                            "nodeType": "Identifier",
+                            "overloadedDeclarations": [],
+                            "referencedDeclaration": -15,
+                            "src": "2933:3:20",
+                            "typeDescriptions": {
+                              "typeIdentifier": "t_magic_message",
+                              "typeString": "msg"
+                            }
+                          },
+                          "id": 4026,
+                          "isConstant": false,
+                          "isLValue": false,
+                          "isPure": false,
+                          "lValueRequested": false,
+                          "memberLocation": "2937:6:20",
+                          "memberName": "sender",
+                          "nodeType": "MemberAccess",
+                          "src": "2933:10:20",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_address",
+                            "typeString": "address"
+                          }
+                        },
+                        "nodeType": "BinaryOperation",
+                        "operator": "==",
+                        "rightExpression": {
+                          "id": 4027,
+                          "name": "borrower",
+                          "nodeType": "Identifier",
+                          "overloadedDeclarations": [],
+                          "referencedDeclaration": 3838,
+                          "src": "2947:8:20",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_address_payable",
+                            "typeString": "address payable"
+                          }
+                        },
+                        "src": "2933:22:20",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_bool",
+                          "typeString": "bool"
+                        }
+                      },
+                      {
+                        "hexValue": "4f6e6c7920626f72726f776572",
+                        "id": 4029,
+                        "isConstant": false,
+                        "isLValue": false,
+                        "isPure": true,
+                        "kind": "string",
+                        "lValueRequested": false,
+                        "nodeType": "Literal",
+                        "src": "2957:15:20",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_stringliteral_897dfb609abf3d662f0b8a53e67fd84ad6f21bcbbf0fb4a842a25817b82cec9c",
+                          "typeString": "literal_string \"Only borrower\""
+                        },
+                        "value": "Only borrower"
+                      }
+                    ],
+                    "expression": {
+                      "argumentTypes": [
+                        {
+                          "typeIdentifier": "t_bool",
+                          "typeString": "bool"
+                        },
+                        {
+                          "typeIdentifier": "t_stringliteral_897dfb609abf3d662f0b8a53e67fd84ad6f21bcbbf0fb4a842a25817b82cec9c",
+                          "typeString": "literal_string \"Only borrower\""
+                        }
+                      ],
+                      "id": 4024,
+                      "name": "require",
+                      "nodeType": "Identifier",
+                      "overloadedDeclarations": [
+                        -18,
+                        -18,
+                        -18
+                      ],
+                      "referencedDeclaration": -18,
+                      "src": "2925:7:20",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_function_require_pure$_t_bool_$_t_string_memory_ptr_$returns$__$",
+                        "typeString": "function (bool,string memory) pure"
+                      }
+                    },
+                    "id": 4030,
+                    "isConstant": false,
+                    "isLValue": false,
+                    "isPure": false,
+                    "kind": "functionCall",
+                    "lValueRequested": false,
+                    "nameLocations": [],
+                    "names": [],
+                    "nodeType": "FunctionCall",
+                    "src": "2925:48:20",
+                    "tryCall": false,
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_tuple$__$",
+                      "typeString": "tuple()"
+                    }
+                  },
+                  "id": 4031,
+                  "nodeType": "ExpressionStatement",
+                  "src": "2925:48:20"
+                },
+                {
+                  "id": 4032,
+                  "nodeType": "PlaceholderStatement",
+                  "src": "2980:1:20"
+                }
+              ]
+            },
+            "id": 4034,
+            "name": "onlyBorrower",
+            "nameLocation": "2903:12:20",
+            "nodeType": "ModifierDefinition",
+            "parameters": {
+              "id": 4023,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "2915:2:20"
+            },
+            "src": "2894:93:20",
+            "virtual": false,
+            "visibility": "internal"
+          },
+          {
+            "body": {
+              "id": 4045,
+              "nodeType": "Block",
+              "src": "3020:75:20",
+              "statements": [
+                {
+                  "expression": {
+                    "arguments": [
+                      {
+                        "commonType": {
+                          "typeIdentifier": "t_address",
+                          "typeString": "address"
+                        },
+                        "id": 4040,
+                        "isConstant": false,
+                        "isLValue": false,
+                        "isPure": false,
+                        "lValueRequested": false,
+                        "leftExpression": {
+                          "expression": {
+                            "id": 4037,
+                            "name": "msg",
+                            "nodeType": "Identifier",
+                            "overloadedDeclarations": [],
+                            "referencedDeclaration": -15,
+                            "src": "3035:3:20",
+                            "typeDescriptions": {
+                              "typeIdentifier": "t_magic_message",
+                              "typeString": "msg"
+                            }
+                          },
+                          "id": 4038,
+                          "isConstant": false,
+                          "isLValue": false,
+                          "isPure": false,
+                          "lValueRequested": false,
+                          "memberLocation": "3039:6:20",
+                          "memberName": "sender",
+                          "nodeType": "MemberAccess",
+                          "src": "3035:10:20",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_address",
+                            "typeString": "address"
+                          }
+                        },
+                        "nodeType": "BinaryOperation",
+                        "operator": "==",
+                        "rightExpression": {
+                          "id": 4039,
+                          "name": "loanFactory",
+                          "nodeType": "Identifier",
+                          "overloadedDeclarations": [],
+                          "referencedDeclaration": 3840,
+                          "src": "3049:11:20",
+                          "typeDescriptions": {
+                            "typeIdentifier": "t_address_payable",
+                            "typeString": "address payable"
+                          }
+                        },
+                        "src": "3035:25:20",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_bool",
+                          "typeString": "bool"
+                        }
+                      },
+                      {
+                        "hexValue": "4f6e6c79204c6f616e466163746f7279",
+                        "id": 4041,
+                        "isConstant": false,
+                        "isLValue": false,
+                        "isPure": true,
+                        "kind": "string",
+                        "lValueRequested": false,
+                        "nodeType": "Literal",
+                        "src": "3062:18:20",
+                        "typeDescriptions": {
+                          "typeIdentifier": "t_stringliteral_f9a7b058aa076fbfc71988874cdc0e9cc3bdeae79739c740a92691cf5af49009",
+                          "typeString": "literal_string \"Only LoanFactory\""
+                        },
+                        "value": "Only LoanFactory"
+                      }
+                    ],
+                    "expression": {
+                      "argumentTypes": [
+                        {
+                          "typeIdentifier": "t_bool",
+                          "typeString": "bool"
+                        },
+                        {
+                          "typeIdentifier": "t_stringliteral_f9a7b058aa076fbfc71988874cdc0e9cc3bdeae79739c740a92691cf5af49009",
+                          "typeString": "literal_string \"Only LoanFactory\""
+                        }
+                      ],
+                      "id": 4036,
+                      "name": "require",
+                      "nodeType": "Identifier",
+                      "overloadedDeclarations": [
+                        -18,
+                        -18,
+                        -18
+                      ],
+                      "referencedDeclaration": -18,
+                      "src": "3027:7:20",
+                      "typeDescriptions": {
+                        "typeIdentifier": "t_function_require_pure$_t_bool_$_t_string_memory_ptr_$returns$__$",
+                        "typeString": "function (bool,string memory) pure"
+                      }
+                    },
+                    "id": 4042,
+                    "isConstant": false,
+                    "isLValue": false,
+                    "isPure": false,
+                    "kind": "functionCall",
+                    "lValueRequested": false,
+                    "nameLocations": [],
+                    "names": [],
+                    "nodeType": "FunctionCall",
+                    "src": "3027:54:20",
+                    "tryCall": false,
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_tuple$__$",
+                      "typeString": "tuple()"
+                    }
+                  },
+                  "id": 4043,
+                  "nodeType": "ExpressionStatement",
+                  "src": "3027:54:20"
+                },
+                {
+                  "id": 4044,
+                  "nodeType": "PlaceholderStatement",
+                  "src": "3088:1:20"
+                }
+              ]
+            },
+            "id": 4046,
+            "name": "onlyLoanFactory",
+            "nameLocation": "3002:15:20",
+            "nodeType": "ModifierDefinition",
+            "parameters": {
+              "id": 4035,
+              "nodeType": "ParameterList",
+              "parameters": [],
+              "src": "3017:2:20"
+            },
+            "src": "2993:102:20",
+            "virtual": false,
+            "visibility": "internal"
+          }
+        ],
+        "scope": 4048,
+        "src": "140:2960:20",
+        "usedErrors": [],
+        "usedEvents": []
+      }
+    ],
+    "src": "33:3069:20"
+  },
+  "bytecode": "",
+  "bytecodeSha1": "da39a3ee5e6b4b0d3255bfef95601890afd80709",
+  "compiler": {
+    "evm_version": "istanbul",
+    "optimizer": {
+      "enabled": true,
+      "runs": 200
+    },
+    "version": "0.8.31+commit.fd3a2265"
+  },
+  "contractName": "ITokenFarm",
+  "coverageMap": {
+    "branches": {},
+    "statements": {}
+  },
+  "dependencies": [],
+  "deployedBytecode": "",
+  "deployedSourceMap": "",
+  "language": "Solidity",
+  "natspec": {
+    "kind": "dev",
+    "methods": {},
+    "version": 1
+  },
+  "offset": [
+    60,
+    136
+  ],
+  "opcodes": "",
+  "pcMap": {},
+  "sha1": "f839066676b870f9501967538f5e98b0526ff948",
+  "source": "// SPDX-License-Identifier: MIT\npragma solidity ^0.8.7;\n\ninterface ITokenFarm {\n  function receiveLoanReturns() external payable;\n}\n\ncontract StateMachine {\n  enum State {\n    PENDING,\n    ACTIVE,\n    CLOSED\n  } // Define possible states\n\n  State public state = State.PENDING; // Initial state is PENDING\n  uint256 public amount; // Loan amount to be borrowed\n  uint256 public interest; // Interest amount to be paid by the borrower\n  uint256 public end; // Timestamp when the loan term ends\n  uint256 public duration; // Declare duration as a state variable\n  address payable public borrower; // Updated to address payable\n  address payable public loanFactory; // LoanFactory that funds the loan\n  address payable public tokenFarm; // TokenFarm = lender logique\n\n  constructor(\n    uint256 _amount,\n    uint256 _interest,\n    uint256 _duration,\n    address payable _borrower,\n    address payable _loanFactory,\n    address payable _tokenFarm\n  ) {\n    amount = _amount; // Assign the amount to the state variable\n    interest = _interest; // Assign the interest to the state variable\n    duration = _duration; // Assign the duration to the state variable\n    end = block.timestamp + _duration; // Initialize the end time\n    borrower = _borrower; // Updated to address payable\n    loanFactory = _loanFactory;\n    tokenFarm = _tokenFarm;\n  }\n\n\n  // ===== FUND (appel UNIQUEMENT par LoanFactory)\n\n  function fund() external payable onlyLoanFactory {\n    require(\n      address(this).balance == amount,\n      \"Funding must match the loan amount exactly.\"\n    );\n    _transitionTo(State.ACTIVE);\n    borrower.transfer(amount);\n  } // Transfer the loan amount to the borrower\n\n\n  // ===== REPAY (borrower rembourse, fonds retournent TokenFarm)\n\n  function reimburse() external payable onlyBorrower {\n    require(\n      msg.value == amount + interest,\n      \"Reimbursement must match the loan amount plus interest.\"\n    );\n    _transitionTo(State.CLOSED); // Transition to CLOSED state\n    ITokenFarm(tokenFarm).receiveLoanReturns{ value: msg.value }();\n  }\n\n  function _transitionTo(State to) internal {\n    require(to != State.PENDING, \"Cannot revert to PENDING state.\"); // Prevent reverting to PENDING state\n    require(to != state, \"Cannot transition to the same state.\"); // Prevent transitioning to the same state\n\n    if (to == State.ACTIVE) {\n      require(state == State.PENDING, \"Can only activate from PENDING state.\");\n      state = State.ACTIVE;\n      end = block.timestamp + duration; // Use the duration state variable\n    } // Transition to ACTIVE state\n\n    if (to == State.CLOSED) {\n      require(state == State.ACTIVE, \"Can only close from ACTIVE state.\");\n      require(block.timestamp >= end, \"Loan term has not ended yet.\");\n      state = State.CLOSED;\n    } // Transition to CLOSED state\n  }\n\n  modifier onlyBorrower() {\n    require(msg.sender == borrower, \"Only borrower\");\n    _;\n  }\n\n  modifier onlyLoanFactory() {\n    require(msg.sender == loanFactory, \"Only LoanFactory\");\n    _;\n  }\n\n}\n",
+  "sourceMap": "",
+  "sourcePath": "contracts/StateMachine.sol",
+  "type": "interface"
+}
