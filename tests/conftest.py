@@ -13,4 +13,4 @@ def random_erc20():
 
 @pytest.fixture
 def amount_staked():
-    return Web3.toWei(1, "ether")
+    return Web3.to_wei(1, "ether")

@@ -1,13 +1,17 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.7;
+pragma solidity ^0.8.19;
 
 import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 import "@chainlink/contracts/src/v0.8/ChainlinkClient.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "./LoanFactory.sol";
 
 contract TokenFarm is ChainlinkClient, Ownable, ReentrancyGuard {
+  using SafeERC20 for IERC20;
+
   string public name = "Golden Token Farm";
   IERC20 public goldenToken;
 
@@ -16,7 +20,16 @@ contract TokenFarm is ChainlinkClient, Ownable, ReentrancyGuard {
   mapping(address => mapping(address => uint256)) public stakingBalance;
   mapping(address => uint256) public uniqueTokensStaked;
   mapping(address => address) public tokenPriceFeedMapping;
+  mapping(address => bool) public allowedTokensMapping;
   address[] public allowedTokens;
+  LoanFactory public loanFactory;
+  
+  // Pull-over-push : stocke les retours de chaque StateMachine
+  mapping(address => uint256) public pendingReturns;
+  mapping(address => bool) public authorizedLoans;
+  address[] public authorizedLoansArray;
+  mapping(address => bool) public isStaker;
+  uint256 public stakerCount;
 
   event TokenStaked(
     address indexed user,
@@ -29,19 +42,121 @@ contract TokenFarm is ChainlinkClient, Ownable, ReentrancyGuard {
     address indexed token,
     uint256 amount
   );
+  
+  event LoanCreated(
+    uint256 indexed loanId,
+    uint256 amount,
+    uint256 interest,
+    uint256 duration
+  );
 
-  constructor(address _goldenTokenAddress) public {
+  event LoanFunded(uint256 indexed loanId, uint256 amount);
+
+  event LoanClosed(uint256 indexed loanId);
+
+  event LoanReturnsReceived(address indexed loanAddress, uint256 amount);
+
+  event LoanReturnsDistributed(
+    uint256 totalAmount,
+    uint256 stakerCount,
+    uint256 timestamp
+  );
+
+  event AllowedTokenAdded(address indexed token);
+
+  event AllowedTokenRemoved(address indexed token);
+
+  event NativeTokenDeposited(address indexed depositor, uint256 amount, uint256 timestamp);
+  event NativeTokenWithdrawn(address indexed recipient, uint256 amount, uint256 timestamp);
+  
+  // Limites
+  uint256 public maxStakePerUser = 1_00_000 * 10**18; // 100K tokens max
+
+  // Tracking des dépôts ETH natifs
+  mapping(address => uint256) public nativeDepositsByAddress;
+  uint256 public totalNativeDeposited;
+  uint256 public nativeDepositCount;
+
+  modifier onlyAuthorizedLoan() {
+    require(authorizedLoans[msg.sender], "Unauthorized loan");
+    _;
+  }
+
+  constructor(address _goldenTokenAddress, address _loanFactory) {
     goldenToken = IERC20(_goldenTokenAddress);
+    loanFactory = LoanFactory(_loanFactory);
+  }
+
+  function depositNative() external payable onlyOwner {
+    require(msg.value > 0, "Must send ETH");
+    
+    // Tracking du dépôt
+    if (nativeDepositsByAddress[msg.sender] == 0) {
+      nativeDepositCount++;
+    }
+    nativeDepositsByAddress[msg.sender] += msg.value;
+    totalNativeDeposited += msg.value;
+    
+    // Événement pour tracer le dépôt
+    emit NativeTokenDeposited(msg.sender, msg.value, block.timestamp);
+  }
+
+  /**
+    * @dev Retire les fonds ETH du contrat (avec tracking)
+    */
+  function withdrawNative(uint256 amount) external onlyOwner nonReentrant {
+    require(amount > 0, "Amount must be > 0");
+    require(address(this).balance >= amount, "Insufficient balance");
+    
+    (bool success, ) = msg.sender.call{value: amount}("");
+    require(success, "Withdrawal failed");
+    
+    emit NativeTokenWithdrawn(msg.sender, amount, block.timestamp);
+  }
+
+  /**
+    * @dev Retourne le solde ETH du contrat
+    */
+  function getNativeBalance() external view returns (uint256) {
+    return address(this).balance;
+  }
+
+  /**
+    * @dev Retourne le total d'ETH déposés par une adresse
+    */
+  function getNativeDepositBalance(address depositor) external view returns (uint256) {
+    return nativeDepositsByAddress[depositor];
+  }
+
+  /**
+    * @dev Retourne les statistiques des dépôts natifs
+    */
+  function getNativeDepositStats() 
+    external 
+    view 
+    returns (
+      uint256 totalDeposited,
+      uint256 currentBalance,
+      uint256 depositCount
+    ) 
+  {
+    return (totalNativeDeposited, address(this).balance, nativeDepositCount);
   }
 
   function addAllowedTokens(address token) public onlyOwner {
-    allowedTokens.push(token);
+    require(token != address(0), "Invalid token address");
+    if (!allowedTokensMapping[token]) {
+      allowedTokensMapping[token] = true;
+      allowedTokens.push(token);
+      emit AllowedTokenAdded(token);
+    }
   }
 
   function setPriceFeedContract(
     address token,
     address priceFeed
   ) public onlyOwner {
+    require(token != address(0), "Invalid token address");
     tokenPriceFeedMapping[token] = priceFeed;
   }
 
@@ -50,13 +165,19 @@ contract TokenFarm is ChainlinkClient, Ownable, ReentrancyGuard {
     // Require amount greater than 0
     require(_amount > 0, "amount cannot be 0");
     require(tokenIsAllowed(token), "Token currently isn't allowed");
+    require(
+      stakingBalance[token][msg.sender] + _amount <= maxStakePerUser,
+      "Exceeds max stake per user"
+    );
     updateUniqueTokensStaked(msg.sender, token);
-    IERC20(token).transferFrom(msg.sender, address(this), _amount);
+    IERC20(token).safeTransferFrom(msg.sender, address(this), _amount);
     stakingBalance[token][msg.sender] =
       stakingBalance[token][msg.sender] +
       _amount;
-    if (uniqueTokensStaked[msg.sender] == 1) {
+    if (uniqueTokensStaked[msg.sender] == 1 && !isStaker[msg.sender]) {
       stakers.push(msg.sender);
+      isStaker[msg.sender] = true;
+      stakerCount++;
     }
     // EVENT
     emit TokenStaked(msg.sender, token, _amount);
@@ -68,13 +189,13 @@ contract TokenFarm is ChainlinkClient, Ownable, ReentrancyGuard {
     // Fetch staking balance
     uint256 balance = stakingBalance[token][msg.sender];
     require(balance > 0, "staking balance cannot be 0");
-    IERC20(token).transfer(msg.sender, balance);
+    IERC20(token).safeTransfer(msg.sender, balance);
     stakingBalance[token][msg.sender] = 0;
     uniqueTokensStaked[msg.sender] = uniqueTokensStaked[msg.sender] - 1;
 
     // The code below fixes a problem where stakers could not appear twice
     // in the stakers array, receiving twice the reward.
-    if (uniqueTokensStaked[msg.sender] == 0) {
+    if (uniqueTokensStaked[msg.sender] == 0 && isStaker[msg.sender]) {
       for (
         uint256 stakersIndex = 0;
         stakersIndex < stakers.length;
@@ -83,6 +204,9 @@ contract TokenFarm is ChainlinkClient, Ownable, ReentrancyGuard {
         if (stakers[stakersIndex] == msg.sender) {
           stakers[stakersIndex] = stakers[stakers.length - 1];
           stakers.pop();
+          isStaker[msg.sender] = false;
+          stakerCount--;
+          break;
         }
       }
     }
@@ -110,41 +234,29 @@ contract TokenFarm is ChainlinkClient, Ownable, ReentrancyGuard {
   }
 
   function tokenIsAllowed(address token) public view returns (bool) {
-    for (
-      uint256 allowedTokensIndex = 0;
-      allowedTokensIndex < allowedTokens.length;
-      allowedTokensIndex++
-    ) {
-      if (allowedTokens[allowedTokensIndex] == token) {
-        return true;
-      }
-    }
-    return false;
+    return allowedTokensMapping[token];
   }
 
   // Event pour tracer la suppression
 
-  event AllowedTokenRemoved(address token);
-
   function removeAllowedToken(address token) public onlyOwner {
+    require(allowedTokensMapping[token], "Token not allowed");
+    allowedTokensMapping[token] = false;
     for (
       uint256 allowedTokensIndex = 0;
       allowedTokensIndex < allowedTokens.length;
       allowedTokensIndex++
     ) {
       if (allowedTokens[allowedTokensIndex] == token) {
-        // swap avec le dernier élément et pop
+        // swap avec le dernier élement et pop
         allowedTokens[allowedTokensIndex] = allowedTokens[
           allowedTokens.length - 1
         ];
         allowedTokens.pop();
-        require(!tokenIsAllowed(token), "Token removal failed");
         emit AllowedTokenRemoved(token);
-        return; // on sort de la boucle dès qu'on supprime
+        break; // since mapping ensures uniqueness
       }
     }
-
-    revert("Token not found in allowedTokens");
   }
 
   function updateUniqueTokensStaked(address user, address token) internal {
@@ -173,14 +285,17 @@ contract TokenFarm is ChainlinkClient, Ownable, ReentrancyGuard {
       stakersIndex++
     ) {
       address recipient = stakers[stakersIndex];
-      goldenToken.transfer(recipient, getUserTotalValue(recipient));
+      uint256 totalStakedValue = getUserTotalValue(recipient);
+      goldenToken.safeTransfer(recipient, totalStakedValue);
     }
   }
+
 
   function getTokenEthPrice(
     address token
   ) public view returns (uint256, uint8) {
     address priceFeedAddress = tokenPriceFeedMapping[token];
+    require(priceFeedAddress != address(0), "Price feed not set");
     AggregatorV3Interface priceFeed = AggregatorV3Interface(priceFeedAddress);
     (
       uint80 roundID,
@@ -189,6 +304,147 @@ contract TokenFarm is ChainlinkClient, Ownable, ReentrancyGuard {
       uint256 timeStamp,
       uint80 answeredInRound
     ) = priceFeed.latestRoundData();
+
+    require(price > 0, "Invalid price");
+    require(timeStamp > 0, "Round not complete");
+    require(answeredInRound >= roundID, "Stale price feed");
+
     return (uint256(price), priceFeed.decimals());
   }
+
+  function getStakers() public view returns(address [] memory){
+    return stakers;
+  }
+
+  receive() external payable {
+    require(authorizedLoans[msg.sender], "Unauthorized loan");
+    require(msg.value > 0, "No funds sent");
+
+    pendingReturns[msg.sender] += msg.value;
+    emit LoanReturnsReceived(msg.sender, msg.value);
+  }
+
+  
+  // ===== LOAN MANAGEMENT =====
+  function createProjectLoan(
+    address borrower,
+    uint256 amount,
+    uint256 interest,
+    uint256 duration
+  ) external onlyOwner returns (uint256) {
+    require(borrower != address(0), "Invalid borrower");
+    require(amount > 0, "Amount must be > 0");
+
+    uint256 loanId = loanFactory.createLoan(
+      amount,
+      interest,
+      duration,
+      payable(borrower)
+    );
+
+    address loanAddress = loanFactory.getLoanAddress(loanId);
+    authorizeLoan(loanAddress);
+
+    emit LoanCreated(loanId, amount, interest, duration);
+    return loanId;
+  }
+
+  function investInLoan(uint256 loanId, uint256 amount)
+    external
+    onlyOwner
+    nonReentrant
+  {
+    require(amount > 0, "Amount must be > 0");
+    require(address(this).balance >= amount, "Insufficient funds");
+
+    loanFactory.fundLoan{ value: amount }(loanId);
+
+    emit LoanFunded(loanId, amount);
+  }
+
+  function closeLoan(uint256 loanId) external onlyOwner nonReentrant {
+    loanFactory.closeLoan(loanId);
+    emit LoanClosed(loanId);
+  }
+
+  // ===== LOAN RETURNS MANAGEMENT =====
+  function authorizeLoan(address loan) public onlyOwner {
+    require(loan != address(0), "Invalid loan address");
+    if (!authorizedLoans[loan]) {
+      authorizedLoans[loan] = true;
+      authorizedLoansArray.push(loan);
+    }
+  }
+
+  /**
+    * @dev Reçoit les retours d'un prêt (appelé par le contrat StateMachine)
+    * Utilise le pattern pull-over-push
+    */
+  function receiveLoanReturns() external payable onlyAuthorizedLoan nonReentrant {
+    require(msg.value > 0, "No funds sent");
+    
+    pendingReturns[msg.sender] += msg.value;
+    
+    emit LoanReturnsReceived(msg.sender, msg.value);
+  }
+
+  /**
+    * @dev Distribue les retours des prêts proportionnellement aux stakers
+    */
+  function distributeLoanReturns() 
+    external 
+    onlyOwner 
+    nonReentrant
+  {
+    require(stakers.length > 0, "No stakers");
+
+    // 1. Calculer le total des retours disponibles
+    uint256 totalReturns = 0;
+    for (uint256 i = 0; i < authorizedLoansArray.length; i++) {
+      totalReturns += pendingReturns[authorizedLoansArray[i]];
+    }
+
+    require(totalReturns > 0, "No loan returns to distribute");
+
+    // 2. Calculer la valeur totale stakée
+    uint256 totalStakedValue = 0;
+    for (uint256 i = 0; i < stakers.length; i++) {
+      uint256 userValue = getUserTotalValue(stakers[i]);
+      totalStakedValue += userValue;
+    }
+
+    require(totalStakedValue > 0, "No staking value to distribute");
+
+    // 3. Distribuer proportionnellement
+    for (uint256 i = 0; i < stakers.length; i++) {
+      address recipient = stakers[i];
+      uint256 userValue = getUserTotalValue(recipient);
+
+      uint256 userShare = (totalReturns * userValue) / totalStakedValue;
+
+      if (userShare > 0) {
+        goldenToken.safeTransfer(recipient, userShare);
+      }
+    }
+
+    // 4. Reset tous les pendingReturns
+    for (uint256 i = 0; i < authorizedLoansArray.length; i++) {
+      pendingReturns[authorizedLoansArray[i]] = 0;
+    }
+
+    emit LoanReturnsDistributed(totalReturns, stakers.length, block.timestamp);
+  }
+
+  // ===== ADMIN FUNCTIONS =====
+  function setMaxStakePerUser(uint256 _maxStake) external onlyOwner {
+    require(_maxStake > 0, "Max stake must be > 0");
+    maxStakePerUser = _maxStake;
+  }
+
+  function setLoanFactory(address _loanFactory) external onlyOwner {
+    require(_loanFactory != address(0), "Invalid factory address");
+    loanFactory = LoanFactory(payable(_loanFactory));
+  }
+
+
 }

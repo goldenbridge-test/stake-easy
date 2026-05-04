@@ -8,3 +8,10 @@ front_end_again
 .env
 yarn-error.log
 mon_env/
+venv/
+.cache/
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db

@@ -15,21 +15,21 @@
     }
   ],
   "allSourcePaths": {
-    "12": "C:/Users/1K/.brownie/packages/smartcontractkit/chainlink-brownie-contracts@0.2.2/contracts/src/v0.8/interfaces/PointerInterface.sol"
+    "20": "C:/Users/1K/.brownie/packages/smartcontractkit/chainlink-brownie-contracts@0.2.2/contracts/src/v0.8/interfaces/PointerInterface.sol"
   },
   "ast": {
     "absolutePath": "C:/Users/1K/.brownie/packages/smartcontractkit/chainlink-brownie-contracts@0.2.2/contracts/src/v0.8/interfaces/PointerInterface.sol",
     "exportedSymbols": {
       "PointerInterface": [
-        1932
+        7672
       ]
     },
-    "id": 1933,
+    "id": 7673,
     "license": "MIT",
     "nodeType": "SourceUnit",
     "nodes": [
       {
-        "id": 1926,
+        "id": 7666,
         "literals": [
           "solidity",
           "^",
@@ -37,7 +37,7 @@
           ".0"
         ],
         "nodeType": "PragmaDirective",
-        "src": "32:23:12"
+        "src": "32:23:20"
       },
       {
         "abstract": false,
@@ -46,42 +46,42 @@
         "contractDependencies": [],
         "contractKind": "interface",
         "fullyImplemented": false,
-        "id": 1932,
+        "id": 7672,
         "linearizedBaseContracts": [
-          1932
+          7672
         ],
         "name": "PointerInterface",
-        "nameLocation": "67:16:12",
+        "nameLocation": "67:16:20",
         "nodeType": "ContractDefinition",
         "nodes": [
           {
             "functionSelector": "38cc4831",
-            "id": 1931,
+            "id": 7671,
             "implemented": false,
             "kind": "function",
             "modifiers": [],
             "name": "getAddress",
-            "nameLocation": "100:10:12",
+            "nameLocation": "100:10:20",
             "nodeType": "FunctionDefinition",
             "parameters": {
-              "id": 1927,
+              "id": 7667,
               "nodeType": "ParameterList",
               "parameters": [],
-              "src": "110:2:12"
+              "src": "110:2:20"
             },
             "returnParameters": {
-              "id": 1930,
+              "id": 7670,
               "nodeType": "ParameterList",
               "parameters": [
                 {
                   "constant": false,
-                  "id": 1929,
+                  "id": 7669,
                   "mutability": "mutable",
                   "name": "",
                   "nameLocation": "-1:-1:-1",
                   "nodeType": "VariableDeclaration",
-                  "scope": 1931,
-                  "src": "155:7:12",
+                  "scope": 7671,
+                  "src": "155:7:20",
                   "stateVariable": false,
                   "storageLocation": "default",
                   "typeDescriptions": {
@@ -89,10 +89,10 @@
                     "typeString": "address"
                   },
                   "typeName": {
-                    "id": 1928,
+                    "id": 7668,
                     "name": "address",
                     "nodeType": "ElementaryTypeName",
-                    "src": "155:7:12",
+                    "src": "155:7:20",
                     "stateMutability": "nonpayable",
                     "typeDescriptions": {
                       "typeIdentifier": "t_address",
@@ -102,21 +102,22 @@
                   "visibility": "internal"
                 }
               ],
-              "src": "147:21:12"
+              "src": "147:21:20"
             },
-            "scope": 1932,
-            "src": "91:78:12",
+            "scope": 7672,
+            "src": "91:78:20",
             "stateMutability": "view",
             "virtual": false,
             "visibility": "external"
           }
         ],
-        "scope": 1933,
-        "src": "57:114:12",
-        "usedErrors": []
+        "scope": 7673,
+        "src": "57:114:20",
+        "usedErrors": [],
+        "usedEvents": []
       }
     ],
-    "src": "32:140:12"
+    "src": "32:140:20"
   },
   "bytecode": "",
   "bytecodeSha1": "da39a3ee5e6b4b0d3255bfef95601890afd80709",
@@ -126,7 +127,7 @@
       "enabled": true,
       "runs": 200
     },
-    "version": "0.8.16+commit.07a7930e"
+    "version": "0.8.31+commit.fd3a2265"
   },
   "contractName": "PointerInterface",
   "coverageMap": {

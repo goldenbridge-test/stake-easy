@@ -6,7 +6,7 @@ from scripts.helpful_scripts import (
     get_account,
     get_contract,
 )
-from brownie import network, exceptions
+from brownie import accounts, chain, network, exceptions, StateMachine
 import pytest
 from web3 import Web3
 
@@ -17,7 +17,7 @@ def test_add_allowed_tokens():
         pytest.skip("Only for local testing")
     account = get_account()
     non_owner = get_account(index=1)
-    token_farm, golden_token = deploy_token_farm_and_golden_token()
+    token_farm, golden_token, *_ = deploy_token_farm_and_golden_token()
     # Act
     token_farm.addAllowedTokens(golden_token.address, {"from": account})
     # Assert
@@ -30,10 +30,10 @@ def test_token_is_allowed():
     if network.show_active() not in LOCAL_BLOCKCHAIN_ENVIRONMENTS:
         pytest.skip("Only for local testing!")
     account = get_account()
-    token_farm, golden_token = deploy_token_farm_and_golden_token()
+    token_farm, golden_token, *_ = deploy_token_farm_and_golden_token()
+    token_farm.addAllowedTokens(golden_token.address, {"from": account})
     # Act.
-    test_add_allowed_tokens()
-    token_is_allowed = token_farm.tokenIsAllowed(golden_token, {"from": account})
+    token_is_allowed = token_farm.tokenIsAllowed(golden_token.address)
     # Assert.
     assert token_is_allowed is True
 
@@ -43,7 +43,7 @@ def test_set_price_feed_contract():
         pytest.skip("Only for local testing")
     account = get_account()
     non_owner = get_account(index=1)
-    token_farm, golden_token = deploy_token_farm_and_golden_token()
+    token_farm, golden_token, *_ = deploy_token_farm_and_golden_token()
     # Act
     token_farm.setPriceFeedContract(
         golden_token.address, get_contract("eth_usd_price_feed"), {"from": account}
@@ -63,7 +63,7 @@ def test_remove_allowed_token(random_erc20):
         pytest.skip("Only for local testing")
     
     account = get_account()
-    token_farm, golden_token = deploy_token_farm_and_golden_token()
+    token_farm, golden_token, *_ = deploy_token_farm_and_golden_token()
 
     # Add the token first
     token_farm.addAllowedTokens(golden_token.address, {"from": account})
@@ -90,7 +90,7 @@ def test_stake_tokens(amount_staked):
     if network.show_active() not in LOCAL_BLOCKCHAIN_ENVIRONMENTS:
         pytest.skip("Only for local testing")
     account = get_account()
-    token_farm, golden_token = deploy_token_farm_and_golden_token()
+    token_farm, golden_token, *_ = deploy_token_farm_and_golden_token()
     # Act
     golden_token.approve(token_farm.address, amount_staked, {"from": account})
     token_farm.stakeTokens(amount_staked, golden_token.address, {"from": account})
@@ -108,7 +108,7 @@ def test_stake_unapproved_tokens(random_erc20, amount_staked):
     if network.show_active() not in LOCAL_BLOCKCHAIN_ENVIRONMENTS:
         pytest.skip("Only for local testing")
     account = get_account()
-    token_farm, golden_token = deploy_token_farm_and_golden_token()
+    token_farm, golden_token, *_ = deploy_token_farm_and_golden_token()
     # Act
     random_erc20.approve(token_farm.address, amount_staked, {"from": account})
     # Assert
@@ -162,7 +162,7 @@ def test_get_token_eth_price():
     # Arrange
     if network.show_active() not in LOCAL_BLOCKCHAIN_ENVIRONMENTS:
         pytest.skip("Only for local testing")
-    token_farm, golden_token = deploy_token_farm_and_golden_token()
+    token_farm, golden_token, *_ = deploy_token_farm_and_golden_token()
     # Act / Assert
     assert token_farm.getTokenEthPrice(golden_token.address) == (
         INITIAL_PRICE_FEED_VALUE,
@@ -175,7 +175,7 @@ def test_get_user_token_staking_balance_eth_value(amount_staked):
     if network.show_active() not in LOCAL_BLOCKCHAIN_ENVIRONMENTS:
         pytest.skip("Only for local testing")
     account = get_account()
-    token_farm, golden_token = deploy_token_farm_and_golden_token()
+    token_farm, golden_token, *_ = deploy_token_farm_and_golden_token()
     # Act
     golden_token.approve(token_farm.address, amount_staked, {"from": account})
     token_farm.stakeTokens(amount_staked, golden_token.address, {"from": account})
@@ -183,7 +183,7 @@ def test_get_user_token_staking_balance_eth_value(amount_staked):
     eth_balance_token = token_farm.getUserTokenStakingBalanceEthValue(
         account.address, golden_token.address
     )
-    assert eth_balance_token == Web3.toWei(2000, "ether")
+    assert eth_balance_token == Web3.to_wei(2000, "ether")
 
 
 def test_issue_tokens(amount_staked):
@@ -191,7 +191,7 @@ def test_issue_tokens(amount_staked):
     if network.show_active() not in LOCAL_BLOCKCHAIN_ENVIRONMENTS:
         pytest.skip("Only for local testing")
     account = get_account()
-    token_farm, golden_token = test_stake_tokens(amount_staked)
+    token_farm, golden_token, *_ = test_stake_tokens(amount_staked)
     starting_balance = golden_token.balanceOf(account.address)
     # Act
     token_farm.issueTokens({"from": account})
@@ -200,3 +200,243 @@ def test_issue_tokens(amount_staked):
         golden_token.balanceOf(account.address)
         == starting_balance + INITIAL_PRICE_FEED_VALUE
     )
+
+
+
+def test_issue_tokens_with_max_supply(amount_staked):
+    if network.show_active() not in LOCAL_BLOCKCHAIN_ENVIRONMENTS:
+        pytest.skip("Only for local testing")
+    account = get_account()
+    token_farm, golden_token, *_ = test_stake_tokens(amount_staked)
+    
+    # Verify initial circulating supply is within limits
+    starting_circulating = golden_token.circulatingSupply()
+    max_supply = golden_token.MAX_SUPPLY()
+    
+    # Act: Issue tokens via TokenFarm
+    token_farm.issueTokens({"from": account})
+    
+    # Assert: Circulating supply never exceeds MAX_SUPPLY
+    assert golden_token.circulatingSupply() <= max_supply
+
+
+def test_burn_tokens():
+    if network.show_active() not in LOCAL_BLOCKCHAIN_ENVIRONMENTS:
+        pytest.skip("Only for local testing")
+    account = get_account()
+    token_farm, golden_token, *_ = deploy_token_farm_and_golden_token()
+
+    # Arrange: balance initiale
+    initial_balance = golden_token.balanceOf(account.address)
+    initial_supply = golden_token.circulatingSupply()
+    
+    burn_amount = 1_000 * 10**18
+    golden_token.burn(account.address, burn_amount, {"from": account})
+    
+    # Assert: balance diminue et circulatingSupply aussi
+    assert golden_token.balanceOf(account.address) == initial_balance - burn_amount
+    assert golden_token.circulatingSupply() == initial_supply - burn_amount
+
+
+def test_create_project_loan_authorizes_loan():
+    # Arrange
+    if network.show_active() not in LOCAL_BLOCKCHAIN_ENVIRONMENTS:
+        pytest.skip("Only for local testing")
+    account = get_account()
+    token_farm, golden_token, loan_factory, _ = deploy_token_farm_and_golden_token()
+    borrower = accounts[2]
+    loan_amount = Web3.to_wei(1, "ether")
+    interest = Web3.to_wei(100, "gwei")
+    duration = 1
+
+    # Act
+    tx = token_farm.createProjectLoan(
+        borrower.address,
+        loan_amount,
+        interest,
+        duration,
+        {"from": account},
+    )
+    loan_id = tx.return_value
+    loan_address = loan_factory.getLoanAddress(loan_id)
+
+    # Assert
+    assert token_farm.authorizedLoans(loan_address) is True
+    assert loan_factory.isLoan(loan_address) is True
+    assert loan_factory.loans(loan_id)[1] == borrower.address
+    assert loan_factory.loans(loan_id)[2] == loan_amount
+
+
+def test_invest_in_loan_flow():
+    # Arrange
+    if network.show_active() not in LOCAL_BLOCKCHAIN_ENVIRONMENTS:
+        pytest.skip("Only for local testing")
+    account = get_account()
+    token_farm, golden_token, loan_factory, _ = deploy_token_farm_and_golden_token()
+    borrower = accounts[2]
+    loan_amount = Web3.to_wei(1, "ether")
+    interest = Web3.to_wei(100, "gwei")
+    duration = 1
+
+    tx = token_farm.createProjectLoan(
+        borrower.address,
+        loan_amount,
+        interest,
+        duration,
+        {"from": account},
+    )
+    loan_id = tx.return_value
+    loan_address = loan_factory.getLoanAddress(loan_id)
+    loan_contract = StateMachine.at(loan_address)
+
+    token_farm.depositNative({"from": account, "value": loan_amount})
+
+    borrower_balance_before = borrower.balance()
+
+    # Act
+    token_farm.investInLoan(loan_id, loan_amount, {"from": account})
+
+    # Assert
+    assert loan_factory.loans(loan_id)[5] is True
+    assert borrower.balance() == borrower_balance_before + loan_amount
+    assert loan_contract.state() == 1
+
+    # Repayment and close cycle
+    chain.sleep(duration + 1)
+    chain.mine(1)
+
+    loan_contract.reimburse({"from": borrower, "value": loan_amount + interest})
+
+    assert token_farm.pendingReturns(loan_address) == loan_amount + interest
+
+    token_farm.closeLoan(loan_id, {"from": account})
+    assert loan_factory.loans(loan_id)[6] is True
+
+
+def test_unauthorized_loan_cannot_send_returns():
+    # Arrange
+    if network.show_active() not in LOCAL_BLOCKCHAIN_ENVIRONMENTS:
+        pytest.skip("Only for local testing")
+    account = get_account()
+    token_farm, golden_token, *_ = deploy_token_farm_and_golden_token()
+
+    # Act / Assert
+    with pytest.raises(Exception):
+        accounts[2].transfer(token_farm.address, 1_000, {"from": accounts[2]})
+
+
+def test_transfer_ownership_to_token_farm():
+    # Arrange
+    if network.show_active() not in LOCAL_BLOCKCHAIN_ENVIRONMENTS:
+        pytest.skip("Only for local testing")
+    account = get_account()
+    token_farm, golden_token, *_ = deploy_token_farm_and_golden_token()
+    
+    # Avant transfert, le propriétaire doit être le deployer
+    assert golden_token.owner() == account.address
+    
+    # Act: transférer la propriété du token à TokenFarm
+    golden_token.transferOwnership(token_farm.address, {"from": account})
+    
+    # Assert: le nouveau propriétaire est bien TokenFarm
+    assert golden_token.owner() == token_farm.address
+    
+    # Vérification que l'ancien owner ne peut plus mint
+    with pytest.raises(Exception):
+        golden_token.mint(account.address, 1_000 * 10**18, {"from": account})
+
+    # Vérification de la propriété uniquement
+    assert golden_token.owner() == token_farm.address
+
+
+def test_distribute_loan_returns(amount_staked):
+    # Arrange
+    if network.show_active() not in LOCAL_BLOCKCHAIN_ENVIRONMENTS:
+        pytest.skip("Only for local testing")
+    account = get_account()
+    token_farm, golden_token, loan_factory, _ = deploy_token_farm_and_golden_token()
+    borrower = accounts[2]
+    loan_amount = Web3.to_wei(1, "ether")
+    interest = Web3.to_wei(100, "gwei")
+    duration = 1
+
+    golden_token.approve(token_farm.address, amount_staked, {"from": account})
+    token_farm.stakeTokens(amount_staked, golden_token.address, {"from": account})
+
+    tx = token_farm.createProjectLoan(
+        borrower.address,
+        loan_amount,
+        interest,
+        duration,
+        {"from": account},
+    )
+    loan_id = tx.return_value
+    loan_address = loan_factory.getLoanAddress(loan_id)
+    loan_contract = StateMachine.at(loan_address)
+
+    token_farm.depositNative({"from": account, "value": loan_amount})
+    token_farm.investInLoan(loan_id, loan_amount, {"from": account})
+
+    chain.sleep(duration + 1)
+    chain.mine(1)
+    loan_contract.reimburse({"from": borrower, "value": loan_amount + interest})
+
+    assert token_farm.pendingReturns(loan_address) == loan_amount + interest
+
+    initial_balance = golden_token.balanceOf(account.address)
+
+    # Act: Distribute loan returns
+    token_farm.distributeLoanReturns({"from": account})
+
+    # Assert: pendingReturns reset to 0
+    assert token_farm.pendingReturns(loan_address) == 0
+    assert golden_token.balanceOf(account.address) == initial_balance + (loan_amount + interest)
+
+
+def test_allowed_tokens_mapping(amount_staked, random_erc20):
+    # Arrange
+    if network.show_active() not in LOCAL_BLOCKCHAIN_ENVIRONMENTS:
+        pytest.skip("Only for local testing")
+    account = get_account()
+    token_farm, golden_token, *_ = deploy_token_farm_and_golden_token()
+
+    # Act: Add token
+    token_farm.addAllowedTokens(random_erc20.address, {"from": account})
+
+    # Assert: Mapping is true
+    assert token_farm.allowedTokensMapping(random_erc20.address) is True
+    assert token_farm.tokenIsAllowed(random_erc20.address) is True
+
+    # Act: Remove token
+    token_farm.removeAllowedToken(random_erc20.address, {"from": account})
+
+    # Assert: Mapping is false
+    assert token_farm.allowedTokensMapping(random_erc20.address) is False
+    assert token_farm.tokenIsAllowed(random_erc20.address) is False
+
+
+def test_staker_mapping_and_count(amount_staked):
+    # Arrange
+    if network.show_active() not in LOCAL_BLOCKCHAIN_ENVIRONMENTS:
+        pytest.skip("Only for local testing")
+    account = get_account()
+    token_farm, golden_token, *_ = deploy_token_farm_and_golden_token()
+
+    # Initial state
+    assert token_farm.stakerCount() == 0
+    assert token_farm.isStaker(account.address) == False
+
+    # Act: Stake tokens
+    golden_token.approve(token_farm.address, amount_staked, {"from": account})
+    token_farm.stakeTokens(amount_staked, golden_token.address, {"from": account})
+
+    # Assert: Staker added
+    assert token_farm.stakerCount() == 1
+    assert token_farm.isStaker(account.address) == True
+
+    # Act: Unstake all
+    token_farm.unstakeTokens(golden_token.address, {"from": account})
+
+    # Assert: Staker removed
+    assert token_farm.stakerCount() == 0
+    assert token_farm.isStaker(account.address) == False
