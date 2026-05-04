@@ -25,7 +25,7 @@ compiler:
 autofetch_sources: true
 dotenv: .env
 # Change to true to verify smart contracts
-verify: False
+verify: True
 
 networks:
   development:
@@ -59,7 +59,7 @@ networks:
     eth_usd_price_feed: "0x694AA1769357215DE4FAC081bf1f309aDC325306"
     link_usd_price_feed: "0xc59E3633BAAC79493d908e63626716e204A45EdF"
     usdc_usd_price_feed: "0xA2F78ab2355fe2f984D808B5CeE7FD0A93D5270E"
-    verify: False
+    verify: True
     ExplorerAPI: "https://api-sepolia.etherscan.io/api"
     timeout: 300
   goerli:

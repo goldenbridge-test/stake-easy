@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.7;
+pragma solidity ^0.8.19;
 
 import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 import "@chainlink/contracts/src/v0.8/ChainlinkClient.sol";
@@ -65,8 +65,17 @@ contract TokenFarm is ChainlinkClient, Ownable, ReentrancyGuard {
   event AllowedTokenAdded(address indexed token);
 
   event AllowedTokenRemoved(address indexed token);
+
+  event NativeTokenDeposited(address indexed depositor, uint256 amount, uint256 timestamp);
+  event NativeTokenWithdrawn(address indexed recipient, uint256 amount, uint256 timestamp);
+  
   // Limites
   uint256 public maxStakePerUser = 1_00_000 * 10**18; // 100K tokens max
+
+  // Tracking des dépôts ETH natifs
+  mapping(address => uint256) public nativeDepositsByAddress;
+  uint256 public totalNativeDeposited;
+  uint256 public nativeDepositCount;
 
   modifier onlyAuthorizedLoan() {
     require(authorizedLoans[msg.sender], "Unauthorized loan");
@@ -80,6 +89,58 @@ contract TokenFarm is ChainlinkClient, Ownable, ReentrancyGuard {
 
   function depositNative() external payable onlyOwner {
     require(msg.value > 0, "Must send ETH");
+    
+    // Tracking du dépôt
+    if (nativeDepositsByAddress[msg.sender] == 0) {
+      nativeDepositCount++;
+    }
+    nativeDepositsByAddress[msg.sender] += msg.value;
+    totalNativeDeposited += msg.value;
+    
+    // Événement pour tracer le dépôt
+    emit NativeTokenDeposited(msg.sender, msg.value, block.timestamp);
+  }
+
+  /**
+    * @dev Retire les fonds ETH du contrat (avec tracking)
+    */
+  function withdrawNative(uint256 amount) external onlyOwner nonReentrant {
+    require(amount > 0, "Amount must be > 0");
+    require(address(this).balance >= amount, "Insufficient balance");
+    
+    (bool success, ) = msg.sender.call{value: amount}("");
+    require(success, "Withdrawal failed");
+    
+    emit NativeTokenWithdrawn(msg.sender, amount, block.timestamp);
+  }
+
+  /**
+    * @dev Retourne le solde ETH du contrat
+    */
+  function getNativeBalance() external view returns (uint256) {
+    return address(this).balance;
+  }
+
+  /**
+    * @dev Retourne le total d'ETH déposés par une adresse
+    */
+  function getNativeDepositBalance(address depositor) external view returns (uint256) {
+    return nativeDepositsByAddress[depositor];
+  }
+
+  /**
+    * @dev Retourne les statistiques des dépôts natifs
+    */
+  function getNativeDepositStats() 
+    external 
+    view 
+    returns (
+      uint256 totalDeposited,
+      uint256 currentBalance,
+      uint256 depositCount
+    ) 
+  {
+    return (totalNativeDeposited, address(this).balance, nativeDepositCount);
   }
 
   function addAllowedTokens(address token) public onlyOwner {

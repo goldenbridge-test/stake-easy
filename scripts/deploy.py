@@ -21,7 +21,7 @@ def deploy_token_farm_and_golden_token(update_front_end_flag=False):
         golden_token.address,
         "0x0000000000000000000000000000000000000000",
         {"from": account},
-        publish_source=config["networks"][network.show_active()].get("verify"),
+        publish_source=False,  # Désactiver pour éviter les erreurs
     )
     print(f"kenFarm deployed at: {token_farm.address}")
 
@@ -55,7 +55,7 @@ def deploy_token_farm_and_golden_token(update_front_end_flag=False):
     loan_factory = LoanFactory.deploy(
         token_farm.address,
         {"from": account},
-        publish_source=config["networks"][network.show_active()].get("verify"),
+        publish_source=False,  # Désactiver pour éviter les erreurs
     )
     print(f"Done LoanFactory deployed at: {loan_factory.address}")
 
@@ -116,7 +116,7 @@ def deploy_golden_pe_fund(account, update_front_end_flag=False):
         performance_fee_bp,
         max_deposit_limit,
         {"from": account},
-        publish_source=config["networks"][network.show_active()].get("verify")
+        publish_source=False  # Désactiver pour éviter les erreurs
     )
     
     print(f"Done GoldenPEFund deployed at: {fund.address}")
