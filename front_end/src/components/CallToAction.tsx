@@ -1,5 +1,5 @@
-import React from 'react';
 import { ArrowRight } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 const CallToAction = () => {
   return (
@@ -33,13 +33,13 @@ const CallToAction = () => {
 
         {/* Boutons */}
         <div className="flex flex-col sm:flex-row gap-4 justify-center mb-16">
-          <button className="bg-gold hover:bg-gold-hover text-primary font-heading font-bold px-8 py-4 rounded-lg shadow-lg transition transform hover:-translate-y-1 flex items-center justify-center gap-2">
+          <Link to="/earn" className="bg-gold hover:bg-gold-hover text-primary font-heading font-bold px-8 py-4 rounded-lg shadow-lg transition transform hover:-translate-y-1 flex items-center justify-center gap-2">
             Get Started Now
             <ArrowRight className="w-5 h-5" />
-          </button>
-          <button className="bg-white hover:bg-gray-100 text-primary font-heading font-bold px-8 py-4 rounded-lg shadow-lg transition transform hover:-translate-y-1">
+          </Link>
+          <Link to="/earn/demo" className="bg-white hover:bg-gray-100 text-primary font-heading font-bold px-8 py-4 rounded-lg shadow-lg transition transform hover:-translate-y-1 flex items-center justify-center">
             Schedule a Demo
-          </button>
+          </Link>
         </div>
 
         {/* Statistiques (Stats Footer) */}

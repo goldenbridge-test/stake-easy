@@ -8,10 +8,10 @@ import { useAuth } from "../../contexts/AuthContext";
 
 type Step = "locked" | "form" | "success";
 
-const EarnAccessRequest = () => {
+const EarnAccessRequest = ({ initialStep = "locked" }: { initialStep?: Step }) => {
   const { user, refreshProfile } = useAuth();
   const navigate = useNavigate();
-  const [step, setStep] = useState<Step>("locked");
+  const [step, setStep] = useState<Step>(initialStep);
   const [loading, setLoading] = useState(false);
   const [checking, setChecking] = useState(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
