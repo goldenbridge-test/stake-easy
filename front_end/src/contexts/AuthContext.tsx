@@ -6,7 +6,9 @@ interface AuthUser {
     username: string;
     email: string;
     first_name?: string;
+    last_name?: string;
     role?: 'student' | 'instructor' | 'admin';
+    is_earn_eligible?: boolean;
 }
 
 interface AuthContextType {
@@ -15,6 +17,7 @@ interface AuthContextType {
     login: (username: string, password: string) => Promise<void>;
     register: (username: string, email: string, password: string, firstName?: string, lastName?: string) => Promise<void>;
     logout: () => void;
+    refreshProfile: () => Promise<void>;
 }
 
 
@@ -49,6 +52,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
 
 
+    const refreshProfile = async () => {
+        try {
+            const profile = await profileApi.get();
+            saveUser(profile);
+            setUser(profile);
+        } catch {}
+    };
+
     const logout = () => {
         clearTokens();
         setUser(null);
@@ -56,7 +67,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
 
     return (
-        <AuthContext.Provider value={{ user, isLoggedIn: !!user, login, register, logout }}>
+        <AuthContext.Provider value={{ user, isLoggedIn: !!user, login, register, logout, refreshProfile }}>
             {children}
         </AuthContext.Provider>
     );

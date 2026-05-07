@@ -28,6 +28,7 @@ import Footer from "./Footer";
 import { useWeb3 } from "../hooks/useWeb3";
 import { useAuth } from "../contexts/AuthContext";
 import { analyticsApi, coursesApi, usersApi, getUser } from "../services/api";
+import { earnAccessApi } from "../services/blockchainApi";
 import AdminInstructorApplications from "./AdminInstructorApplications";
 
 
@@ -59,7 +60,7 @@ type Category = {
 // ==========================================
 // TABS
 // ==========================================
-type TabKey = "overview" | "tokens" | "courses" | "users" | "applications";
+type TabKey = "overview" | "tokens" | "courses" | "users" | "applications" | "earn_requests";
 
 const AdminDashboard = () => {
   const { user } = useAuth();
@@ -105,6 +106,10 @@ const AdminDashboard = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [userPage, setUserPage] = useState(1);
 
+  // Earn access requests
+  const [earnRequests, setEarnRequests] = useState<any[]>([]);
+  const [earnRequestsLoading, setEarnRequestsLoading] = useState(false);
+
   // ==========================================
   // EFFECTS
   // ==========================================
@@ -139,7 +144,6 @@ const AdminDashboard = () => {
     setCourses((coursesData as any).results || coursesData || []);
     setCategories(categoriesData || []);
     setUsers((usersData as any).results || usersData || []);
-    // Dédupliquer par adresse
     const seen = new Set<string>();
     setTokens(onchainTokens.filter(t => {
       const addr = t.address.toLowerCase();
@@ -147,6 +151,28 @@ const AdminDashboard = () => {
       seen.add(addr);
       return true;
     }));
+    // Earn access requests
+    earnAccessApi.list().then(data => {
+      setEarnRequests(Array.isArray(data) ? data : (data.results || []));
+    }).catch(() => {});
+  };
+
+  const handleApproveEarnRequest = async (id: number) => {
+    setEarnRequestsLoading(true);
+    try {
+      await earnAccessApi.approve(id);
+      setEarnRequests(prev => prev.map(r => r.id === id ? { ...r, status: "approved" } : r));
+    } catch { alert("Failed to approve request."); }
+    finally { setEarnRequestsLoading(false); }
+  };
+
+  const handleRejectEarnRequest = async (id: number) => {
+    setEarnRequestsLoading(true);
+    try {
+      await earnAccessApi.reject(id);
+      setEarnRequests(prev => prev.map(r => r.id === id ? { ...r, status: "rejected" } : r));
+    } catch { alert("Failed to reject request."); }
+    finally { setEarnRequestsLoading(false); }
   };
 
 
@@ -279,6 +305,7 @@ const AdminDashboard = () => {
     { key: "courses", label: "Courses", icon: <BookOpen className="w-4 h-4" /> },
     { key: "users", label: "Users", icon: <Users className="w-4 h-4" /> },
     { key: "applications", label: "Applications", icon: <ClipboardList className="w-4 h-4" /> },
+    { key: "earn_requests", label: "Earn Requests", icon: <Target className="w-4 h-4" /> },
   ];
 
   const visibleTabs = tabs.filter(tab => {
@@ -937,6 +964,79 @@ const AdminDashboard = () => {
           ========================================== */}
           {activeTab === "applications" && (
             <AdminInstructorApplications />
+          )}
+
+          {activeTab === "earn_requests" && (
+            <div>
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h2 className="text-lg font-heading font-bold text-primary">Earn Access Requests</h2>
+                  <p className="text-sm text-gray-400 mt-0.5">Review and approve demo requests to unlock Earn access.</p>
+                </div>
+                <span className="bg-gold/10 text-gold text-xs font-bold px-3 py-1.5 rounded-full border border-gold/20">
+                  {earnRequests.filter(r => r.status === "pending").length} pending
+                </span>
+              </div>
+
+              {earnRequestsLoading && (
+                <div className="flex justify-center py-10">
+                  <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                </div>
+              )}
+
+              {!earnRequestsLoading && earnRequests.length === 0 && (
+                <div className="bg-white rounded-2xl border border-gray-100 p-12 text-center">
+                  <Target className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+                  <p className="text-gray-400 text-sm">No access requests yet.</p>
+                </div>
+              )}
+
+              {!earnRequestsLoading && earnRequests.length > 0 && (
+                <div className="space-y-4">
+                  {earnRequests.map((req) => (
+                    <div key={req.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+                      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                        <div className="flex-1 space-y-1">
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-primary">{req.full_name}</span>
+                            <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                              req.status === "approved" ? "bg-green-50 text-green-600" :
+                              req.status === "rejected" ? "bg-red-50 text-red-500" :
+                              "bg-yellow-50 text-yellow-600"
+                            }`}>
+                              {req.status ?? "pending"}
+                            </span>
+                          </div>
+                          <p className="text-sm text-gray-500">{req.email} · {req.phone} · {req.country}</p>
+                          {req.preferred_time && (
+                            <p className="text-xs text-gray-400">Preferred call: <span className="font-medium">{req.preferred_time}</span></p>
+                          )}
+                          {req.reason && (
+                            <p className="text-sm text-gray-600 mt-2 bg-gray-50 rounded-lg px-3 py-2 italic">"{req.reason}"</p>
+                          )}
+                        </div>
+                        {(!req.status || req.status === "pending") && (
+                          <div className="flex gap-2 shrink-0">
+                            <button
+                              onClick={() => handleApproveEarnRequest(req.id)}
+                              className="flex items-center gap-1.5 bg-green-500 hover:bg-green-600 text-white text-xs font-bold px-4 py-2 rounded-lg transition"
+                            >
+                              <CheckCircle className="w-3.5 h-3.5" /> Approve
+                            </button>
+                            <button
+                              onClick={() => handleRejectEarnRequest(req.id)}
+                              className="flex items-center gap-1.5 bg-red-50 hover:bg-red-100 text-red-500 text-xs font-bold px-4 py-2 rounded-lg transition"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" /> Reject
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           )}
         </div>
       </main>

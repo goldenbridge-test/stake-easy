@@ -3,6 +3,8 @@ import { Link } from "react-router-dom";
 import Navbar from "../Navbar";
 import Footer from "../Footer";
 import { tokenFarmsApi, fundAssetsApi } from "../../services/blockchainApi";
+import { useAuth } from "../../contexts/AuthContext";
+import EarnAccessRequest from "./EarnAccessRequest";
 import {
   Coins,
   TrendingUp,
@@ -22,11 +24,19 @@ const WHY_ITEMS = [
 ];
 
 const EarnHub = () => {
+  const { user, isLoggedIn, refreshProfile } = useAuth();
   const [farms, setFarms] = useState<any[]>([]);
   const [fundAssets, setFundAssets] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [profileChecked, setProfileChecked] = useState(false);
+
+  // Au montage : rafraîchir le profil depuis le backend avant de vérifier l'éligibilité
+  useEffect(() => {
+    refreshProfile().finally(() => setProfileChecked(true));
+  }, []);
 
   useEffect(() => {
+    if (!profileChecked || !isLoggedIn || !user?.is_earn_eligible) return;
     Promise.all([
       tokenFarmsApi.list().catch(() => ({ results: [] })),
       fundAssetsApi.list().catch(() => ({ results: [] })),
@@ -34,7 +44,21 @@ const EarnHub = () => {
       setFarms(farmsData.results || farmsData || []);
       setFundAssets(fundsData.results || fundsData || []);
     }).finally(() => setLoading(false));
-  }, []);
+  }, [profileChecked, user?.is_earn_eligible]);
+
+  // Spinner pendant la vérification du profil
+  if (!profileChecked) {
+    return (
+      <div className="bg-gray-50 min-h-screen font-body flex items-center justify-center">
+        <Loader2 className="w-8 h-8 text-primary animate-spin" />
+      </div>
+    );
+  }
+
+  // Garde d'accès : non connecté ou non éligible → page de demande
+  if (!isLoggedIn || !user?.is_earn_eligible) {
+    return <EarnAccessRequest />;
+  }
 
   return (
     <div className="bg-gray-50 min-h-screen font-body text-dark">

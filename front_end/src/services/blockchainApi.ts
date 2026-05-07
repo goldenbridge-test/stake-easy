@@ -209,3 +209,48 @@ export const fundAssetsApi = {
         return res.json();
     },
 };
+
+// ─── Earn Access Requests ─────────────────────────────────────────────────────
+export const earnAccessApi = {
+    // POST /api/earn/access-request/ — soumettre une demande d'accès
+    async request(data: {
+        full_name: string;
+        email: string;
+        phone: string;
+        country: string;
+        reason: string;
+        preferred_time: string;
+    }) {
+        const res = await apiFetch('/api/earn/access-request/', {
+            method: 'POST',
+            body: JSON.stringify(data),
+        });
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(JSON.stringify(err));
+        }
+        return res.json();
+    },
+    // GET /api/earn/access-request/ — liste des demandes (admin)
+    async list() {
+        const res = await apiFetch('/api/earn/access-request/');
+        if (!res.ok) throw new Error('Failed to fetch access requests');
+        return res.json();
+    },
+    // PATCH /api/earn/access-request/{id}/approve/ — approuver une demande (admin)
+    async approve(id: number) {
+        const res = await apiFetch(`/api/earn/access-request/${id}/approve/`, {
+            method: 'PATCH',
+        });
+        if (!res.ok) throw new Error('Failed to approve request');
+        return res.json();
+    },
+    // PATCH /api/earn/access-request/{id}/reject/ — rejeter une demande (admin)
+    async reject(id: number) {
+        const res = await apiFetch(`/api/earn/access-request/${id}/reject/`, {
+            method: 'PATCH',
+        });
+        if (!res.ok) throw new Error('Failed to reject request');
+        return res.json();
+    },
+};

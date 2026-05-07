@@ -22,6 +22,7 @@ const Navbar = () => {
   // Base links available to everyone
   const baseLinks = [
     { name: "Accueil", href: "/" },
+    { name: "Services", href: "/services" },
     { name: "Academy", href: "/academy" },
     { name: "Earn", href: "/earn" },
   ];
