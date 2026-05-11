@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import Navbar from "../Navbar";
 import Footer from "../Footer";
-import { tokenFarmsApi, fundAssetsApi } from "../../services/blockchainApi";
+import { tokenFarmsApi, fundAssetsApi, serviceSubscriptionsApi, ServiceSubscription } from "../../services/blockchainApi";
 import { useAuth } from "../../contexts/AuthContext";
 import EarnAccessRequest from "./EarnAccessRequest";
 import {
@@ -29,6 +29,7 @@ const EarnHub = () => {
   const [fundAssets, setFundAssets] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [profileChecked, setProfileChecked] = useState(false);
+  const [mySubscriptions, setMySubscriptions] = useState<ServiceSubscription[]>([]);
 
   // Au montage : rafraîchir le profil depuis le backend avant de vérifier l'éligibilité
   useEffect(() => {
@@ -40,9 +41,11 @@ const EarnHub = () => {
     Promise.all([
       tokenFarmsApi.list().catch(() => ({ results: [] })),
       fundAssetsApi.list().catch(() => ({ results: [] })),
-    ]).then(([farmsData, fundsData]) => {
+      serviceSubscriptionsApi.mine().catch(() => []),
+    ]).then(([farmsData, fundsData, subs]) => {
       setFarms(farmsData.results || farmsData || []);
       setFundAssets(fundsData.results || fundsData || []);
+      setMySubscriptions(subs);
     }).finally(() => setLoading(false));
   }, [profileChecked, user?.is_earn_eligible]);
 
@@ -99,6 +102,72 @@ const EarnHub = () => {
           </div>
         </div>
       </div>
+
+      {/* ── Mon Service ── */}
+      {mySubscriptions.length > 0 && (
+        <div className="max-w-7xl mx-auto px-6 pt-10">
+          <h2 className="text-xl font-heading font-bold text-primary mb-4">Mon Service</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            {mySubscriptions.map((sub) => {
+              const SERVICE_META: Record<string, { label: string; color: string; bg: string; bar: string }> = {
+                advisory:    { label: "Golden Advisory",     color: "text-gold",         bg: "bg-gold/10",         bar: "from-gold to-yellow-400" },
+                copytrading: { label: "Golden Copy-Trading", color: "text-blue-500",     bg: "bg-blue-500/10",     bar: "from-blue-400 to-blue-600" },
+                otc:         { label: "Golden OTC Desk",     color: "text-emerald-500",  bg: "bg-emerald-500/10",  bar: "from-emerald-400 to-emerald-600" },
+              };
+              const meta = SERVICE_META[sub.service] ?? { label: sub.service, color: "text-primary", bg: "bg-gray-100", bar: "from-gray-400 to-gray-600" };
+              const STATUS_COLORS: Record<string, string> = {
+                active: "bg-green-50 text-green-600",
+                paused: "bg-yellow-50 text-yellow-600",
+                ended:  "bg-gray-100 text-gray-500",
+              };
+              const durationLabel = sub.contract_duration_months >= 12
+                ? `${Math.floor(sub.contract_duration_months / 12)} an${Math.floor(sub.contract_duration_months / 12) > 1 ? "s" : ""}`
+                : `${sub.contract_duration_months} mois`;
+              const start = new Date(sub.contract_start).toLocaleDateString("fr-FR");
+              const end   = sub.contract_end ? new Date(sub.contract_end).toLocaleDateString("fr-FR") : "—";
+              return (
+                <div key={sub.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex flex-col">
+                  <div className={`h-1 w-full bg-gradient-to-r ${meta.bar}`} />
+                  <div className="p-6 flex flex-col gap-4 flex-1">
+                    <div className="flex items-center justify-between">
+                      <span className={`text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full ${meta.bg} ${meta.color}`}>
+                        {meta.label}
+                      </span>
+                      <span className={`text-xs font-bold px-2.5 py-1 rounded-full capitalize ${STATUS_COLORS[sub.status] ?? "bg-gray-100 text-gray-500"}`}>
+                        {sub.status}
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className={`${meta.bg} rounded-xl p-3 text-center`}>
+                        <div className={`text-base font-black ${meta.color}`}>${parseFloat(sub.investment_amount).toLocaleString()}</div>
+                        <div className="text-[10px] text-gray-500 mt-0.5">Apport</div>
+                      </div>
+                      <div className={`${meta.bg} rounded-xl p-3 text-center`}>
+                        <div className={`text-base font-black ${meta.color}`}>{sub.expected_return_rate}%</div>
+                        <div className="text-[10px] text-gray-500 mt-0.5">Rendement attendu</div>
+                      </div>
+                    </div>
+                    <div className="bg-gray-50 rounded-xl p-3 text-sm text-gray-600 space-y-1">
+                      <div className="flex justify-between">
+                        <span className="text-gray-400 text-xs">Début</span>
+                        <span className="font-semibold text-xs">{start}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-400 text-xs">Fin</span>
+                        <span className="font-semibold text-xs">{end}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-400 text-xs">Durée</span>
+                        <span className="font-semibold text-xs">{durationLabel}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       <div className="max-w-7xl mx-auto px-6 py-16 space-y-16">
 

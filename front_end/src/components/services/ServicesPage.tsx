@@ -1,13 +1,17 @@
 import { useState } from "react";
-import { ArrowRight, X, MessageCircle, TrendingUp, BarChart3, Repeat2, Shield, CheckCircle, ChevronRight, Zap, Lock, Users } from "lucide-react";
+import {
+  ArrowRight, X, MessageCircle, TrendingUp, BarChart3, Repeat2,
+  Shield, CheckCircle, ChevronRight, Zap, Lock, Users, Loader2, PhoneCall,
+} from "lucide-react";
 import Navbar from "../Navbar";
 import Footer from "../Footer";
+import { serviceInquiriesApi, ServiceType } from "../../services/blockchainApi";
 
 const WHATSAPP_NUMBER = "22901441348420";
 const WHATSAPP_BASE = `https://wa.me/${WHATSAPP_NUMBER}`;
 
 interface Service {
-  id: string;
+  id: ServiceType;
   badge: string;
   title: string;
   subtitle: string;
@@ -16,6 +20,7 @@ interface Service {
   color: string;
   bgColor: string;
   borderColor: string;
+  barClass: string;
   features: string[];
   highlights: { icon: React.ReactNode; label: string; value: string }[];
   ctaLabel: string;
@@ -34,6 +39,7 @@ const services: Service[] = [
     color: "text-gold",
     bgColor: "bg-gold/10",
     borderColor: "border-gold/20",
+    barClass: "from-gold to-yellow-400",
     features: [
       "Dedicated financial advisor",
       "Custom portfolio construction",
@@ -60,6 +66,7 @@ const services: Service[] = [
     color: "text-blue-500",
     bgColor: "bg-blue-500/10",
     borderColor: "border-blue-500/20",
+    barClass: "from-blue-400 to-blue-600",
     features: [
       "Real-time trade mirroring",
       "Curated trader leaderboard",
@@ -86,6 +93,7 @@ const services: Service[] = [
     color: "text-emerald-500",
     bgColor: "bg-emerald-500/10",
     borderColor: "border-emerald-500/20",
+    barClass: "from-emerald-400 to-emerald-600",
     features: [
       "BTC, ETH, USDT & major altcoins",
       "Preferential rates on large volumes",
@@ -103,85 +111,172 @@ const services: Service[] = [
   },
 ];
 
-const ServiceCard = ({ service, onLearnMore }: { service: Service; onLearnMore: () => void }) => (
-  <div className={`bg-white rounded-3xl border ${service.borderColor} shadow-sm hover:shadow-lg transition-all duration-300 group overflow-hidden flex flex-col`}>
-    {/* Top accent bar */}
-    <div className={`h-1 w-full ${service.id === "advisory" ? "bg-gradient-to-r from-gold to-yellow-400" : service.id === "copytrading" ? "bg-gradient-to-r from-blue-400 to-blue-600" : "bg-gradient-to-r from-emerald-400 to-emerald-600"}`} />
+// ── Contact Form Modal ─────────────────────────────────────────────────────────
+const ContactModal = ({
+  service,
+  onClose,
+}: {
+  service: Service;
+  onClose: () => void;
+}) => {
+  const [form, setForm] = useState({ full_name: "", email: "", phone: "", message: "" });
+  const [loading, setLoading] = useState(false);
+  const [done, setDone] = useState(false);
+  const [saved, setSaved] = useState(false);
 
-    <div className="p-8 flex flex-col flex-1">
-      {/* Header */}
-      <div className="flex items-start justify-between mb-6">
-        <div>
-          <span className={`inline-block text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full ${service.bgColor} ${service.color} mb-3`}>
-            {service.badge}
-          </span>
-          <h3 className="text-2xl font-heading font-bold text-primary">{service.title}</h3>
-          <p className={`text-sm font-semibold mt-0.5 ${service.color}`}>{service.subtitle}</p>
-        </div>
-        <div className={`w-14 h-14 rounded-2xl ${service.bgColor} flex items-center justify-center ${service.color} shrink-0`}>
-          {service.icon}
-        </div>
-      </div>
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      await serviceInquiriesApi.create({ service: service.id, ...form });
+      setSaved(true);
+    } catch {
+      // backend pas encore disponible — on continue quand même vers WhatsApp
+      setSaved(false);
+    } finally {
+      setLoading(false);
+    }
+    setDone(true);
+    setTimeout(() => {
+      window.open(`${WHATSAPP_BASE}?text=${encodeURIComponent(service.waMessage)}`, "_blank");
+      onClose();
+    }, 1500);
+  };
 
-      {/* Description */}
-      <p className="text-gray-500 text-sm leading-relaxed mb-6">{service.description}</p>
-
-      {/* Highlights */}
-      <div className="grid grid-cols-3 gap-3 mb-6">
-        {service.highlights.map((h) => (
-          <div key={h.label} className={`${service.bgColor} rounded-xl p-3 text-center`}>
-            <div className={`flex justify-center mb-1 ${service.color}`}>{h.icon}</div>
-            <div className={`text-sm font-black ${service.color}`}>{h.value}</div>
-            <div className="text-[10px] text-gray-500 mt-0.5 leading-tight">{h.label}</div>
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className={`h-1 w-full bg-gradient-to-r ${service.barClass}`} />
+        <div className="px-7 pt-6 pb-4 flex items-center justify-between border-b border-gray-100">
+          <div className="flex items-center gap-3">
+            <div className={`w-10 h-10 rounded-xl ${service.bgColor} flex items-center justify-center ${service.color}`}>
+              {service.icon}
+            </div>
+            <div>
+              <p className={`text-xs font-black uppercase tracking-widest ${service.color}`}>{service.badge}</p>
+              <h2 className="text-base font-heading font-bold text-primary">{service.title}</h2>
+            </div>
           </div>
-        ))}
-      </div>
+          <button
+            onClick={onClose}
+            className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 transition"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
 
-      {/* Features */}
-      <ul className="space-y-2 mb-8 flex-1">
-        {service.features.map((f) => (
-          <li key={f} className="flex items-center gap-2.5 text-sm text-gray-600">
-            <CheckCircle className={`w-4 h-4 shrink-0 ${service.color}`} />
-            {f}
-          </li>
-        ))}
-      </ul>
+        {done ? (
+          <div className="px-7 py-10 text-center">
+            <div className={`w-16 h-16 ${saved ? "bg-green-50" : "bg-yellow-50"} rounded-full flex items-center justify-center mx-auto mb-4`}>
+              <CheckCircle className={`w-8 h-8 ${saved ? "text-green-500" : "text-yellow-500"}`} />
+            </div>
+            <h3 className="font-heading font-bold text-primary text-lg mb-2">
+              {saved ? "Demande enregistrée !" : "Redirection en cours…"}
+            </h3>
+            <p className="text-gray-500 text-sm">
+              {saved
+                ? "Vos coordonnées ont bien été enregistrées. Redirection vers WhatsApp…"
+                : "Impossible d'enregistrer pour l'instant (backend indisponible). Vous serez quand même redirigé vers WhatsApp."}
+            </p>
+          </div>
+        ) : (
+          /* Form */
+          <form onSubmit={handleSubmit} className="px-7 py-6 space-y-4">
+            <p className="text-sm text-gray-500">
+              Laissez vos coordonnées — notre équipe vous contactera sous 48h.
+              Vous serez ensuite redirigé vers WhatsApp.
+            </p>
 
-      {/* CTAs */}
-      <div className="flex gap-3 mt-auto">
-        <a
-          href={`${WHATSAPP_BASE}?text=${encodeURIComponent(service.waMessage)}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm transition
-            ${service.id === "advisory"
-              ? "bg-gold hover:bg-gold-hover text-white shadow-md shadow-gold/20"
-              : service.id === "copytrading"
-              ? "bg-blue-500 hover:bg-blue-600 text-white shadow-md shadow-blue-500/20"
-              : "bg-emerald-500 hover:bg-emerald-600 text-white shadow-md shadow-emerald-500/20"
-            }`}
-        >
-          <MessageCircle className="w-4 h-4" />
-          {service.ctaLabel}
-        </a>
-        <button
-          onClick={onLearnMore}
-          className="px-4 py-3 rounded-xl border border-gray-200 text-gray-500 hover:border-primary hover:text-primary font-semibold text-sm transition"
-        >
-          <ChevronRight className="w-4 h-4" />
-        </button>
+            <div className="grid grid-cols-1 gap-3">
+              <div>
+                <label className="block text-xs font-bold text-gray-600 uppercase tracking-wide mb-1.5">Nom complet *</label>
+                <input
+                  required
+                  value={form.full_name}
+                  onChange={e => setForm({ ...form, full_name: e.target.value })}
+                  placeholder="Honorine GABIAM"
+                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold/40"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-gray-600 uppercase tracking-wide mb-1.5">Email *</label>
+                  <input
+                    required
+                    type="email"
+                    value={form.email}
+                    onChange={e => setForm({ ...form, email: e.target.value })}
+                    placeholder="vous@email.com"
+                    className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold/40"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-600 uppercase tracking-wide mb-1.5">Téléphone *</label>
+                  <input
+                    required
+                    value={form.phone}
+                    onChange={e => setForm({ ...form, phone: e.target.value })}
+                    placeholder="+229 96 00 00 00"
+                    className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold/40"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-600 uppercase tracking-wide mb-1.5">Message (optionnel)</label>
+                <textarea
+                  value={form.message}
+                  onChange={e => setForm({ ...form, message: e.target.value })}
+                  rows={2}
+                  placeholder="Décrivez votre besoin..."
+                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold/40 resize-none"
+                />
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className={`w-full flex items-center justify-center gap-2 py-3.5 rounded-xl font-bold text-sm transition disabled:opacity-60
+                ${service.id === "advisory"   ? "bg-gold hover:bg-gold-hover text-white shadow-md shadow-gold/20"
+                : service.id === "copytrading" ? "bg-blue-500 hover:bg-blue-600 text-white shadow-md shadow-blue-500/20"
+                : "bg-emerald-500 hover:bg-emerald-600 text-white shadow-md shadow-emerald-500/20"}`}
+            >
+              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <PhoneCall className="w-4 h-4" />}
+              {loading ? "Envoi en cours…" : "Envoyer & continuer sur WhatsApp"}
+            </button>
+          </form>
+        )}
       </div>
     </div>
-  </div>
-);
+  );
+};
 
-const ServiceModal = ({ service, onClose }: { service: Service; onClose: () => void }) => (
-  <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" onClick={onClose}>
+// ── Service Detail Modal ───────────────────────────────────────────────────────
+const ServiceModal = ({
+  service,
+  onContact,
+  onClose,
+}: {
+  service: Service;
+  onContact: () => void;
+  onClose: () => void;
+}) => (
+  <div
+    className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
+    onClick={onClose}
+  >
     <div
       className="bg-white rounded-3xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto"
       onClick={(e) => e.stopPropagation()}
     >
-      {/* Modal header */}
+      <div className={`h-1 w-full bg-gradient-to-r ${service.barClass}`} />
       <div className="relative p-8 pb-6">
         <button
           onClick={onClose}
@@ -189,7 +284,6 @@ const ServiceModal = ({ service, onClose }: { service: Service; onClose: () => v
         >
           <X className="w-4 h-4" />
         </button>
-
         <span className={`inline-block text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full ${service.bgColor} ${service.color} mb-3`}>
           {service.badge}
         </span>
@@ -206,7 +300,6 @@ const ServiceModal = ({ service, onClose }: { service: Service; onClose: () => v
       </div>
 
       <div className="border-t border-gray-100 px-8 py-6 space-y-6">
-        {/* Stats */}
         <div>
           <p className="text-xs font-black uppercase tracking-widest text-gray-400 mb-3">Key Figures</p>
           <div className="grid grid-cols-3 gap-3">
@@ -219,8 +312,6 @@ const ServiceModal = ({ service, onClose }: { service: Service; onClose: () => v
             ))}
           </div>
         </div>
-
-        {/* Features */}
         <div>
           <p className="text-xs font-black uppercase tracking-widest text-gray-400 mb-3">What's Included</p>
           <ul className="space-y-2.5">
@@ -234,31 +325,91 @@ const ServiceModal = ({ service, onClose }: { service: Service; onClose: () => v
             ))}
           </ul>
         </div>
-
-        {/* CTA */}
-        <a
-          href={`${WHATSAPP_BASE}?text=${encodeURIComponent(service.waMessage)}`}
-          target="_blank"
-          rel="noopener noreferrer"
+        <button
+          onClick={() => { onClose(); onContact(); }}
           className={`flex items-center justify-center gap-2 w-full py-4 rounded-xl font-bold text-sm transition
-            ${service.id === "advisory"
-              ? "bg-gold hover:bg-gold-hover text-white shadow-lg shadow-gold/20"
-              : service.id === "copytrading"
-              ? "bg-blue-500 hover:bg-blue-600 text-white shadow-lg shadow-blue-500/20"
-              : "bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-500/20"
-            }`}
+            ${service.id === "advisory"    ? "bg-gold hover:bg-gold-hover text-white shadow-lg shadow-gold/20"
+            : service.id === "copytrading" ? "bg-blue-500 hover:bg-blue-600 text-white shadow-lg shadow-blue-500/20"
+            : "bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-500/20"}`}
         >
           <MessageCircle className="w-4 h-4" />
-          {service.ctaLabel} via WhatsApp
+          {service.ctaLabel}
           <ArrowRight className="w-4 h-4" />
-        </a>
+        </button>
       </div>
     </div>
   </div>
 );
 
+// ── Service Card ───────────────────────────────────────────────────────────────
+const ServiceCard = ({
+  service,
+  onContact,
+  onLearnMore,
+}: {
+  service: Service;
+  onContact: () => void;
+  onLearnMore: () => void;
+}) => (
+  <div className={`bg-white rounded-3xl border ${service.borderColor} shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden flex flex-col`}>
+    <div className={`h-1 w-full bg-gradient-to-r ${service.barClass}`} />
+    <div className="p-8 flex flex-col flex-1">
+      <div className="flex items-start justify-between mb-6">
+        <div>
+          <span className={`inline-block text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full ${service.bgColor} ${service.color} mb-3`}>
+            {service.badge}
+          </span>
+          <h3 className="text-2xl font-heading font-bold text-primary">{service.title}</h3>
+          <p className={`text-sm font-semibold mt-0.5 ${service.color}`}>{service.subtitle}</p>
+        </div>
+        <div className={`w-14 h-14 rounded-2xl ${service.bgColor} flex items-center justify-center ${service.color} shrink-0`}>
+          {service.icon}
+        </div>
+      </div>
+      <p className="text-gray-500 text-sm leading-relaxed mb-6">{service.description}</p>
+      <div className="grid grid-cols-3 gap-3 mb-6">
+        {service.highlights.map((h) => (
+          <div key={h.label} className={`${service.bgColor} rounded-xl p-3 text-center`}>
+            <div className={`flex justify-center mb-1 ${service.color}`}>{h.icon}</div>
+            <div className={`text-sm font-black ${service.color}`}>{h.value}</div>
+            <div className="text-[10px] text-gray-500 mt-0.5 leading-tight">{h.label}</div>
+          </div>
+        ))}
+      </div>
+      <ul className="space-y-2 mb-8 flex-1">
+        {service.features.map((f) => (
+          <li key={f} className="flex items-center gap-2.5 text-sm text-gray-600">
+            <CheckCircle className={`w-4 h-4 shrink-0 ${service.color}`} />
+            {f}
+          </li>
+        ))}
+      </ul>
+      <div className="flex gap-3 mt-auto">
+        <button
+          onClick={onContact}
+          className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm transition
+            ${service.id === "advisory"    ? "bg-gold hover:bg-gold-hover text-white shadow-md shadow-gold/20"
+            : service.id === "copytrading" ? "bg-blue-500 hover:bg-blue-600 text-white shadow-md shadow-blue-500/20"
+            : "bg-emerald-500 hover:bg-emerald-600 text-white shadow-md shadow-emerald-500/20"}`}
+        >
+          <MessageCircle className="w-4 h-4" />
+          {service.ctaLabel}
+        </button>
+        <button
+          onClick={onLearnMore}
+          className="px-4 py-3 rounded-xl border border-gray-200 text-gray-500 hover:border-primary hover:text-primary font-semibold text-sm transition"
+        >
+          <ChevronRight className="w-4 h-4" />
+        </button>
+      </div>
+    </div>
+  </div>
+);
+
+// ── Page ───────────────────────────────────────────────────────────────────────
 const ServicesPage = () => {
-  const [selectedService, setSelectedService] = useState<Service | null>(null);
+  const [detailService, setDetailService]   = useState<Service | null>(null);
+  const [contactService, setContactService] = useState<Service | null>(null);
 
   return (
     <div className="bg-gray-50 min-h-screen font-body text-dark">
@@ -268,7 +419,6 @@ const ServicesPage = () => {
       <section className="pt-32 pb-16 px-6 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-96 h-96 bg-gold/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl pointer-events-none" />
         <div className="absolute bottom-0 left-0 w-80 h-80 bg-blue-500/5 rounded-full translate-y-1/2 -translate-x-1/2 blur-3xl pointer-events-none" />
-
         <div className="max-w-3xl mx-auto text-center relative">
           <div className="inline-flex items-center gap-2 bg-gold/10 border border-gold/20 text-gold text-xs font-black px-3 py-1.5 rounded-full uppercase tracking-widest mb-5">
             GoldenBridge Services
@@ -286,14 +436,15 @@ const ServicesPage = () => {
         </div>
       </section>
 
-      {/* Services grid */}
+      {/* Cards */}
       <section className="pb-24 px-6">
         <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-6">
           {services.map((service) => (
             <ServiceCard
               key={service.id}
               service={service}
-              onLearnMore={() => setSelectedService(service)}
+              onContact={() => setContactService(service)}
+              onLearnMore={() => setDetailService(service)}
             />
           ))}
         </div>
@@ -325,9 +476,21 @@ const ServicesPage = () => {
 
       <Footer />
 
-      {/* Modal */}
-      {selectedService && (
-        <ServiceModal service={selectedService} onClose={() => setSelectedService(null)} />
+      {/* Detail modal */}
+      {detailService && (
+        <ServiceModal
+          service={detailService}
+          onContact={() => { setDetailService(null); setContactService(detailService); }}
+          onClose={() => setDetailService(null)}
+        />
+      )}
+
+      {/* Contact form modal */}
+      {contactService && (
+        <ContactModal
+          service={contactService}
+          onClose={() => setContactService(null)}
+        />
       )}
     </div>
   );

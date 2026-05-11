@@ -33,6 +33,7 @@ import PaymentReturn from './components/PaymentReturn';
 import ResetPassword from './components/ResetPassword';
 import InstructorApplicationForm from './components/academy/InstructorApplicationForm';
 import ServicesPage from './components/services/ServicesPage';
+import MyServicesPage from './components/services/MyServicesPage';
 
 // On crée un composant pour la Landing Page complète pour garder le code propre
 const LandingPage = () => (
@@ -89,6 +90,7 @@ function App() {
             <Route path="/verify/:code" element={<CertificateVerify />} />
             <Route path="/payment/return" element={<PaymentReturn />} />
             <Route path="/services" element={<ServicesPage />} />
+            <Route path="/my-services" element={<MyServicesPage />} />
           </Routes>
         </div>
       </Router>

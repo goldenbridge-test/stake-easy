@@ -21,6 +21,8 @@ import {
   Settings,
   Target,
   ClipboardList,
+  Briefcase,
+  X,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import Navbar from "./Navbar";
@@ -28,7 +30,11 @@ import Footer from "./Footer";
 import { useWeb3 } from "../hooks/useWeb3";
 import { useAuth } from "../contexts/AuthContext";
 import { analyticsApi, coursesApi, usersApi, getUser } from "../services/api";
-import { earnAccessApi } from "../services/blockchainApi";
+import {
+  earnAccessApi,
+  serviceSubscriptionsApi, ServiceSubscription, ServiceType, SubscriptionStatus,
+  serviceInquiriesApi, ServiceInquiry, InquiryStatus,
+} from "../services/blockchainApi";
 import AdminInstructorApplications from "./AdminInstructorApplications";
 
 
@@ -60,7 +66,7 @@ type Category = {
 // ==========================================
 // TABS
 // ==========================================
-type TabKey = "overview" | "tokens" | "courses" | "users" | "applications" | "earn_requests";
+type TabKey = "overview" | "tokens" | "courses" | "users" | "applications" | "earn_requests" | "service_clients";
 
 const AdminDashboard = () => {
   const { user } = useAuth();
@@ -110,6 +116,21 @@ const AdminDashboard = () => {
   const [earnRequests, setEarnRequests] = useState<any[]>([]);
   const [earnRequestsLoading, setEarnRequestsLoading] = useState(false);
 
+  // Service inquiries
+  const [serviceInquiries, setServiceInquiries] = useState<ServiceInquiry[]>([]);
+
+  // Service subscriptions
+  const [serviceClients, setServiceClients] = useState<ServiceSubscription[]>([]);
+  const [showClientForm, setShowClientForm] = useState(false);
+  const [editingClient, setEditingClient] = useState<ServiceSubscription | null>(null);
+  const [clientFormLoading, setClientFormLoading] = useState(false);
+  const emptyClientForm = {
+    user_id: 0, service: "advisory" as ServiceType, investment_amount: "",
+    contract_start: "", contract_duration_months: 12,
+    expected_return_rate: "", status: "active" as SubscriptionStatus, notes: "",
+  };
+  const [clientForm, setClientForm] = useState(emptyClientForm);
+
   // ==========================================
   // EFFECTS
   // ==========================================
@@ -155,6 +176,10 @@ const AdminDashboard = () => {
     earnAccessApi.list().then(data => {
       setEarnRequests(Array.isArray(data) ? data : (data.results || []));
     }).catch(() => {});
+    // Service subscriptions
+    serviceSubscriptionsApi.list().then(data => setServiceClients(data)).catch(() => {});
+    // Service inquiries
+    serviceInquiriesApi.list().then(data => setServiceInquiries(data)).catch(() => {});
   };
 
   const handleApproveEarnRequest = async (id: number) => {
@@ -164,6 +189,97 @@ const AdminDashboard = () => {
       setEarnRequests(prev => prev.map(r => r.id === id ? { ...r, status: "approved" } : r));
     } catch { alert("Failed to approve request."); }
     finally { setEarnRequestsLoading(false); }
+  };
+
+  // ==========================================
+  // SERVICE INQUIRY HANDLERS
+  // ==========================================
+
+  const handleInquiryStatus = async (id: number, status: InquiryStatus) => {
+    try {
+      await serviceInquiriesApi.update(id, { status });
+      setServiceInquiries(prev => prev.map(i => i.id === id ? { ...i, status } : i));
+    } catch { alert("Impossible de mettre à jour le statut."); }
+  };
+
+  const handleDeleteInquiry = async (id: number) => {
+    if (!window.confirm("Supprimer cette demande ?")) return;
+    try {
+      await serviceInquiriesApi.remove(id);
+      setServiceInquiries(prev => prev.filter(i => i.id !== id));
+    } catch { alert("Impossible de supprimer."); }
+  };
+
+  const handleConvertInquiry = (inquiry: ServiceInquiry) => {
+    setActiveTab("service_clients");
+    setEditingClient(null);
+    setClientForm({
+      user_id: 0,
+      service: inquiry.service,
+      investment_amount: "",
+      contract_start: new Date().toISOString().split("T")[0],
+      contract_duration_months: 12,
+      expected_return_rate: "",
+      status: "active",
+      notes: `Converti depuis demande du ${new Date(inquiry.created_at).toLocaleDateString("fr-FR")} — ${inquiry.full_name} (${inquiry.email})`,
+    });
+    setShowClientForm(true);
+  };
+
+  // ==========================================
+  // SERVICE CLIENT HANDLERS
+  // ==========================================
+
+  const handleOpenClientForm = (client?: ServiceSubscription) => {
+    if (client) {
+      setEditingClient(client);
+      setClientForm({
+        user_id: client.user.id,
+        service: client.service,
+        investment_amount: client.investment_amount,
+        contract_start: client.contract_start,
+        contract_duration_months: client.contract_duration_months,
+        expected_return_rate: client.expected_return_rate,
+        status: client.status,
+        notes: client.notes,
+      });
+    } else {
+      setEditingClient(null);
+      setClientForm(emptyClientForm);
+    }
+    setShowClientForm(true);
+  };
+
+  const handleSaveClient = async () => {
+    if (!clientForm.user_id || !clientForm.investment_amount || !clientForm.contract_start) {
+      alert("Remplis tous les champs obligatoires.");
+      return;
+    }
+    setClientFormLoading(true);
+    try {
+      if (editingClient) {
+        const updated = await serviceSubscriptionsApi.update(editingClient.id, clientForm);
+        setServiceClients(prev => prev.map(c => c.id === editingClient.id ? updated : c));
+      } else {
+        const created = await serviceSubscriptionsApi.create(clientForm);
+        setServiceClients(prev => [created, ...prev]);
+      }
+      setShowClientForm(false);
+      setEditingClient(null);
+      setClientForm(emptyClientForm);
+    } catch (e: any) {
+      alert("Erreur : " + e.message);
+    } finally {
+      setClientFormLoading(false);
+    }
+  };
+
+  const handleDeleteClient = async (id: number) => {
+    if (!window.confirm("Supprimer ce client ?")) return;
+    try {
+      await serviceSubscriptionsApi.remove(id);
+      setServiceClients(prev => prev.filter(c => c.id !== id));
+    } catch { alert("Impossible de supprimer."); }
   };
 
   const handleRejectEarnRequest = async (id: number) => {
@@ -306,6 +422,7 @@ const AdminDashboard = () => {
     { key: "users", label: "Users", icon: <Users className="w-4 h-4" /> },
     { key: "applications", label: "Applications", icon: <ClipboardList className="w-4 h-4" /> },
     { key: "earn_requests", label: "Earn Requests", icon: <Target className="w-4 h-4" /> },
+    { key: "service_clients", label: "Service Clients", icon: <Briefcase className="w-4 h-4" /> },
   ];
 
   const visibleTabs = tabs.filter(tab => {
@@ -965,6 +1082,394 @@ const AdminDashboard = () => {
           {activeTab === "applications" && (
             <AdminInstructorApplications />
           )}
+
+          {/* ==========================================
+              TAB: SERVICE CLIENTS
+          ========================================== */}
+          {activeTab === "service_clients" && (() => {
+            const INQUIRY_PIPELINE: { key: InquiryStatus; label: string; color: string }[] = [
+              { key: "new",        label: "Nouveau",    color: "bg-blue-50 text-blue-600" },
+              { key: "contacted",  label: "Contacté",   color: "bg-yellow-50 text-yellow-600" },
+              { key: "demo_done",  label: "Démo faite", color: "bg-purple-50 text-purple-600" },
+              { key: "converted",  label: "Converti",   color: "bg-green-50 text-green-600" },
+            ];
+
+            const SVC_META: Record<string, { label: string; dot: string }> = {
+              advisory:    { label: "Advisory",     dot: "bg-gold" },
+              copytrading: { label: "Copy-Trading",  dot: "bg-blue-500" },
+              otc:         { label: "OTC Desk",      dot: "bg-emerald-500" },
+            };
+
+            const SERVICE_LABELS: Record<string, { label: string; color: string; dot: string }> = {
+              advisory:    { label: "Golden Advisory",     color: "bg-gold/10 text-gold border-gold/20",           dot: "bg-gold" },
+              copytrading: { label: "Golden Copy-Trading", color: "bg-blue-50 text-blue-600 border-blue-200",      dot: "bg-blue-500" },
+              otc:         { label: "Golden OTC Desk",     color: "bg-emerald-50 text-emerald-600 border-emerald-200", dot: "bg-emerald-500" },
+            };
+            const STATUS_COLORS: Record<string, string> = {
+              active: "bg-green-50 text-green-600",
+              paused: "bg-yellow-50 text-yellow-600",
+              ended:  "bg-gray-100 text-gray-500",
+            };
+            return (
+              <div className="space-y-6">
+                {/* Header */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div>
+                    <h2 className="text-base font-heading font-bold text-dark">Service Clients</h2>
+                    <p className="text-xs text-gray-400 mt-0.5">{serviceClients.length} client(s) enregistré(s)</p>
+                  </div>
+                  <button
+                    onClick={() => handleOpenClientForm()}
+                    className="bg-primary hover:bg-primary-dark text-white font-semibold px-4 py-2 rounded-lg transition text-sm flex items-center gap-1.5 shrink-0"
+                  >
+                    <Plus className="w-4 h-4" /> Ajouter un client
+                  </button>
+                </div>
+
+                {/* ── Inquiries section ── */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-heading font-bold text-dark">Demandes de contact</h3>
+                    <span className="text-xs text-gray-400">{serviceInquiries.length} demande(s) au total</span>
+                  </div>
+
+                  {/* Pipeline stats */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    {INQUIRY_PIPELINE.map(p => {
+                      const count = serviceInquiries.filter(i => i.status === p.key).length;
+                      return (
+                        <div key={p.key} className={`rounded-xl p-4 ${p.color.replace("text-", "border-").replace("bg-", "bg-")} border`}>
+                          <div className="text-2xl font-black">{count}</div>
+                          <div className="text-xs font-semibold mt-0.5">{p.label}</div>
+                          {p.key !== "converted" && count > 0 && (
+                            <div className="text-[10px] opacity-60 mt-1">
+                              {SVC_META[serviceInquiries.find(i => i.status === p.key)?.service ?? ""]?.label ?? ""}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Per-service breakdown */}
+                  <div className="grid grid-cols-3 gap-3">
+                    {(["advisory", "copytrading", "otc"] as const).map(svc => {
+                      const total     = serviceInquiries.filter(i => i.service === svc).length;
+                      const converted = serviceInquiries.filter(i => i.service === svc && i.status === "converted").length;
+                      const meta      = SVC_META[svc];
+                      return (
+                        <div key={svc} className="bg-white rounded-xl border border-gray-100 p-4">
+                          <div className="flex items-center gap-2 mb-2">
+                            <div className={`w-2 h-2 rounded-full ${meta.dot}`} />
+                            <span className="text-xs font-bold text-dark">{meta.label}</span>
+                          </div>
+                          <div className="text-xl font-black text-primary">{total}</div>
+                          <div className="text-[10px] text-gray-400 mt-0.5">
+                            dont <span className="text-green-600 font-bold">{converted} converti{converted > 1 ? "s" : ""}</span>
+                          </div>
+                          {total > 0 && (
+                            <div className="mt-2 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                              <div
+                                className="h-full bg-green-400 rounded-full transition-all"
+                                style={{ width: `${Math.round((converted / total) * 100)}%` }}
+                              />
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Inquiry list */}
+                  {serviceInquiries.length > 0 && (
+                    <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-left">
+                          <thead className="bg-gray-50 text-gray-400 text-[11px] uppercase tracking-wider">
+                            <tr>
+                              <th className="px-5 py-3 font-semibold">Contact</th>
+                              <th className="px-5 py-3 font-semibold">Service</th>
+                              <th className="px-5 py-3 font-semibold">Date</th>
+                              <th className="px-5 py-3 font-semibold">Statut</th>
+                              <th className="px-5 py-3 font-semibold text-right">Actions</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-gray-50">
+                            {serviceInquiries.map(inq => {
+                              const meta = SVC_META[inq.service];
+                              const pipeline = INQUIRY_PIPELINE;
+                              const currentIdx = pipeline.findIndex(p => p.key === inq.status);
+                              const nextStep = pipeline[currentIdx + 1];
+                              return (
+                                <tr key={inq.id} className="hover:bg-gray-50/50 transition">
+                                  <td className="px-5 py-3">
+                                    <div className="font-semibold text-sm text-dark">{inq.full_name}</div>
+                                    <div className="text-xs text-gray-400">{inq.email} · {inq.phone}</div>
+                                    {inq.message && (
+                                      <div className="text-xs text-gray-500 italic mt-0.5 max-w-xs truncate">"{inq.message}"</div>
+                                    )}
+                                  </td>
+                                  <td className="px-5 py-3">
+                                    <div className="flex items-center gap-1.5">
+                                      <div className={`w-2 h-2 rounded-full ${meta?.dot ?? "bg-gray-400"}`} />
+                                      <span className="text-xs font-semibold text-dark">{meta?.label ?? inq.service}</span>
+                                    </div>
+                                  </td>
+                                  <td className="px-5 py-3 text-xs text-gray-400">
+                                    {new Date(inq.created_at).toLocaleDateString("fr-FR")}
+                                  </td>
+                                  <td className="px-5 py-3">
+                                    <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${INQUIRY_PIPELINE.find(p => p.key === inq.status)?.color ?? "bg-gray-100 text-gray-500"}`}>
+                                      {INQUIRY_PIPELINE.find(p => p.key === inq.status)?.label ?? inq.status}
+                                    </span>
+                                  </td>
+                                  <td className="px-5 py-3">
+                                    <div className="flex items-center justify-end gap-1.5 flex-wrap">
+                                      {nextStep && (
+                                        <button
+                                          onClick={() => handleInquiryStatus(inq.id, nextStep.key)}
+                                          className="text-[11px] font-bold px-2.5 py-1 rounded-lg border border-gray-200 hover:border-primary hover:text-primary text-gray-500 transition whitespace-nowrap"
+                                        >
+                                          → {nextStep.label}
+                                        </button>
+                                      )}
+                                      {inq.status !== "converted" && (
+                                        <button
+                                          onClick={() => handleConvertInquiry(inq)}
+                                          className="text-[11px] font-bold px-2.5 py-1 rounded-lg bg-green-50 text-green-600 hover:bg-green-100 transition whitespace-nowrap"
+                                        >
+                                          Convertir
+                                        </button>
+                                      )}
+                                      <button
+                                        onClick={() => handleDeleteInquiry(inq.id)}
+                                        className="p-1.5 text-gray-300 hover:text-red-500 rounded hover:bg-gray-100 transition"
+                                      >
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                      </button>
+                                    </div>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="border-t border-gray-200 pt-4" />
+                </div>
+
+                {/* Table */}
+                <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left">
+                      <thead className="bg-gray-50 text-gray-400 text-[11px] uppercase tracking-wider">
+                        <tr>
+                          <th className="px-5 py-3 font-semibold">Client</th>
+                          <th className="px-5 py-3 font-semibold">Service</th>
+                          <th className="px-5 py-3 font-semibold">Apport</th>
+                          <th className="px-5 py-3 font-semibold">Contrat</th>
+                          <th className="px-5 py-3 font-semibold">Rendement</th>
+                          <th className="px-5 py-3 font-semibold">Statut</th>
+                          <th className="px-5 py-3 font-semibold text-right">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-50">
+                        {serviceClients.length === 0 ? (
+                          <tr>
+                            <td colSpan={7} className="px-6 py-12 text-center text-gray-400 text-sm">
+                              <Briefcase className="w-8 h-8 mx-auto mb-2 text-gray-200" />
+                              Aucun client enregistré
+                            </td>
+                          </tr>
+                        ) : serviceClients.map((c) => {
+                          const svc = SERVICE_LABELS[c.service] ?? { label: c.service, color: "bg-gray-100 text-gray-500 border-gray-200", dot: "bg-gray-400" };
+                          const durationYears = c.contract_duration_months >= 12
+                            ? `${Math.floor(c.contract_duration_months / 12)} an${Math.floor(c.contract_duration_months / 12) > 1 ? "s" : ""}`
+                            : `${c.contract_duration_months} mois`;
+                          return (
+                            <tr key={c.id} className="hover:bg-gray-50/50 transition">
+                              <td className="px-5 py-4">
+                                <div className="font-semibold text-sm text-dark">{c.user.username}</div>
+                                <div className="text-xs text-gray-400">{c.user.email}</div>
+                              </td>
+                              <td className="px-5 py-4">
+                                <span className={`inline-flex items-center gap-1.5 border text-xs font-bold px-2.5 py-1 rounded-full ${svc.color}`}>
+                                  <span className={`w-1.5 h-1.5 rounded-full ${svc.dot}`} />
+                                  {svc.label}
+                                </span>
+                              </td>
+                              <td className="px-5 py-4 font-mono text-sm font-bold text-dark">
+                                ${parseFloat(c.investment_amount).toLocaleString()}
+                              </td>
+                              <td className="px-5 py-4 text-xs text-gray-500">
+                                <div>{new Date(c.contract_start).toLocaleDateString("fr-FR")}</div>
+                                <div className="text-gray-400">→ {c.contract_end ? new Date(c.contract_end).toLocaleDateString("fr-FR") : "—"} ({durationYears})</div>
+                              </td>
+                              <td className="px-5 py-4 font-bold text-green-600 text-sm">
+                                {c.expected_return_rate}%
+                              </td>
+                              <td className="px-5 py-4">
+                                <span className={`text-xs font-bold px-2.5 py-1 rounded-full capitalize ${STATUS_COLORS[c.status] ?? "bg-gray-100 text-gray-500"}`}>
+                                  {c.status}
+                                </span>
+                              </td>
+                              <td className="px-5 py-4 text-right">
+                                <div className="flex items-center justify-end gap-1">
+                                  <button onClick={() => handleOpenClientForm(c)} className="p-1.5 text-gray-300 hover:text-primary rounded hover:bg-gray-100 transition">
+                                    <Pencil className="w-3.5 h-3.5" />
+                                  </button>
+                                  <button onClick={() => handleDeleteClient(c.id)} className="p-1.5 text-gray-300 hover:text-red-500 rounded hover:bg-gray-100 transition">
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* Modal form */}
+                {showClientForm && (
+                  <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" onClick={() => setShowClientForm(false)}>
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+                      <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100">
+                        <h3 className="font-heading font-bold text-primary">{editingClient ? "Modifier le client" : "Nouveau client"}</h3>
+                        <button onClick={() => setShowClientForm(false)} className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 transition">
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                      <div className="p-6 space-y-4">
+                        {/* User ID */}
+                        <div>
+                          <label className="block text-xs font-bold text-gray-600 uppercase tracking-wide mb-1.5">User ID *</label>
+                          <input
+                            type="number"
+                            value={clientForm.user_id || ""}
+                            onChange={e => setClientForm({ ...clientForm, user_id: Number(e.target.value) })}
+                            placeholder="ID de l'utilisateur"
+                            className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold/40"
+                          />
+                          <p className="text-[10px] text-gray-400 mt-1">Retrouvable dans l'onglet Users</p>
+                        </div>
+
+                        {/* Service */}
+                        <div>
+                          <label className="block text-xs font-bold text-gray-600 uppercase tracking-wide mb-1.5">Service *</label>
+                          <select
+                            value={clientForm.service}
+                            onChange={e => setClientForm({ ...clientForm, service: e.target.value as ServiceType })}
+                            className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold/40 bg-white"
+                          >
+                            <option value="advisory">Golden Advisory</option>
+                            <option value="copytrading">Golden Copy-Trading</option>
+                            <option value="otc">Golden OTC Desk</option>
+                          </select>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                          {/* Apport */}
+                          <div>
+                            <label className="block text-xs font-bold text-gray-600 uppercase tracking-wide mb-1.5">Apport (USD) *</label>
+                            <input
+                              type="number"
+                              value={clientForm.investment_amount}
+                              onChange={e => setClientForm({ ...clientForm, investment_amount: e.target.value })}
+                              placeholder="5000"
+                              className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold/40"
+                            />
+                          </div>
+                          {/* Rendement */}
+                          <div>
+                            <label className="block text-xs font-bold text-gray-600 uppercase tracking-wide mb-1.5">Rendement (%) *</label>
+                            <input
+                              type="number"
+                              step="0.1"
+                              value={clientForm.expected_return_rate}
+                              onChange={e => setClientForm({ ...clientForm, expected_return_rate: e.target.value })}
+                              placeholder="14.5"
+                              className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold/40"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                          {/* Début */}
+                          <div>
+                            <label className="block text-xs font-bold text-gray-600 uppercase tracking-wide mb-1.5">Début contrat *</label>
+                            <input
+                              type="date"
+                              value={clientForm.contract_start}
+                              onChange={e => setClientForm({ ...clientForm, contract_start: e.target.value })}
+                              className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold/40"
+                            />
+                          </div>
+                          {/* Durée */}
+                          <div>
+                            <label className="block text-xs font-bold text-gray-600 uppercase tracking-wide mb-1.5">Durée (mois) *</label>
+                            <select
+                              value={clientForm.contract_duration_months}
+                              onChange={e => setClientForm({ ...clientForm, contract_duration_months: Number(e.target.value) })}
+                              className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold/40 bg-white"
+                            >
+                              {[3, 6, 9, 12, 18, 24, 36].map(m => (
+                                <option key={m} value={m}>{m >= 12 ? `${m / 12} an${m > 12 ? "s" : ""}` : `${m} mois`}</option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
+
+                        {/* Statut */}
+                        <div>
+                          <label className="block text-xs font-bold text-gray-600 uppercase tracking-wide mb-1.5">Statut</label>
+                          <select
+                            value={clientForm.status}
+                            onChange={e => setClientForm({ ...clientForm, status: e.target.value as SubscriptionStatus })}
+                            className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold/40 bg-white"
+                          >
+                            <option value="active">Actif</option>
+                            <option value="paused">En pause</option>
+                            <option value="ended">Terminé</option>
+                          </select>
+                        </div>
+
+                        {/* Notes */}
+                        <div>
+                          <label className="block text-xs font-bold text-gray-600 uppercase tracking-wide mb-1.5">Notes internes</label>
+                          <textarea
+                            value={clientForm.notes}
+                            onChange={e => setClientForm({ ...clientForm, notes: e.target.value })}
+                            rows={3}
+                            placeholder="Infos complémentaires, commentaires..."
+                            className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold/40 resize-none"
+                          />
+                        </div>
+
+                        <div className="flex gap-3 pt-2">
+                          <button
+                            onClick={handleSaveClient}
+                            disabled={clientFormLoading}
+                            className="flex-1 flex items-center justify-center gap-2 bg-primary hover:bg-primary-dark text-white font-bold py-3 rounded-xl transition disabled:opacity-60 text-sm"
+                          >
+                            {clientFormLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                            {editingClient ? "Enregistrer les modifications" : "Créer le client"}
+                          </button>
+                          <button onClick={() => setShowClientForm(false)} className="px-5 py-3 border border-gray-200 text-gray-500 hover:text-dark font-semibold rounded-xl text-sm transition">
+                            Annuler
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
 
           {activeTab === "earn_requests" && (
             <div>
