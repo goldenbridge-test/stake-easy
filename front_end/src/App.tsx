@@ -13,6 +13,7 @@ import Footer from './components/Footer';
 import SignIn from './components/SignIn';
 import SignUp from './components/SignUp';
 import EarnHub from './components/earn/EarnHub';
+import EarnAccessRequest from './components/earn/EarnAccessRequest';
 import GldStaking from './components/earn/GldStaking';
 import StakingDashboard from './components/earn/StakingDashboard';
 import ApiDebug from './components/earn/ApiDebug';
@@ -31,6 +32,8 @@ import ForgotPassword from './components/ForgotPassword';
 import PaymentReturn from './components/PaymentReturn';
 import ResetPassword from './components/ResetPassword';
 import InstructorApplicationForm from './components/academy/InstructorApplicationForm';
+import ServicesPage from './components/services/ServicesPage';
+import MyServicesPage from './components/services/MyServicesPage';
 import AcademySubscriptions from './components/academy/AcademySubscriptions';
 import EnterpriseDashboard from './components/academy/EnterpriseDashboard';
 
@@ -65,6 +68,7 @@ function App() {
             <Route path="/signup" element={<SignUp />} />
 
             <Route path="/earn" element={<EarnHub />} />
+            <Route path="/earn/demo" element={<EarnAccessRequest initialStep="form" />} />
             <Route path="/earn/staking" element={<GldStaking />} />
             <Route path="/earn/dashboard" element={<StakingDashboard />} />
             <Route path="/earn/debug" element={<ApiDebug />} />
@@ -89,6 +93,8 @@ function App() {
             <Route path="/instructor" element={<InstructorDashboard />} />
             <Route path="/verify/:code" element={<CertificateVerify />} />
             <Route path="/payment/return" element={<PaymentReturn />} />
+            <Route path="/services" element={<ServicesPage />} />
+            <Route path="/my-services" element={<MyServicesPage />} />
           </Routes>
         </div>
       </Router>

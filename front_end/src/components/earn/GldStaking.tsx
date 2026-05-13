@@ -17,6 +17,8 @@ import Footer from "../Footer";
 import { useWeb3 } from "../../hooks/useWeb3";
 import { stakingApi, tokenPricesApi } from "../../services/blockchainApi";
 import { isAuthenticated } from "../../services/api";
+import { useAuth } from "../../contexts/AuthContext";
+import EarnAccessRequest from "./EarnAccessRequest";
 
 type Token = {
   symbol: string;
@@ -55,6 +57,8 @@ const DURATION_OPTIONS = [
 ];
 
 const Staking = () => {
+  const { user, isLoggedIn, refreshProfile } = useAuth();
+  const [profileChecked, setProfileChecked] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [amount, setAmount] = useState("");
   const [selectedToken, setSelectedToken] = useState<Token | null>(null);
@@ -76,12 +80,28 @@ const Staking = () => {
   } = useWeb3();
 
   const [tokens, setTokens] = useState(SUPPORTED_TOKENS);
-  const [tokenBalances, setTokenBalances] = useState<{
-    [key: string]: string;
-  }>({});
-  // Données réelles depuis la blockchain
+  const [tokenBalances, setTokenBalances] = useState<{ [key: string]: string }>({});
   const [stakedAssets, setStakedAssets] = useState<StakedAsset[]>([]);
   const [history, setHistory] = useState<HistoryItem[]>([]);
+
+  // Rafraîchir le profil au montage pour vérifier l'éligibilité à jour
+  useEffect(() => {
+    refreshProfile().finally(() => setProfileChecked(true));
+  }, []);
+
+  // Spinner pendant la vérification
+  if (!profileChecked) {
+    return (
+      <div className="bg-gray-50 min-h-screen font-body flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  // Garde d'accès : non connecté ou non éligible → page de demande
+  if (!isLoggedIn || !user?.is_earn_eligible) {
+    return <EarnAccessRequest />;
+  }
 
   // Charger les balances wallet + balances stakées + historique
   const loadAllData = async () => {

@@ -1,4 +1,5 @@
 import { ArrowRight } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 const Hero = () => {
   const stats = [
@@ -35,14 +36,14 @@ const Hero = () => {
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4 pt-4">
-              <button className="bg-primary hover:bg-blue-900 text-white px-8 py-3.5 rounded-lg font-heading font-bold text-lg transition shadow-lg flex items-center justify-center gap-2">
-                Start Investing 
+              <Link to="/earn" className="bg-primary hover:bg-blue-900 text-white px-8 py-3.5 rounded-lg font-heading font-bold text-lg transition shadow-lg flex items-center justify-center gap-2">
+                Start Investing
                 <ArrowRight className="w-5 h-5 text-gold" />
-              </button>
-              
-              <button className="border-2 border-gray-200 hover:border-gold text-dark hover:text-primary px-8 py-3.5 rounded-lg font-heading font-bold text-lg transition flex items-center justify-center bg-white">
+              </Link>
+
+              <Link to="/services" className="border-2 border-gray-200 hover:border-gold text-dark hover:text-primary px-8 py-3.5 rounded-lg font-heading font-bold text-lg transition flex items-center justify-center bg-white">
                 Explore Opportunities
-              </button>
+              </Link>
             </div>
           </div>
 

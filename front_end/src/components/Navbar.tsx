@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Globe, Menu, X, Wallet, LogOut, User, LayoutDashboard, Target, BookOpen } from "lucide-react";
+import { Globe, Menu, X, Wallet, LogOut, User, LayoutDashboard, Target, BookOpen, Briefcase } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { useWeb3 } from "../hooks/useWeb3";
 import { useAuth } from "../contexts/AuthContext";
@@ -22,6 +22,7 @@ const Navbar = () => {
   // Base links available to everyone
   const baseLinks = [
     { name: "Accueil", href: "/" },
+    { name: "Services", href: "/services" },
     { name: "Academy", href: "/academy" },
     { name: "Earn", href: "/earn" },
   ];
@@ -30,6 +31,7 @@ const Navbar = () => {
   const studentLinks = [
     { name: "Mes Formations", href: "/academy/my-learning", icon: <BookOpen className="w-4 h-4" /> },
     { name: "Coaching", href: "/academy/coaching", icon: <Target className="w-4 h-4" /> },
+    { name: "Mes Services", href: "/my-services", icon: <Briefcase className="w-4 h-4" /> },
   ];
 
   // General admin/instructor flag

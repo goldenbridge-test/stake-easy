@@ -209,3 +209,146 @@ export const fundAssetsApi = {
         return res.json();
     },
 };
+
+// ─── Service Subscriptions ────────────────────────────────────────────────────
+export type ServiceType = "advisory" | "copytrading" | "otc";
+export type SubscriptionStatus = "active" | "paused" | "ended";
+
+export interface ServiceSubscription {
+    id: number;
+    user: { id: number; username: string; email: string };
+    service: ServiceType;
+    investment_amount: string;
+    contract_start: string;
+    contract_duration_months: number;
+    contract_end: string;
+    expected_return_rate: string;
+    status: SubscriptionStatus;
+    notes: string;
+    created_at: string;
+}
+
+export const serviceSubscriptionsApi = {
+    async list(): Promise<ServiceSubscription[]> {
+        const res = await apiFetch('/api/services/subscriptions/');
+        if (!res.ok) throw new Error('Failed to fetch subscriptions');
+        const data = await res.json();
+        return Array.isArray(data) ? data : (data.results || []);
+    },
+    async mine(): Promise<ServiceSubscription[]> {
+        const res = await apiFetch('/api/services/subscriptions/?mine=true');
+        if (!res.ok) throw new Error('Failed to fetch subscriptions');
+        const data = await res.json();
+        return Array.isArray(data) ? data : (data.results || []);
+    },
+    async create(data: Omit<ServiceSubscription, 'id' | 'user' | 'contract_end' | 'created_at'> & { user_id: number }) {
+        const res = await apiFetch('/api/services/subscriptions/', {
+            method: 'POST',
+            body: JSON.stringify(data),
+        });
+        if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(JSON.stringify(err)); }
+        return res.json();
+    },
+    async update(id: number, data: Partial<ServiceSubscription>) {
+        const res = await apiFetch(`/api/services/subscriptions/${id}/`, {
+            method: 'PATCH',
+            body: JSON.stringify(data),
+        });
+        if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(JSON.stringify(err)); }
+        return res.json();
+    },
+    async remove(id: number) {
+        const res = await apiFetch(`/api/services/subscriptions/${id}/`, { method: 'DELETE' });
+        if (!res.ok) throw new Error('Failed to delete subscription');
+    },
+};
+
+// ─── Service Inquiries ────────────────────────────────────────────────────────
+export type InquiryStatus = "new" | "contacted" | "demo_done" | "converted";
+
+export interface ServiceInquiry {
+    id: number;
+    service: ServiceType;
+    full_name: string;
+    email: string;
+    phone: string;
+    message: string;
+    status: InquiryStatus;
+    admin_notes: string;
+    created_at: string;
+}
+
+export const serviceInquiriesApi = {
+    async create(data: Pick<ServiceInquiry, "service" | "full_name" | "email" | "phone" | "message">) {
+        const res = await fetch(`${API_BASE}/api/services/inquiries/`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(data),
+        });
+        if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(JSON.stringify(err)); }
+        return res.json();
+    },
+    async list(): Promise<ServiceInquiry[]> {
+        const res = await apiFetch("/api/services/inquiries/");
+        if (!res.ok) throw new Error("Failed to fetch inquiries");
+        const data = await res.json();
+        return Array.isArray(data) ? data : (data.results || []);
+    },
+    async update(id: number, data: Partial<Pick<ServiceInquiry, "status" | "admin_notes">>) {
+        const res = await apiFetch(`/api/services/inquiries/${id}/`, {
+            method: "PATCH",
+            body: JSON.stringify(data),
+        });
+        if (!res.ok) throw new Error("Failed to update inquiry");
+        return res.json();
+    },
+    async remove(id: number) {
+        const res = await apiFetch(`/api/services/inquiries/${id}/`, { method: "DELETE" });
+        if (!res.ok) throw new Error("Failed to delete inquiry");
+    },
+};
+
+// ─── Earn Access Requests ─────────────────────────────────────────────────────
+export const earnAccessApi = {
+    // POST /api/earn/access-request/ — soumettre une demande d'accès
+    async request(data: {
+        full_name: string;
+        email: string;
+        phone: string;
+        country: string;
+        reason: string;
+        preferred_time: string;
+    }) {
+        const res = await apiFetch('/api/earn/access-request/', {
+            method: 'POST',
+            body: JSON.stringify(data),
+        });
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(JSON.stringify(err));
+        }
+        return res.json();
+    },
+    // GET /api/earn/access-request/ — liste des demandes (admin)
+    async list() {
+        const res = await apiFetch('/api/earn/access-request/');
+        if (!res.ok) throw new Error('Failed to fetch access requests');
+        return res.json();
+    },
+    // PATCH /api/earn/access-request/{id}/approve/ — approuver une demande (admin)
+    async approve(id: number) {
+        const res = await apiFetch(`/api/earn/access-request/${id}/approve/`, {
+            method: 'PATCH',
+        });
+        if (!res.ok) throw new Error('Failed to approve request');
+        return res.json();
+    },
+    // PATCH /api/earn/access-request/{id}/reject/ — rejeter une demande (admin)
+    async reject(id: number) {
+        const res = await apiFetch(`/api/earn/access-request/${id}/reject/`, {
+            method: 'PATCH',
+        });
+        if (!res.ok) throw new Error('Failed to reject request');
+        return res.json();
+    },
+};
