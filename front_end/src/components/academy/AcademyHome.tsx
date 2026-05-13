@@ -33,9 +33,12 @@ const AcademyHome = () => {
                 >
                   Browse Courses
                 </Link>
-                <button className="border border-white/30 hover:bg-white/10 text-white font-bold px-8 py-3.5 rounded-lg transition">
-                  Start Free Trial
-                </button>
+                <Link
+                  to="/academy/subscriptions"
+                  className="border border-white/30 hover:bg-white/10 text-white font-bold px-8 py-3.5 rounded-lg transition"
+                >
+                  Voir les Abonnements
+                </Link>
               </div>
             </div>
             {/* Illustration Abstraite */}
@@ -194,10 +197,10 @@ const AcademyHome = () => {
                 unlimited access to all courses.
               </p>
               <Link
-                to="/signup"
-                className="bg-white text-orange-600 font-bold px-8 py-3 rounded-lg shadow-md hover:bg-gray-50 transition"
+                to="/academy/subscriptions"
+                className="bg-white text-orange-600 font-bold px-8 py-3 rounded-lg shadow-md hover:bg-gray-50 transition inline-block"
               >
-                Get Started for Free
+                Voir nos Abonnements
               </Link>
             </div>
           </div>

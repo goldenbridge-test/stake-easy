@@ -216,12 +216,21 @@ const CourseDetails = () => {
                                         )}
                                     </div>
                                 ) : (
-                                    <button
-                                        onClick={handleEnroll}
-                                        className="w-full bg-primary text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-primary-dark transition shadow-md text-sm"
-                                    >
-                                        <ShoppingBag className="w-4 h-4" /> Commencer maintenant
-                                    </button>
+                                    <div className="space-y-3">
+                                        <button
+                                            onClick={handleEnroll}
+                                            className="w-full bg-primary text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-primary-dark transition shadow-md text-sm"
+                                        >
+                                            <ShoppingBag className="w-4 h-4" /> Commencer maintenant
+                                        </button>
+                                        {!course.is_free && (
+                                            <Link to="/academy/subscriptions"
+                                                className="w-full border border-gold/30 text-gold font-bold py-2.5 rounded-xl flex items-center justify-center gap-2 hover:bg-gold/5 transition text-xs text-center"
+                                            >
+                                                Ou débloquez tout avec un Abonnement
+                                            </Link>
+                                        )}
+                                    </div>
                                 )}
 
                                 {isOwner && (

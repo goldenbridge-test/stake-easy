@@ -8,6 +8,7 @@ import {
     Star, TrendingUp, Settings, X, CheckCircle2
 } from "lucide-react";
 import { coursesApi, coachingApi, analyticsApi, getUser } from "../../services/api";
+import B2bOpportunities from "./B2bOpportunities";
 
 const LEVELS = ["beginner", "intermediate", "advanced"];
 
@@ -47,7 +48,7 @@ const InstructorDashboard = () => {
     const [editingId, setEditingId] = useState<number | null>(null);
     const [form, setForm] = useState<CourseForm>(defaultForm);
     const [saving, setSaving] = useState(false);
-    const [activeTab, setActiveTab] = useState<"courses" | "coaching" | "stats">("courses");
+    const [activeTab, setActiveTab] = useState<"courses" | "coaching" | "stats" | "b2b">("courses");
 
     // Check role
     if (!currentUser || (currentUser.role !== "instructor" && currentUser.role !== "admin")) {
@@ -154,6 +155,7 @@ const InstructorDashboard = () => {
     const TABS = [
         { key: "courses", label: "Mes Cours", icon: <BookOpen className="w-4 h-4" /> },
         { key: "coaching", label: "Coaching", icon: <Target className="w-4 h-4" /> },
+        { key: "b2b", label: "Opportunités B2B", icon: <Briefcase className="w-4 h-4" /> },
         { key: "stats", label: "Statistiques", icon: <BarChart2 className="w-4 h-4" /> },
     ] as const;
 
@@ -440,6 +442,13 @@ const InstructorDashboard = () => {
                                     <Target className="w-5 h-5" /> Voir les programmes <ChevronRight className="w-4 h-4" />
                                 </Link>
                             </div>
+                        </div>
+                    )}
+
+                    {/* ── TAB: B2B OPPORTUNITIES ── */}
+                    {activeTab === "b2b" && (
+                        <div className="bg-[#0d1a2d] border border-white/10 rounded-3xl p-8">
+                            <B2bOpportunities />
                         </div>
                     )}
 

@@ -31,6 +31,8 @@ import ForgotPassword from './components/ForgotPassword';
 import PaymentReturn from './components/PaymentReturn';
 import ResetPassword from './components/ResetPassword';
 import InstructorApplicationForm from './components/academy/InstructorApplicationForm';
+import AcademySubscriptions from './components/academy/AcademySubscriptions';
+import EnterpriseDashboard from './components/academy/EnterpriseDashboard';
 
 // On crée un composant pour la Landing Page complète pour garder le code propre
 const LandingPage = () => (
@@ -71,8 +73,10 @@ function App() {
             <Route path="/reset-password" element={<ResetPassword />} />
 
             <Route path="/admin" element={<AdminDashboard />} />
+            <Route path="/enterprise" element={<EnterpriseDashboard />} />
 
             <Route path="/academy" element={<AcademyHome />} />
+            <Route path="/academy/subscriptions" element={<AcademySubscriptions />} />
             <Route path="/academy/catalog" element={<AcademyCatalog />} />
             <Route path="/academy/my-learning" element={<MyLearning />} />
             <Route path="/academy/course/:id" element={<CourseDetails />} />

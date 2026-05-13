@@ -29,6 +29,7 @@ import { useWeb3 } from "../hooks/useWeb3";
 import { useAuth } from "../contexts/AuthContext";
 import { analyticsApi, coursesApi, usersApi, getUser } from "../services/api";
 import AdminInstructorApplications from "./AdminInstructorApplications";
+import AdminB2BManagement from "./academy/AdminB2BManagement";
 
 
 // ==========================================
@@ -59,7 +60,7 @@ type Category = {
 // ==========================================
 // TABS
 // ==========================================
-type TabKey = "overview" | "tokens" | "courses" | "users" | "applications";
+type TabKey = "overview" | "tokens" | "courses" | "users" | "applications" | "b2b";
 
 const AdminDashboard = () => {
   const { user } = useAuth();
@@ -279,6 +280,7 @@ const AdminDashboard = () => {
     { key: "courses", label: "Courses", icon: <BookOpen className="w-4 h-4" /> },
     { key: "users", label: "Users", icon: <Users className="w-4 h-4" /> },
     { key: "applications", label: "Applications", icon: <ClipboardList className="w-4 h-4" /> },
+    { key: "b2b", label: "B2B & Coaching", icon: <Briefcase className="w-4 h-4" /> },
   ];
 
   const visibleTabs = tabs.filter(tab => {
@@ -799,6 +801,25 @@ const AdminDashboard = () => {
                               >
                                 <Trash2 className="w-3.5 h-3.5" />
                               </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ==========================================
+              TAB: B2B MANAGEMENT
+          ========================================== */}
+          {activeTab === "b2b" && (
+            <div className="bg-white rounded-xl border border-gray-200 p-6">
+              <AdminB2BManagement />
+            </div>
+          )}
                             </div>
                           </td>
                         </tr>
