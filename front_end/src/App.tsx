@@ -34,6 +34,7 @@ import ResetPassword from './components/ResetPassword';
 import InstructorApplicationForm from './components/academy/InstructorApplicationForm';
 import ServicesPage from './components/services/ServicesPage';
 import MyServicesPage from './components/services/MyServicesPage';
+import FAQPage from './components/FAQPage';
 
 // On crée un composant pour la Landing Page complète pour garder le code propre
 const LandingPage = () => (
@@ -91,6 +92,7 @@ function App() {
             <Route path="/payment/return" element={<PaymentReturn />} />
             <Route path="/services" element={<ServicesPage />} />
             <Route path="/my-services" element={<MyServicesPage />} />
+            <Route path="/faq" element={<FAQPage />} />
           </Routes>
         </div>
       </Router>

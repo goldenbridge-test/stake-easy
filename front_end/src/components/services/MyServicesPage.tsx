@@ -3,11 +3,14 @@ import { Link } from "react-router-dom";
 import {
   TrendingUp, BarChart3, Repeat2, CalendarDays, DollarSign,
   Clock, CheckCircle, PauseCircle, XCircle, Loader2, MessageCircle,
-  ArrowRight, Lock,
+  ArrowRight, Lock, FileText, ChevronDown, ChevronUp,
 } from "lucide-react";
+import {
+  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+} from "recharts";
 import Navbar from "../Navbar";
 import Footer from "../Footer";
-import { serviceSubscriptionsApi, ServiceSubscription } from "../../services/blockchainApi";
+import { serviceSubscriptionsApi, ServiceSubscription, portfolioReportsApi, PortfolioReport } from "../../services/blockchainApi";
 import { useAuth } from "../../contexts/AuthContext";
 
 const WHATSAPP_NUMBER = "22901441348420";
@@ -78,9 +81,27 @@ const ContractProgress = ({ sub }: { sub: ServiceSubscription }) => {
   );
 };
 
+const MONTH_NAMES = ["Jan","Fév","Mar","Avr","Mai","Juin","Juil","Aoû","Sep","Oct","Nov","Déc"];
+
 const SubscriptionCard = ({ sub }: { sub: ServiceSubscription }) => {
   const meta   = SERVICE_META[sub.service] ?? SERVICE_META.advisory;
   const status = STATUS_CONFIG[sub.status] ?? STATUS_CONFIG.active;
+  const [reports, setReports] = useState<PortfolioReport[]>([]);
+  const [showReports, setShowReports] = useState(false);
+
+  useEffect(() => {
+    portfolioReportsApi.list(sub.id)
+      .then(data => setReports(data.sort((a, b) =>
+        a.period_year !== b.period_year ? a.period_year - b.period_year : a.period_month - b.period_month
+      )))
+      .catch(() => {});
+  }, [sub.id]);
+
+  const chartData = reports.map(r => ({
+    label: `${MONTH_NAMES[r.period_month - 1]} ${r.period_year}`,
+    valeur: parseFloat(r.portfolio_value),
+    rendement: parseFloat(r.return_pct),
+  }));
 
   const durationLabel = sub.contract_duration_months >= 12
     ? `${Math.floor(sub.contract_duration_months / 12)} an${Math.floor(sub.contract_duration_months / 12) > 1 ? "s" : ""}`
@@ -160,6 +181,84 @@ const SubscriptionCard = ({ sub }: { sub: ServiceSubscription }) => {
 
         {/* Progress bar */}
         {sub.status === "active" && <ContractProgress sub={sub} />}
+
+        {/* Monthly reports */}
+        {reports.length > 0 && (
+          <div className="space-y-3">
+            <button
+              onClick={() => setShowReports(v => !v)}
+              className="w-full flex items-center justify-between text-xs font-bold text-gray-500 uppercase tracking-wide hover:text-primary transition"
+            >
+              <span className="flex items-center gap-1.5">
+                <FileText className="w-3.5 h-3.5" />
+                Rapports mensuels ({reports.length})
+              </span>
+              {showReports ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+            </button>
+
+            {showReports && (
+              <div className="space-y-3">
+                {/* Line chart */}
+                {chartData.length >= 2 && (
+                  <div className="h-36">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={chartData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                        <XAxis dataKey="label" tick={{ fontSize: 9 }} />
+                        <YAxis tick={{ fontSize: 9 }} />
+                        <Tooltip
+                          formatter={(v: number) => [`$${v.toLocaleString()}`, "Portefeuille"]}
+                          contentStyle={{ fontSize: 11, borderRadius: 8 }}
+                        />
+                        <Line
+                          type="monotone"
+                          dataKey="valeur"
+                          stroke="#C9A84C"
+                          strokeWidth={2}
+                          dot={{ r: 3, fill: "#C9A84C" }}
+                          activeDot={{ r: 5 }}
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
+
+                {/* Report list */}
+                <div className="space-y-1.5">
+                  {[...reports].reverse().map(r => (
+                    <div key={r.id} className="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2.5">
+                      <div>
+                        <span className="text-xs font-bold text-dark">
+                          {MONTH_NAMES[r.period_month - 1]} {r.period_year}
+                        </span>
+                        <span className="text-xs text-gray-400 mx-2">·</span>
+                        <span className="text-xs font-bold text-primary">${parseFloat(r.portfolio_value).toLocaleString()}</span>
+                      </div>
+                      <span className={`text-xs font-black px-2 py-0.5 rounded-full ${parseFloat(r.return_pct) >= 0 ? "bg-green-50 text-green-600" : "bg-red-50 text-red-500"}`}>
+                        {parseFloat(r.return_pct) >= 0 ? "+" : ""}{r.return_pct}%
+                      </span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Advisor note from latest report */}
+                {reports[reports.length - 1]?.notes && (
+                  <div className="bg-blue-50 border border-blue-100 rounded-xl p-3">
+                    <div className="text-[10px] text-blue-400 font-bold uppercase tracking-wide mb-1">Message de votre conseiller</div>
+                    <p className="text-xs text-blue-700 leading-relaxed">{reports[reports.length - 1].notes}</p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {reports.length === 0 && sub.status === "active" && (
+          <div className="flex items-center gap-2 text-xs text-gray-400 bg-gray-50 rounded-lg px-3 py-2.5">
+            <FileText className="w-3.5 h-3.5 shrink-0" />
+            Rapport mensuel en cours de préparation
+          </div>
+        )}
 
         {/* CTA */}
         <a

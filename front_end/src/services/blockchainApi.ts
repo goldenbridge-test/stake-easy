@@ -272,14 +272,16 @@ export interface ServiceInquiry {
     full_name: string;
     email: string;
     phone: string;
+    profile_type?: string;
     message: string;
+    extra_data?: Record<string, string>;
     status: InquiryStatus;
     admin_notes: string;
     created_at: string;
 }
 
 export const serviceInquiriesApi = {
-    async create(data: Pick<ServiceInquiry, "service" | "full_name" | "email" | "phone" | "message">) {
+    async create(data: Pick<ServiceInquiry, "service" | "full_name" | "email" | "phone" | "message"> & { profile_type?: string; extra_data?: Record<string, string> }) {
         const res = await fetch(`${API_BASE}/api/services/inquiries/`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -305,6 +307,48 @@ export const serviceInquiriesApi = {
     async remove(id: number) {
         const res = await apiFetch(`/api/services/inquiries/${id}/`, { method: "DELETE" });
         if (!res.ok) throw new Error("Failed to delete inquiry");
+    },
+};
+
+// ─── Portfolio Monthly Reports ────────────────────────────────────────────────
+export interface PortfolioReport {
+    id: number;
+    subscription: number;
+    period_month: number;  // 1-12
+    period_year: number;
+    portfolio_value: string;
+    return_pct: string;         // rendement du mois en %
+    cumulative_return_pct?: string;
+    notes: string;
+    created_at: string;
+}
+
+export const portfolioReportsApi = {
+    async list(subscriptionId: number): Promise<PortfolioReport[]> {
+        const res = await apiFetch(`/api/services/subscriptions/${subscriptionId}/reports/`);
+        if (!res.ok) throw new Error('Failed to fetch reports');
+        const data = await res.json();
+        return Array.isArray(data) ? data : (data.results || []);
+    },
+    async create(subscriptionId: number, data: Omit<PortfolioReport, 'id' | 'subscription' | 'created_at'>): Promise<PortfolioReport> {
+        const res = await apiFetch(`/api/services/subscriptions/${subscriptionId}/reports/`, {
+            method: 'POST',
+            body: JSON.stringify(data),
+        });
+        if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(JSON.stringify(err)); }
+        return res.json();
+    },
+    async update(subscriptionId: number, reportId: number, data: Partial<PortfolioReport>): Promise<PortfolioReport> {
+        const res = await apiFetch(`/api/services/subscriptions/${subscriptionId}/reports/${reportId}/`, {
+            method: 'PATCH',
+            body: JSON.stringify(data),
+        });
+        if (!res.ok) throw new Error('Failed to update report');
+        return res.json();
+    },
+    async remove(subscriptionId: number, reportId: number): Promise<void> {
+        const res = await apiFetch(`/api/services/subscriptions/${subscriptionId}/reports/${reportId}/`, { method: 'DELETE' });
+        if (!res.ok) throw new Error('Failed to delete report');
     },
 };
 

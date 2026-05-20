@@ -112,6 +112,9 @@ const services: Service[] = [
 ];
 
 // ── Contact Form Modal ─────────────────────────────────────────────────────────
+const inputCls = "w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold/40 bg-white cursor-pointer";
+const labelCls = "block text-xs font-bold text-gray-600 uppercase tracking-wide mb-1.5";
+
 const ContactModal = ({
   service,
   onClose,
@@ -119,29 +122,46 @@ const ContactModal = ({
   service: Service;
   onClose: () => void;
 }) => {
-  const [form, setForm] = useState({ full_name: "", email: "", phone: "", message: "" });
+  const [base, setBase] = useState({ full_name: "", email: "", phone: "", profile_type: "" });
+  const [otc,  setOtc]  = useState({ source_asset: "", target_asset: "", amount: "", timeline: "" });
+  const [inv,  setInv]  = useState({ crypto_level: "" });
   const [loading, setLoading] = useState(false);
-  const [done, setDone] = useState(false);
-  const [saved, setSaved] = useState(false);
+  const [done,    setDone]    = useState(false);
+  const [saved,   setSaved]   = useState(false);
+
+  const isOtc    = service.id === "otc";
+  const isAdvCpy = service.id === "advisory" || service.id === "copytrading";
+
+  const buildMessage = () => {
+    if (isOtc) {
+      return `Bonjour, je souhaite convertir ${otc.amount} ${otc.source_asset} en ${otc.target_asset} — délai : ${otc.timeline}. Profil : ${base.profile_type === "company" ? "Entreprise" : "Particulier"} | Nom : ${base.full_name} | Tél : ${base.phone}`;
+    }
+    return `Bonjour, intéressé(e) par ${service.title}. Profil : ${base.profile_type === "company" ? "Entreprise" : "Particulier"} | Niveau crypto : ${inv.crypto_level}. Nom : ${base.full_name} | Tél : ${base.phone}`;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    const extra_data = isOtc ? otc : inv;
     try {
-      await serviceInquiriesApi.create({ service: service.id, ...form });
+      await serviceInquiriesApi.create({ service: service.id, ...base, message: buildMessage(), extra_data });
       setSaved(true);
     } catch {
-      // backend pas encore disponible — on continue quand même vers WhatsApp
       setSaved(false);
     } finally {
       setLoading(false);
     }
     setDone(true);
     setTimeout(() => {
-      window.open(`${WHATSAPP_BASE}?text=${encodeURIComponent(service.waMessage)}`, "_blank");
+      window.open(`${WHATSAPP_BASE}?text=${encodeURIComponent(buildMessage())}`, "_blank");
       onClose();
     }, 1500);
   };
+
+  const btnCls = `w-full flex items-center justify-center gap-2 py-3.5 rounded-xl font-bold text-sm transition cursor-pointer disabled:opacity-60
+    ${service.id === "advisory"    ? "bg-gold hover:bg-gold-hover text-white shadow-md shadow-gold/20"
+    : service.id === "copytrading" ? "bg-blue-500 hover:bg-blue-600 text-white shadow-md shadow-blue-500/20"
+    : "bg-emerald-500 hover:bg-emerald-600 text-white shadow-md shadow-emerald-500/20"}`;
 
   return (
     <div
@@ -149,10 +169,9 @@ const ContactModal = ({
       onClick={onClose}
     >
       <div
-        className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden"
+        className="bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[92vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header */}
         <div className={`h-1 w-full bg-gradient-to-r ${service.barClass}`} />
         <div className="px-7 pt-6 pb-4 flex items-center justify-between border-b border-gray-100">
           <div className="flex items-center gap-3">
@@ -164,10 +183,7 @@ const ContactModal = ({
               <h2 className="text-base font-heading font-bold text-primary">{service.title}</h2>
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 transition"
-          >
+          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 transition cursor-pointer">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -182,72 +198,104 @@ const ContactModal = ({
             </h3>
             <p className="text-gray-500 text-sm">
               {saved
-                ? "Vos coordonnées ont bien été enregistrées. Redirection vers WhatsApp…"
-                : "Impossible d'enregistrer pour l'instant (backend indisponible). Vous serez quand même redirigé vers WhatsApp."}
+                ? "Votre demande a bien été enregistrée. Redirection vers WhatsApp…"
+                : "Backend indisponible. Vous serez quand même redirigé vers WhatsApp."}
             </p>
           </div>
         ) : (
-          /* Form */
-          <form onSubmit={handleSubmit} className="px-7 py-6 space-y-4">
-            <p className="text-sm text-gray-500">
-              Laissez vos coordonnées — notre équipe vous contactera sous 48h.
-              Vous serez ensuite redirigé vers WhatsApp.
-            </p>
+          <form onSubmit={handleSubmit} className="px-7 py-6 space-y-5">
+            <p className="text-sm text-gray-500">Remplissez ce formulaire — notre équipe vous contactera sous 48h puis vous serez redirigé vers WhatsApp.</p>
 
-            <div className="grid grid-cols-1 gap-3">
+            {/* Champs communs */}
+            <div className="space-y-3">
+              <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Vos coordonnées</p>
               <div>
-                <label className="block text-xs font-bold text-gray-600 uppercase tracking-wide mb-1.5">Nom complet *</label>
-                <input
-                  required
-                  value={form.full_name}
-                  onChange={e => setForm({ ...form, full_name: e.target.value })}
-                  placeholder="Honorine GABIAM"
-                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold/40"
-                />
+                <label className={labelCls}>Nom complet *</label>
+                <input required value={base.full_name} onChange={e => setBase({ ...base, full_name: e.target.value })} placeholder="Honorine GABIAM" className={inputCls} />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-gray-600 uppercase tracking-wide mb-1.5">Email *</label>
-                  <input
-                    required
-                    type="email"
-                    value={form.email}
-                    onChange={e => setForm({ ...form, email: e.target.value })}
-                    placeholder="vous@email.com"
-                    className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold/40"
-                  />
+                  <label className={labelCls}>Email *</label>
+                  <input required type="email" value={base.email} onChange={e => setBase({ ...base, email: e.target.value })} placeholder="vous@email.com" className={inputCls} />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-gray-600 uppercase tracking-wide mb-1.5">Téléphone *</label>
-                  <input
-                    required
-                    value={form.phone}
-                    onChange={e => setForm({ ...form, phone: e.target.value })}
-                    placeholder="+229 96 00 00 00"
-                    className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold/40"
-                  />
+                  <label className={labelCls}>Téléphone *</label>
+                  <input required value={base.phone} onChange={e => setBase({ ...base, phone: e.target.value })} placeholder="+229 96 00 00 00" className={inputCls} />
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-bold text-gray-600 uppercase tracking-wide mb-1.5">Message (optionnel)</label>
-                <textarea
-                  value={form.message}
-                  onChange={e => setForm({ ...form, message: e.target.value })}
-                  rows={2}
-                  placeholder="Décrivez votre besoin..."
-                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold/40 resize-none"
-                />
+                <label className={labelCls}>Vous êtes *</label>
+                <select required value={base.profile_type} onChange={e => setBase({ ...base, profile_type: e.target.value })} className={inputCls}>
+                  <option value="">-- Sélectionner --</option>
+                  <option value="individual">Particulier</option>
+                  <option value="company">Entreprise</option>
+                </select>
               </div>
             </div>
 
-            <button
-              type="submit"
-              disabled={loading}
-              className={`w-full flex items-center justify-center gap-2 py-3.5 rounded-xl font-bold text-sm transition disabled:opacity-60
-                ${service.id === "advisory"   ? "bg-gold hover:bg-gold-hover text-white shadow-md shadow-gold/20"
-                : service.id === "copytrading" ? "bg-blue-500 hover:bg-blue-600 text-white shadow-md shadow-blue-500/20"
-                : "bg-emerald-500 hover:bg-emerald-600 text-white shadow-md shadow-emerald-500/20"}`}
-            >
+            {/* Champs OTC */}
+            {isOtc && (
+              <div className="space-y-3 border-t border-gray-100 pt-4">
+                <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Détails de la transaction</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className={labelCls}>J'ai (actif source) *</label>
+                    <select required value={otc.source_asset} onChange={e => setOtc({ ...otc, source_asset: e.target.value })} className={inputCls}>
+                      <option value="">--</option>
+                      <option value="XOF">Francs CFA (XOF)</option>
+                      <option value="USDT">USDT</option>
+                      <option value="USDC">USDC</option>
+                      <option value="BTC">BTC</option>
+                      <option value="ETH">ETH</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className={labelCls}>Je veux (actif cible) *</label>
+                    <select required value={otc.target_asset} onChange={e => setOtc({ ...otc, target_asset: e.target.value })} className={inputCls}>
+                      <option value="">--</option>
+                      <option value="XOF">Francs CFA (XOF)</option>
+                      <option value="USDT">USDT</option>
+                      <option value="USDC">USDC</option>
+                      <option value="BTC">BTC</option>
+                      <option value="ETH">ETH</option>
+                    </select>
+                  </div>
+                </div>
+                <div>
+                  <label className={labelCls}>Montant à convertir *</label>
+                  <input required type="number" min="0" value={otc.amount} onChange={e => setOtc({ ...otc, amount: e.target.value })} placeholder="ex: 500 000" className={inputCls} />
+                  <p className="text-[10px] text-gray-400 mt-1">Indiquez le montant dans la devise source. GoldenBridge vous proposera le meilleur prix disponible.</p>
+                </div>
+                <div>
+                  <label className={labelCls}>Délai souhaité *</label>
+                  <select required value={otc.timeline} onChange={e => setOtc({ ...otc, timeline: e.target.value })} className={inputCls}>
+                    <option value="">--</option>
+                    <option value="asap">Dès que possible</option>
+                    <option value="1week">Dans la semaine</option>
+                    <option value="1month">Dans le mois</option>
+                    <option value="flexible">Flexible</option>
+                  </select>
+                </div>
+              </div>
+            )}
+
+            {/* Champs Advisory / Copy-Trading */}
+            {isAdvCpy && (
+              <div className="space-y-3 border-t border-gray-100 pt-4">
+                <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Votre profil investisseur</p>
+                <div>
+                  <label className={labelCls}>Niveau en crypto *</label>
+                  <select required value={inv.crypto_level} onChange={e => setInv({ crypto_level: e.target.value })} className={inputCls}>
+                    <option value="">--</option>
+                    <option value="beginner">Débutant — je découvre</option>
+                    <option value="intermediate">Intermédiaire — j'ai déjà investi</option>
+                    <option value="advanced">Avancé — je suis actif sur les marchés</option>
+                  </select>
+                </div>
+              </div>
+            )}
+
+            <button type="submit" disabled={loading} className={btnCls}>
               {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <PhoneCall className="w-4 h-4" />}
               {loading ? "Envoi en cours…" : "Envoyer & continuer sur WhatsApp"}
             </button>

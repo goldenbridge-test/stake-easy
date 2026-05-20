@@ -1,4 +1,5 @@
 import { Twitter, Linkedin, Send, MessageCircle } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 const Footer = () => {
   return (
@@ -44,7 +45,7 @@ const Footer = () => {
             <ul className="space-y-4 text-gray-300 text-sm">
               <li><a href="#" className="hover:text-gold transition">Documentation</a></li>
               <li><a href="#" className="hover:text-gold transition">Blog</a></li>
-              <li><a href="#" className="hover:text-gold transition">FAQs</a></li>
+              <li><Link to="/faq" className="hover:text-gold transition">FAQs</Link></li>
               <li><a href="#" className="hover:text-gold transition">Security</a></li>
               <li><a href="#" className="hover:text-gold transition">Privacy Policy</a></li>
               <li><a href="#" className="hover:text-gold transition">Terms of Service</a></li>

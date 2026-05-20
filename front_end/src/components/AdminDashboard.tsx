@@ -34,6 +34,7 @@ import {
   earnAccessApi,
   serviceSubscriptionsApi, ServiceSubscription, ServiceType, SubscriptionStatus,
   serviceInquiriesApi, ServiceInquiry, InquiryStatus,
+  portfolioReportsApi, PortfolioReport,
 } from "../services/blockchainApi";
 import AdminInstructorApplications from "./AdminInstructorApplications";
 
@@ -130,6 +131,28 @@ const AdminDashboard = () => {
     expected_return_rate: "", status: "active" as SubscriptionStatus, notes: "",
   };
   const [clientForm, setClientForm] = useState(emptyClientForm);
+
+  // OTC quote modal
+  const [showQuoteModal, setShowQuoteModal] = useState(false);
+  const [quoteTarget, setQuoteTarget] = useState<ServiceInquiry | null>(null);
+  const [quoteLoading, setQuoteLoading] = useState(false);
+  const emptyQuoteForm = { proposed_price: "", fee_pct: "1.1", expires_at: "", notes: "" };
+  const [quoteForm, setQuoteForm] = useState(emptyQuoteForm);
+
+  // Portfolio reports
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [reportTargetClient, setReportTargetClient] = useState<ServiceSubscription | null>(null);
+  const [reportFormLoading, setReportFormLoading] = useState(false);
+  const [clientReports, setClientReports] = useState<Record<number, PortfolioReport[]>>({});
+  const now = new Date();
+  const emptyReportForm = {
+    period_month: now.getMonth() + 1,
+    period_year: now.getFullYear(),
+    portfolio_value: "",
+    return_pct: "",
+    notes: "",
+  };
+  const [reportForm, setReportForm] = useState(emptyReportForm);
 
   // ==========================================
   // EFFECTS
@@ -280,6 +303,88 @@ const AdminDashboard = () => {
       await serviceSubscriptionsApi.remove(id);
       setServiceClients(prev => prev.filter(c => c.id !== id));
     } catch { alert("Impossible de supprimer."); }
+  };
+
+  // ==========================================
+  // OTC QUOTE HANDLERS
+  // ==========================================
+
+  const handleOpenQuoteModal = (inquiry: ServiceInquiry) => {
+    setQuoteTarget(inquiry);
+    // Pre-parse existing quote from admin_notes if any
+    setQuoteForm(emptyQuoteForm);
+    setShowQuoteModal(true);
+  };
+
+  const handleSaveQuote = async () => {
+    if (!quoteTarget || !quoteForm.proposed_price) {
+      alert("Remplis le prix proposé.");
+      return;
+    }
+    setQuoteLoading(true);
+    const amount = parseFloat(quoteForm.proposed_price);
+    const fee = amount * parseFloat(quoteForm.fee_pct) / 100;
+    const total = amount + fee;
+    const noteText = `[DEVIS] Prix proposé: ${amount.toLocaleString()} | Frais GB (${quoteForm.fee_pct}%): ${fee.toFixed(2)} | Total client: ${total.toFixed(2)} | Expire: ${quoteForm.expires_at || "N/A"} | Note: ${quoteForm.notes}`;
+    try {
+      await serviceInquiriesApi.update(quoteTarget.id, {
+        status: "contacted",
+        admin_notes: noteText,
+      });
+      setServiceInquiries(prev => prev.map(i =>
+        i.id === quoteTarget.id ? { ...i, status: "contacted", admin_notes: noteText } : i
+      ));
+      setShowQuoteModal(false);
+    } catch { alert("Impossible d'enregistrer le devis."); }
+    finally { setQuoteLoading(false); }
+  };
+
+  // ==========================================
+  // PORTFOLIO REPORT HANDLERS
+  // ==========================================
+
+  const handleOpenReportModal = (client: ServiceSubscription) => {
+    setReportTargetClient(client);
+    setReportForm(emptyReportForm);
+    // Load existing reports for this client if not already loaded
+    if (!clientReports[client.id]) {
+      portfolioReportsApi.list(client.id)
+        .then(data => setClientReports(prev => ({ ...prev, [client.id]: data })))
+        .catch(() => {});
+    }
+    setShowReportModal(true);
+  };
+
+  const handleSaveReport = async () => {
+    if (!reportTargetClient || !reportForm.portfolio_value || !reportForm.return_pct) {
+      alert("Remplis tous les champs obligatoires.");
+      return;
+    }
+    setReportFormLoading(true);
+    try {
+      const created = await portfolioReportsApi.create(reportTargetClient.id, reportForm);
+      setClientReports(prev => ({
+        ...prev,
+        [reportTargetClient.id]: [created, ...(prev[reportTargetClient.id] || [])],
+      }));
+      setReportForm(emptyReportForm);
+      setShowReportModal(false);
+    } catch (e: any) {
+      alert("Erreur : " + e.message);
+    } finally {
+      setReportFormLoading(false);
+    }
+  };
+
+  const handleDeleteReport = async (subscriptionId: number, reportId: number) => {
+    if (!window.confirm("Supprimer ce rapport ?")) return;
+    try {
+      await portfolioReportsApi.remove(subscriptionId, reportId);
+      setClientReports(prev => ({
+        ...prev,
+        [subscriptionId]: (prev[subscriptionId] || []).filter(r => r.id !== reportId),
+      }));
+    } catch { alert("Impossible de supprimer ce rapport."); }
   };
 
   const handleRejectEarnRequest = async (id: number) => {
@@ -1126,140 +1231,330 @@ const AdminDashboard = () => {
                   </button>
                 </div>
 
-                {/* ── Inquiries section ── */}
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-heading font-bold text-dark">Demandes de contact</h3>
-                    <span className="text-xs text-gray-400">{serviceInquiries.length} demande(s) au total</span>
-                  </div>
+                {/* ── Advisory / Copy-Trading Inquiries ── */}
+                {(() => {
+                  const nonOtcInquiries = serviceInquiries.filter(i => i.service !== "otc");
+                  return (
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-sm font-heading font-bold text-dark">Demandes Advisory & Copy-Trading</h3>
+                        <span className="text-xs text-gray-400">{nonOtcInquiries.length} demande(s)</span>
+                      </div>
 
-                  {/* Pipeline stats */}
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                    {INQUIRY_PIPELINE.map(p => {
-                      const count = serviceInquiries.filter(i => i.status === p.key).length;
-                      return (
-                        <div key={p.key} className={`rounded-xl p-4 ${p.color.replace("text-", "border-").replace("bg-", "bg-")} border`}>
-                          <div className="text-2xl font-black">{count}</div>
-                          <div className="text-xs font-semibold mt-0.5">{p.label}</div>
-                          {p.key !== "converted" && count > 0 && (
-                            <div className="text-[10px] opacity-60 mt-1">
-                              {SVC_META[serviceInquiries.find(i => i.status === p.key)?.service ?? ""]?.label ?? ""}
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        {INQUIRY_PIPELINE.map(p => {
+                          const count = nonOtcInquiries.filter(i => i.status === p.key).length;
+                          return (
+                            <div key={p.key} className={`rounded-xl p-4 ${p.color.replace("text-", "border-").replace("bg-", "bg-")} border`}>
+                              <div className="text-2xl font-black">{count}</div>
+                              <div className="text-xs font-semibold mt-0.5">{p.label}</div>
                             </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
+                          );
+                        })}
+                      </div>
 
-                  {/* Per-service breakdown */}
-                  <div className="grid grid-cols-3 gap-3">
-                    {(["advisory", "copytrading", "otc"] as const).map(svc => {
-                      const total     = serviceInquiries.filter(i => i.service === svc).length;
-                      const converted = serviceInquiries.filter(i => i.service === svc && i.status === "converted").length;
-                      const meta      = SVC_META[svc];
-                      return (
-                        <div key={svc} className="bg-white rounded-xl border border-gray-100 p-4">
-                          <div className="flex items-center gap-2 mb-2">
-                            <div className={`w-2 h-2 rounded-full ${meta.dot}`} />
-                            <span className="text-xs font-bold text-dark">{meta.label}</span>
-                          </div>
-                          <div className="text-xl font-black text-primary">{total}</div>
-                          <div className="text-[10px] text-gray-400 mt-0.5">
-                            dont <span className="text-green-600 font-bold">{converted} converti{converted > 1 ? "s" : ""}</span>
-                          </div>
-                          {total > 0 && (
-                            <div className="mt-2 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                              <div
-                                className="h-full bg-green-400 rounded-full transition-all"
-                                style={{ width: `${Math.round((converted / total) * 100)}%` }}
-                              />
+                      <div className="grid grid-cols-2 gap-3">
+                        {(["advisory", "copytrading"] as const).map(svc => {
+                          const total     = nonOtcInquiries.filter(i => i.service === svc).length;
+                          const converted = nonOtcInquiries.filter(i => i.service === svc && i.status === "converted").length;
+                          const meta      = SVC_META[svc];
+                          return (
+                            <div key={svc} className="bg-white rounded-xl border border-gray-100 p-4">
+                              <div className="flex items-center gap-2 mb-2">
+                                <div className={`w-2 h-2 rounded-full ${meta.dot}`} />
+                                <span className="text-xs font-bold text-dark">{meta.label}</span>
+                              </div>
+                              <div className="text-xl font-black text-primary">{total}</div>
+                              <div className="text-[10px] text-gray-400 mt-0.5">
+                                dont <span className="text-green-600 font-bold">{converted} converti{converted > 1 ? "s" : ""}</span>
+                              </div>
+                              {total > 0 && (
+                                <div className="mt-2 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                  <div className="h-full bg-green-400 rounded-full" style={{ width: `${Math.round((converted / total) * 100)}%` }} />
+                                </div>
+                              )}
                             </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
+                          );
+                        })}
+                      </div>
 
-                  {/* Inquiry list */}
-                  {serviceInquiries.length > 0 && (
-                    <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-left">
-                          <thead className="bg-gray-50 text-gray-400 text-[11px] uppercase tracking-wider">
-                            <tr>
-                              <th className="px-5 py-3 font-semibold">Contact</th>
-                              <th className="px-5 py-3 font-semibold">Service</th>
-                              <th className="px-5 py-3 font-semibold">Date</th>
-                              <th className="px-5 py-3 font-semibold">Statut</th>
-                              <th className="px-5 py-3 font-semibold text-right">Actions</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-gray-50">
-                            {serviceInquiries.map(inq => {
-                              const meta = SVC_META[inq.service];
-                              const pipeline = INQUIRY_PIPELINE;
-                              const currentIdx = pipeline.findIndex(p => p.key === inq.status);
-                              const nextStep = pipeline[currentIdx + 1];
-                              return (
-                                <tr key={inq.id} className="hover:bg-gray-50/50 transition">
-                                  <td className="px-5 py-3">
-                                    <div className="font-semibold text-sm text-dark">{inq.full_name}</div>
-                                    <div className="text-xs text-gray-400">{inq.email} · {inq.phone}</div>
-                                    {inq.message && (
-                                      <div className="text-xs text-gray-500 italic mt-0.5 max-w-xs truncate">"{inq.message}"</div>
-                                    )}
-                                  </td>
-                                  <td className="px-5 py-3">
-                                    <div className="flex items-center gap-1.5">
-                                      <div className={`w-2 h-2 rounded-full ${meta?.dot ?? "bg-gray-400"}`} />
-                                      <span className="text-xs font-semibold text-dark">{meta?.label ?? inq.service}</span>
-                                    </div>
-                                  </td>
-                                  <td className="px-5 py-3 text-xs text-gray-400">
-                                    {new Date(inq.created_at).toLocaleDateString("fr-FR")}
-                                  </td>
-                                  <td className="px-5 py-3">
-                                    <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${INQUIRY_PIPELINE.find(p => p.key === inq.status)?.color ?? "bg-gray-100 text-gray-500"}`}>
-                                      {INQUIRY_PIPELINE.find(p => p.key === inq.status)?.label ?? inq.status}
-                                    </span>
-                                  </td>
-                                  <td className="px-5 py-3">
-                                    <div className="flex items-center justify-end gap-1.5 flex-wrap">
-                                      {nextStep && (
-                                        <button
-                                          onClick={() => handleInquiryStatus(inq.id, nextStep.key)}
-                                          className="text-[11px] font-bold px-2.5 py-1 rounded-lg border border-gray-200 hover:border-primary hover:text-primary text-gray-500 transition whitespace-nowrap"
-                                        >
-                                          → {nextStep.label}
-                                        </button>
-                                      )}
-                                      {inq.status !== "converted" && (
-                                        <button
-                                          onClick={() => handleConvertInquiry(inq)}
-                                          className="text-[11px] font-bold px-2.5 py-1 rounded-lg bg-green-50 text-green-600 hover:bg-green-100 transition whitespace-nowrap"
-                                        >
-                                          Convertir
-                                        </button>
-                                      )}
-                                      <button
-                                        onClick={() => handleDeleteInquiry(inq.id)}
-                                        className="p-1.5 text-gray-300 hover:text-red-500 rounded hover:bg-gray-100 transition"
-                                      >
-                                        <Trash2 className="w-3.5 h-3.5" />
-                                      </button>
-                                    </div>
+                      {nonOtcInquiries.length > 0 && (
+                        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+                          <div className="overflow-x-auto">
+                            <table className="w-full text-left">
+                              <thead className="bg-gray-50 text-gray-400 text-[11px] uppercase tracking-wider">
+                                <tr>
+                                  <th className="px-5 py-3 font-semibold">Contact</th>
+                                  <th className="px-5 py-3 font-semibold">Service</th>
+                                  <th className="px-5 py-3 font-semibold">Date</th>
+                                  <th className="px-5 py-3 font-semibold">Statut</th>
+                                  <th className="px-5 py-3 font-semibold text-right">Actions</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-gray-50">
+                                {nonOtcInquiries.map(inq => {
+                                  const meta = SVC_META[inq.service];
+                                  const currentIdx = INQUIRY_PIPELINE.findIndex(p => p.key === inq.status);
+                                  const nextStep = INQUIRY_PIPELINE[currentIdx + 1];
+                                  return (
+                                    <tr key={inq.id} className="hover:bg-gray-50/50 transition">
+                                      <td className="px-5 py-3">
+                                        <div className="font-semibold text-sm text-dark">{inq.full_name}</div>
+                                        <div className="text-xs text-gray-400">{inq.email} · {inq.phone}</div>
+                                      </td>
+                                      <td className="px-5 py-3">
+                                        <div className="flex items-center gap-1.5">
+                                          <div className={`w-2 h-2 rounded-full ${meta?.dot ?? "bg-gray-400"}`} />
+                                          <span className="text-xs font-semibold text-dark">{meta?.label ?? inq.service}</span>
+                                        </div>
+                                      </td>
+                                      <td className="px-5 py-3 text-xs text-gray-400">{new Date(inq.created_at).toLocaleDateString("fr-FR")}</td>
+                                      <td className="px-5 py-3">
+                                        <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${INQUIRY_PIPELINE.find(p => p.key === inq.status)?.color ?? "bg-gray-100 text-gray-500"}`}>
+                                          {INQUIRY_PIPELINE.find(p => p.key === inq.status)?.label ?? inq.status}
+                                        </span>
+                                      </td>
+                                      <td className="px-5 py-3">
+                                        <div className="flex items-center justify-end gap-1.5 flex-wrap">
+                                          {nextStep && (
+                                            <button onClick={() => handleInquiryStatus(inq.id, nextStep.key)} className="text-[11px] font-bold px-2.5 py-1 rounded-lg border border-gray-200 hover:border-primary hover:text-primary text-gray-500 transition whitespace-nowrap">
+                                              → {nextStep.label}
+                                            </button>
+                                          )}
+                                          {inq.status !== "converted" && (
+                                            <button onClick={() => handleConvertInquiry(inq)} className="text-[11px] font-bold px-2.5 py-1 rounded-lg bg-green-50 text-green-600 hover:bg-green-100 transition whitespace-nowrap">
+                                              Convertir
+                                            </button>
+                                          )}
+                                          <button onClick={() => handleDeleteInquiry(inq.id)} className="p-1.5 text-gray-300 hover:text-red-500 rounded hover:bg-gray-100 transition">
+                                            <Trash2 className="w-3.5 h-3.5" />
+                                          </button>
+                                        </div>
+                                      </td>
+                                    </tr>
+                                  );
+                                })}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+
+                <div className="border-t border-gray-200" />
+
+                {/* ── OTC Orders Pipeline ── */}
+                {(() => {
+                  const otcInquiries = serviceInquiries.filter(i => i.service === "otc");
+                  const OTC_PIPELINE = [
+                    { key: "new" as InquiryStatus,       label: "Demande reçue", color: "bg-blue-50 text-blue-600" },
+                    { key: "contacted" as InquiryStatus,  label: "Devis envoyé",  color: "bg-yellow-50 text-yellow-600" },
+                    { key: "demo_done" as InquiryStatus,  label: "Paiement reçu", color: "bg-purple-50 text-purple-600" },
+                    { key: "converted" as InquiryStatus,  label: "Clôturé",       color: "bg-green-50 text-green-600" },
+                  ];
+                  return (
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h3 className="text-sm font-heading font-bold text-dark flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
+                            Ordres OTC Desk
+                          </h3>
+                          <p className="text-[10px] text-gray-400 mt-0.5">Intermédiaire de conversion crypto / FCFA — commission 1.1%</p>
+                        </div>
+                        <span className="text-xs text-gray-400">{otcInquiries.length} ordre(s)</span>
+                      </div>
+
+                      {/* OTC pipeline stats */}
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        {OTC_PIPELINE.map(p => {
+                          const count = otcInquiries.filter(i => i.status === p.key).length;
+                          return (
+                            <div key={p.key} className={`rounded-xl p-4 ${p.color} border border-current/20`}>
+                              <div className="text-2xl font-black">{count}</div>
+                              <div className="text-xs font-semibold mt-0.5">{p.label}</div>
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      {/* OTC orders table */}
+                      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-left">
+                            <thead className="bg-gray-50 text-gray-400 text-[11px] uppercase tracking-wider">
+                              <tr>
+                                <th className="px-5 py-3 font-semibold">Client</th>
+                                <th className="px-5 py-3 font-semibold">Conversion</th>
+                                <th className="px-5 py-3 font-semibold">Délai</th>
+                                <th className="px-5 py-3 font-semibold">Date</th>
+                                <th className="px-5 py-3 font-semibold">Statut</th>
+                                <th className="px-5 py-3 font-semibold text-right">Actions</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-50">
+                              {otcInquiries.length === 0 ? (
+                                <tr>
+                                  <td colSpan={6} className="px-6 py-10 text-center text-gray-400 text-sm">
+                                    Aucun ordre OTC pour l'instant
                                   </td>
                                 </tr>
-                              );
-                            })}
-                          </tbody>
-                        </table>
+                              ) : otcInquiries.map(inq => {
+                                const extra = inq.extra_data ?? {};
+                                const currentStatus = OTC_PIPELINE.find(p => p.key === inq.status);
+                                const currentIdx = OTC_PIPELINE.findIndex(p => p.key === inq.status);
+                                const nextStep = OTC_PIPELINE[currentIdx + 1];
+                                return (
+                                  <tr key={inq.id} className="hover:bg-gray-50/50 transition">
+                                    <td className="px-5 py-3">
+                                      <div className="font-semibold text-sm text-dark">{inq.full_name}</div>
+                                      <div className="text-xs text-gray-400">{inq.email} · {inq.phone}</div>
+                                    </td>
+                                    <td className="px-5 py-3">
+                                      <div className="font-mono text-sm font-bold text-dark">
+                                        {extra.amount ? Number(extra.amount).toLocaleString() : "—"} {extra.source_asset}
+                                      </div>
+                                      <div className="text-xs text-gray-400">→ {extra.target_asset ?? "—"}</div>
+                                      {inq.admin_notes && inq.admin_notes.startsWith("[DEVIS]") && (
+                                        <div className="text-[10px] text-emerald-600 font-semibold mt-0.5 max-w-xs truncate">{inq.admin_notes}</div>
+                                      )}
+                                    </td>
+                                    <td className="px-5 py-3 text-xs text-gray-500">{extra.timeline ?? "—"}</td>
+                                    <td className="px-5 py-3 text-xs text-gray-400">{new Date(inq.created_at).toLocaleDateString("fr-FR")}</td>
+                                    <td className="px-5 py-3">
+                                      <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${currentStatus?.color ?? "bg-gray-100 text-gray-500"}`}>
+                                        {currentStatus?.label ?? inq.status}
+                                      </span>
+                                    </td>
+                                    <td className="px-5 py-3">
+                                      <div className="flex items-center justify-end gap-1.5">
+                                        {inq.status === "new" && (
+                                          <button
+                                            onClick={() => handleOpenQuoteModal(inq)}
+                                            className="text-[11px] font-bold px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition whitespace-nowrap"
+                                          >
+                                            Envoyer devis
+                                          </button>
+                                        )}
+                                        {nextStep && inq.status !== "new" && (
+                                          <button
+                                            onClick={() => handleInquiryStatus(inq.id, nextStep.key)}
+                                            className="text-[11px] font-bold px-2.5 py-1 rounded-lg border border-gray-200 hover:border-emerald-500 hover:text-emerald-600 text-gray-500 transition whitespace-nowrap"
+                                          >
+                                            → {nextStep.label}
+                                          </button>
+                                        )}
+                                        <button onClick={() => handleDeleteInquiry(inq.id)} className="p-1.5 text-gray-300 hover:text-red-500 rounded hover:bg-gray-100 transition">
+                                          <Trash2 className="w-3.5 h-3.5" />
+                                        </button>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
                       </div>
                     </div>
-                  )}
+                  );
+                })()}
 
-                  <div className="border-t border-gray-200 pt-4" />
-                </div>
+                <div className="border-t border-gray-200" />
+
+                {/* ── Quote Modal ── */}
+                {showQuoteModal && quoteTarget && (
+                  <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" onClick={() => setShowQuoteModal(false)}>
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md" onClick={e => e.stopPropagation()}>
+                      <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100">
+                        <div>
+                          <h3 className="font-heading font-bold text-primary">Envoyer un devis OTC</h3>
+                          <p className="text-xs text-gray-400 mt-0.5">
+                            {quoteTarget.full_name} — {quoteTarget.extra_data?.amount} {quoteTarget.extra_data?.source_asset} → {quoteTarget.extra_data?.target_asset}
+                          </p>
+                        </div>
+                        <button onClick={() => setShowQuoteModal(false)} className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 transition">
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                      <div className="p-6 space-y-4">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-xs font-bold text-gray-600 uppercase tracking-wide mb-1.5">Prix proposé ({quoteTarget.extra_data?.target_asset}) *</label>
+                            <input
+                              type="number" min="0" value={quoteForm.proposed_price}
+                              onChange={e => setQuoteForm({ ...quoteForm, proposed_price: e.target.value })}
+                              placeholder="ex: 450 000"
+                              className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400/40"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-bold text-gray-600 uppercase tracking-wide mb-1.5">Commission GoldenBridge (%)</label>
+                            <input
+                              type="number" step="0.1" value={quoteForm.fee_pct}
+                              onChange={e => setQuoteForm({ ...quoteForm, fee_pct: e.target.value })}
+                              className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400/40"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Auto-calculated summary */}
+                        {quoteForm.proposed_price && (
+                          <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-4 space-y-1.5 text-sm">
+                            <div className="flex justify-between">
+                              <span className="text-gray-500">Prix marché</span>
+                              <span className="font-bold">{Number(quoteForm.proposed_price).toLocaleString()} {quoteTarget.extra_data?.target_asset}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-500">Commission ({quoteForm.fee_pct}%)</span>
+                              <span className="font-bold text-emerald-600">+ {(Number(quoteForm.proposed_price) * Number(quoteForm.fee_pct) / 100).toFixed(2)}</span>
+                            </div>
+                            <div className="flex justify-between border-t border-emerald-200 pt-1.5">
+                              <span className="font-bold text-dark">Total client</span>
+                              <span className="font-black text-primary">
+                                {(Number(quoteForm.proposed_price) * (1 + Number(quoteForm.fee_pct) / 100)).toFixed(2)} {quoteTarget.extra_data?.target_asset}
+                              </span>
+                            </div>
+                          </div>
+                        )}
+
+                        <div>
+                          <label className="block text-xs font-bold text-gray-600 uppercase tracking-wide mb-1.5">Valide jusqu'au</label>
+                          <input
+                            type="datetime-local" value={quoteForm.expires_at}
+                            onChange={e => setQuoteForm({ ...quoteForm, expires_at: e.target.value })}
+                            className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400/40"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-bold text-gray-600 uppercase tracking-wide mb-1.5">Note au client</label>
+                          <textarea
+                            value={quoteForm.notes} rows={2}
+                            onChange={e => setQuoteForm({ ...quoteForm, notes: e.target.value })}
+                            placeholder="Disponibilité, instructions de virement..."
+                            className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400/40 resize-none"
+                          />
+                        </div>
+
+                        <div className="flex gap-3 pt-1">
+                          <button
+                            onClick={handleSaveQuote} disabled={quoteLoading}
+                            className="flex-1 flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl transition disabled:opacity-60 text-sm"
+                          >
+                            {quoteLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                            Enregistrer & marquer "Devis envoyé"
+                          </button>
+                          <button onClick={() => setShowQuoteModal(false)} className="px-5 py-3 border border-gray-200 text-gray-500 hover:text-dark font-semibold rounded-xl text-sm transition">
+                            Annuler
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {/* Table */}
                 <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
@@ -1318,6 +1613,13 @@ const AdminDashboard = () => {
                               </td>
                               <td className="px-5 py-4 text-right">
                                 <div className="flex items-center justify-end gap-1">
+                                  <button
+                                    onClick={() => handleOpenReportModal(c)}
+                                    title="Ajouter rapport mensuel"
+                                    className="p-1.5 text-gray-300 hover:text-emerald-600 rounded hover:bg-emerald-50 transition"
+                                  >
+                                    <ClipboardList className="w-3.5 h-3.5" />
+                                  </button>
                                   <button onClick={() => handleOpenClientForm(c)} className="p-1.5 text-gray-300 hover:text-primary rounded hover:bg-gray-100 transition">
                                     <Pencil className="w-3.5 h-3.5" />
                                   </button>
@@ -1333,6 +1635,127 @@ const AdminDashboard = () => {
                     </table>
                   </div>
                 </div>
+
+                {/* ── Report Modal ── */}
+                {showReportModal && reportTargetClient && (
+                  <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" onClick={() => setShowReportModal(false)}>
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+                      <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100">
+                        <div>
+                          <h3 className="font-heading font-bold text-primary">Rapport mensuel</h3>
+                          <p className="text-xs text-gray-400 mt-0.5">{reportTargetClient.user.username} — {SERVICE_LABELS[reportTargetClient.service]?.label}</p>
+                        </div>
+                        <button onClick={() => setShowReportModal(false)} className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 transition">
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                      <div className="p-6 space-y-4">
+                        {/* Period */}
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-xs font-bold text-gray-600 uppercase tracking-wide mb-1.5">Mois *</label>
+                            <select
+                              value={reportForm.period_month}
+                              onChange={e => setReportForm({ ...reportForm, period_month: Number(e.target.value) })}
+                              className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold/40 bg-white"
+                            >
+                              {["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"].map((m, i) => (
+                                <option key={i+1} value={i+1}>{m}</option>
+                              ))}
+                            </select>
+                          </div>
+                          <div>
+                            <label className="block text-xs font-bold text-gray-600 uppercase tracking-wide mb-1.5">Année *</label>
+                            <input
+                              type="number"
+                              value={reportForm.period_year}
+                              onChange={e => setReportForm({ ...reportForm, period_year: Number(e.target.value) })}
+                              className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold/40"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Values */}
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-xs font-bold text-gray-600 uppercase tracking-wide mb-1.5">Valeur du portefeuille (USD) *</label>
+                            <input
+                              type="number"
+                              value={reportForm.portfolio_value}
+                              onChange={e => setReportForm({ ...reportForm, portfolio_value: e.target.value })}
+                              placeholder="12500"
+                              className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold/40"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-bold text-gray-600 uppercase tracking-wide mb-1.5">Rendement du mois (%) *</label>
+                            <input
+                              type="number"
+                              step="0.01"
+                              value={reportForm.return_pct}
+                              onChange={e => setReportForm({ ...reportForm, return_pct: e.target.value })}
+                              placeholder="3.5"
+                              className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold/40"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Notes */}
+                        <div>
+                          <label className="block text-xs font-bold text-gray-600 uppercase tracking-wide mb-1.5">Message au client</label>
+                          <textarea
+                            value={reportForm.notes}
+                            onChange={e => setReportForm({ ...reportForm, notes: e.target.value })}
+                            rows={3}
+                            placeholder="Bonne performance ce mois, le marché a bien réagi..."
+                            className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold/40 resize-none"
+                          />
+                        </div>
+
+                        {/* Existing reports for this client */}
+                        {(clientReports[reportTargetClient.id] || []).length > 0 && (
+                          <div>
+                            <div className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Rapports précédents</div>
+                            <div className="space-y-2 max-h-40 overflow-y-auto">
+                              {(clientReports[reportTargetClient.id] || []).map(r => {
+                                const monthNames = ["Jan","Fév","Mar","Avr","Mai","Juin","Juil","Aoû","Sep","Oct","Nov","Déc"];
+                                return (
+                                  <div key={r.id} className="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2">
+                                    <div>
+                                      <span className="text-xs font-bold text-dark">{monthNames[r.period_month - 1]} {r.period_year}</span>
+                                      <span className="text-xs text-gray-400 mx-2">·</span>
+                                      <span className="text-xs font-bold text-primary">${parseFloat(r.portfolio_value).toLocaleString()}</span>
+                                      <span className={`text-xs font-bold ml-2 ${parseFloat(r.return_pct) >= 0 ? "text-green-600" : "text-red-500"}`}>
+                                        {parseFloat(r.return_pct) >= 0 ? "+" : ""}{r.return_pct}%
+                                      </span>
+                                    </div>
+                                    <button onClick={() => handleDeleteReport(reportTargetClient.id, r.id)} className="p-1 text-gray-300 hover:text-red-500 transition">
+                                      <Trash2 className="w-3 h-3" />
+                                    </button>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="flex gap-3 pt-2">
+                          <button
+                            onClick={handleSaveReport}
+                            disabled={reportFormLoading}
+                            className="flex-1 flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl transition disabled:opacity-60 text-sm"
+                          >
+                            {reportFormLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ClipboardList className="w-4 h-4" />}
+                            Enregistrer le rapport
+                          </button>
+                          <button onClick={() => setShowReportModal(false)} className="px-5 py-3 border border-gray-200 text-gray-500 hover:text-dark font-semibold rounded-xl text-sm transition">
+                            Fermer
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {/* Modal form */}
                 {showClientForm && (
