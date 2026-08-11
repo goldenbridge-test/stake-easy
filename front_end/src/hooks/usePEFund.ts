@@ -140,7 +140,97 @@ export const usePEFund = () => {
     }
   };
 
-  return {
+  // Withdraw: "I want exactly X stablecoins back, burn whatever shares needed"
+  const withdrawFromFund = async (amount: string) => {
+    if (!provider || !account) return;
+    setLoading(true);
+    try {
+      const signer = provider.getSigner();
+      const pefundContract = new ethers.Contract(PEFUND_ADDRESS, PEFUND_ABI, signer);
+
+      const assetAddress = await pefundContract.asset();
+      const assetContract = new ethers.Contract(assetAddress, ERC20_ABI, signer);
+      const decimals = await assetContract.decimals();
+
+      const formattedAmount = ethers.utils.parseUnits(amount, decimals);
+
+      // withdraw(assets, receiver, owner) — one single transaction, no approve needed
+      const tx = await pefundContract.withdraw(formattedAmount, account, account);
+      await tx.wait();
+
+    alert("Retrait Réussi!");
+    } catch (error) {
+      console.error("Erreur durant le retrait :", error);
+      alert("Erreur transaction (voir console)");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Redeem: "I want to burn exactly X shares, give me whatever stablecoins they're worth"
+  const redeemShares = async (shares: string) => {
+    if (!provider || !account) return;
+    setLoading(true);
+    try {
+      const signer = provider.getSigner();
+      const pefundContract = new ethers.Contract(PEFUND_ADDRESS, PEFUND_ABI, signer);
+      const decimals = await pefundContract.decimals();
+
+      const formattedShares = ethers.utils.parseUnits(shares, decimals);
+
+      // redeem(shares, receiver, owner) — one single transaction, no approve needed
+      const tx = await pefundContract.redeem(formattedShares, account, account);
+      await tx.wait();
+
+    alert("Rachat réussi !");
+    } catch (error) {
+      console.error("Erreur durant le Rachat:", error);
+      alert("Erreur transaction (voir console)");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Preview functions — no gas, just simulations for the UI
+  const getPreviewDeposit = async (amount: string): Promise<string> => {
+    if (!provider) return "0";
+    try {
+      const pefundContract = new ethers.Contract(PEFUND_ADDRESS, PEFUND_ABI, provider);
+
+      const assetAddress = await pefundContract.asset();
+      const assetContract = new ethers.Contract(assetAddress, ERC20_ABI, provider);
+      const decimals = await assetContract.decimals();
+
+      const formattedAmount = ethers.utils.parseUnits(amount, decimals);
+      const shares = await pefundContract.previewDeposit(formattedAmount);
+      const shareDecimals = await pefundContract.decimals();
+      return ethers.utils.formatUnits(shares, shareDecimals);
+    } catch (error) {
+      console.error("Error previewDeposit:", error);
+      return "0";
+    }
+  };
+
+  const getPreviewRedeem = async (shares: string): Promise<string> => {
+    if (!provider) return "0";
+    try {
+      const pefundContract = new ethers.Contract(PEFUND_ADDRESS, PEFUND_ABI, provider);
+      const shareDecimals = await pefundContract.decimals();
+      const formattedShares = ethers.utils.parseUnits(shares, shareDecimals);
+
+      const assets = await pefundContract.previewRedeem(formattedShares);
+
+      const assetAddress = await pefundContract.asset();
+      const assetContract = new ethers.Contract(assetAddress, ERC20_ABI, provider);
+      const assetDecimals = await assetContract.decimals();
+      return ethers.utils.formatUnits(assets, assetDecimals);
+    } catch (error) {
+      console.error("Error previewRedeem:", error);
+      return "0";
+    }
+  };
+
+return {
     account,
     provider,
     loading,
@@ -148,5 +238,9 @@ export const usePEFund = () => {
     getShareBalance,
     getTotalAssets,
     depositToFund,
+    withdrawFromFund,
+    redeemShares,
+    getPreviewDeposit,
+    getPreviewRedeem,
   };
 };
