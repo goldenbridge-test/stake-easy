@@ -1,5 +1,6 @@
 import { AlertCircle, ArrowDown, ArrowUp, Info, RefreshCw, Wallet } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { PEFUND_ADDRESS } from '../constants/pefund';
 import { usePEFund } from '../hooks/usePEFund';
 import Footer from './Footer';
 import Navbar from './Navbar';
@@ -14,6 +15,7 @@ const PEFundInvest = () => {
     getShareBalance,
     getTotalAssets,
     getAssetBalance,
+    getFundInfo,
     depositToFund,
     withdrawFromFund,
     redeemShares,
@@ -28,6 +30,7 @@ const PEFundInvest = () => {
   const [assetBalance, setAssetBalance] = useState('0');
   const [preview, setPreview] = useState('0');
   const [refreshing, setRefreshing] = useState(false);
+  const [fundInfo, setFundInfo] = useState<any>(null);
 
   // Load balances when wallet connects
   const loadData = async () => {
@@ -37,9 +40,11 @@ const PEFundInvest = () => {
       const shares = await getShareBalance(account);
       const total = await getTotalAssets();
       const balance = await getAssetBalance(account);
+      const info = await getFundInfo();
       setShareBalance(shares);
       setTotalAssets(total);
       setAssetBalance(balance);
+      setFundInfo(info);
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {
@@ -145,6 +150,49 @@ const PEFundInvest = () => {
               Actualiser
             </button>
           </div>
+
+          {/* Fund info */}
+          {fundInfo && (
+            <div className="bg-white border border-gray-200 rounded-2xl p-6 mb-8 shadow-sm">
+              <h3 className="font-heading font-bold text-primary mb-4">Informations du fonds</h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                <div>
+                  <p className="text-gray-400">Nom du token</p>
+                  <p className="font-medium text-dark">{fundInfo.name} ({fundInfo.symbol})</p>
+                </div>
+                <div>
+                  <p className="text-gray-400">Frais d'entrée</p>
+                  <p className="font-medium text-dark">{fundInfo.entryFee}%</p>
+                </div>
+                <div>
+                  <p className="text-gray-400">Frais de sortie</p>
+                  <p className="font-medium text-dark">{fundInfo.exitFee}%</p>
+                </div>
+                <div>
+                  <p className="text-gray-400">Frais de performance</p>
+                  <p className="font-medium text-dark">{fundInfo.performanceFee}%</p>
+                </div>
+              </div>
+              <div className="mt-4 pt-4 border-t border-gray-100 grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                <div>
+                  <p className="text-gray-400">Adresse du contrat</p>
+                  
+                  <a
+                    href={`https://sepolia.etherscan.io/address/${PEFUND_ADDRESS}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-mono text-xs text-primary hover:underline"
+                  >
+                    {PEFUND_ADDRESS}
+                  </a>
+                </div>
+                <div>
+                  <p className="text-gray-400">Limite de dépôt max</p>
+                  <p className="font-medium text-dark">{parseFloat(fundInfo.maxDeposit).toLocaleString('fr-FR')} USDC</p>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Main card */}
           {!account ? (

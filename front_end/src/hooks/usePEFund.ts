@@ -246,6 +246,38 @@ export const usePEFund = () => {
     }
   };
 
+  // Get fund info (fees, manager, limits)
+  const getFundInfo = async () => {
+    if (!provider) return null;
+    try {
+      const contract = new ethers.Contract(PEFUND_ADDRESS, PEFUND_ABI, provider);
+      const [entryFee, exitFee, perfFee, manager, maxDeposit, isPaused, name, symbol] = await Promise.all([
+        contract.entryFeeBasisPoints(),
+        contract.exitFeeBasisPoints(),
+        contract.performanceFeeBasisPoints(),
+        contract.fundManager(),
+        contract.maxDepositLimit(),
+        contract.paused(),
+        contract.name(),
+        contract.symbol(),
+      ]);
+      const decimals = await contract.decimals();
+      return {
+        entryFee: entryFee.toNumber() / 100,     // basis points → percentage
+        exitFee: exitFee.toNumber() / 100,
+        performanceFee: perfFee.toNumber() / 100,
+        fundManager: manager,
+        maxDeposit: ethers.utils.formatUnits(maxDeposit, decimals),
+        isPaused,
+        name,
+        symbol,
+      };
+    } catch (error) {
+      console.error('Error getFundInfo:', error);
+      return null;
+    }
+  };
+
 return {
     account,
     provider,
@@ -259,5 +291,6 @@ return {
     getPreviewDeposit,
     getPreviewRedeem,
     getAssetBalance,
+    getFundInfo,
   };
 };
