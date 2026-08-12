@@ -230,6 +230,22 @@ export const usePEFund = () => {
     }
   };
 
+   // Get user's stablecoin balance (how much they can deposit)
+  const getAssetBalance = async (account: string): Promise<string> => {
+    if (!provider) return "0";
+    try {
+      const pefundContract = new ethers.Contract(PEFUND_ADDRESS, PEFUND_ABI, provider);
+      const assetAddress = await pefundContract.asset();
+      const assetContract = new ethers.Contract(assetAddress, ERC20_ABI, provider);
+      const balance = await assetContract.balanceOf(account);
+      const decimals = await assetContract.decimals();
+      return ethers.utils.formatUnits(balance, decimals);
+    } catch (error) {
+      console.error('Error getAssetBalance:', error);
+      return "0";
+    }
+  };
+
 return {
     account,
     provider,
@@ -242,5 +258,6 @@ return {
     redeemShares,
     getPreviewDeposit,
     getPreviewRedeem,
+    getAssetBalance,
   };
 };

@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from "react";
 import { Globe, Menu, X } from "lucide-react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
 const Navbar = () => {
@@ -17,6 +17,7 @@ const Navbar = () => {
   const navLinks = [
     { name: "Home", href: "/" },
     { name: "Investments", href: "/staking" },
+    { name: "Invest", href: "/invest" },
     { name: "Performance", href: "/#performance" },
     { name: "Team", href: "/#team" },
     { name: "About", href: "/#about" },

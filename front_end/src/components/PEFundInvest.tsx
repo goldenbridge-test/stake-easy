@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
-import { Wallet, ArrowDown, ArrowUp, RefreshCw, Info, AlertCircle } from 'lucide-react';
-import Navbar from './Navbar';
-import Footer from './Footer';
+import { AlertCircle, ArrowDown, ArrowUp, Info, RefreshCw, Wallet } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { usePEFund } from '../hooks/usePEFund';
+import Footer from './Footer';
+import Navbar from './Navbar';
 
 type Tab = 'deposit' | 'withdraw';
 
@@ -13,6 +13,7 @@ const PEFundInvest = () => {
     connectWallet,
     getShareBalance,
     getTotalAssets,
+    getAssetBalance,
     depositToFund,
     withdrawFromFund,
     redeemShares,
@@ -24,6 +25,7 @@ const PEFundInvest = () => {
   const [amount, setAmount] = useState('');
   const [shareBalance, setShareBalance] = useState('0');
   const [totalAssets, setTotalAssets] = useState('0');
+  const [assetBalance, setAssetBalance] = useState('0');
   const [preview, setPreview] = useState('0');
   const [refreshing, setRefreshing] = useState(false);
 
@@ -34,15 +36,16 @@ const PEFundInvest = () => {
     try {
       const shares = await getShareBalance(account);
       const total = await getTotalAssets();
+      const balance = await getAssetBalance(account);
       setShareBalance(shares);
       setTotalAssets(total);
+      setAssetBalance(balance);
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {
       setRefreshing(false);
     }
   };
-
   useEffect(() => {
     if (account) loadData();
   }, [account]);
@@ -110,7 +113,7 @@ const PEFundInvest = () => {
           </div>
 
           {/* Stats cards */}
-          <div className="grid grid-cols-2 gap-4 mb-8">
+          <div className="grid grid-cols-3 gap-4 mb-8">
             <div className="bg-blue-50 rounded-xl p-5 text-center">
               <p className="text-sm text-gray-500 mb-1">Valeur totale du fonds</p>
               <p className="text-2xl font-heading font-bold text-primary">
@@ -121,6 +124,12 @@ const PEFundInvest = () => {
               <p className="text-sm text-gray-500 mb-1">Mes parts (GPEF)</p>
               <p className="text-2xl font-heading font-bold text-primary">
                 {formatNumber(shareBalance)}
+              </p>
+            </div>
+            <div className="bg-blue-50 rounded-xl p-5 text-center">
+              <p className="text-sm text-gray-500 mb-1">Mon solde disponible</p>
+              <p className="text-2xl font-heading font-bold text-primary">
+                {formatNumber(assetBalance)} <span className="text-sm font-normal">USDC</span>
               </p>
             </div>
           </div>
