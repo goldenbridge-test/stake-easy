@@ -1,51 +1,45 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 
-// Import des pages
-import Navbar from './components/Navbar';
-import Hero from './components/Hero';
-import Investments from './components/Investments';
-import Performance from './components/Performance';
-import Team from './components/Team';
-import CallToAction from './components/CallToAction';
-import Footer from './components/Footer';
-import SignIn from './components/SignIn'; // Nouveau
-import SignUp from './components/SignUp'; // Nouveau
 import Staking from './components/Staking';
-import AdminDashboard from './components/AdminDashboard';
-
-// On crée un composant pour la Landing Page complète pour garder le code propre
-const LandingPage = () => (
-  <>
-    <Navbar />
-    <main>
-      <Hero />
-      <Investments />
-      <Performance />
-      <Team />
-      <CallToAction />
-    </main>
-    <Footer />
-  </>
-);
+import SignIn from './components/SignIn';
+import SignUp from './components/SignUp';
+import Home from './components/Home';
+import TradingDashboard from './components/TradingDashboard';
+import ProtectedRoute from './components/ProtectedRoute';
 
 function App() {
   return (
     <Router>
       <div className="bg-white min-h-screen font-body text-dark">
         <Routes>
-          {/* Route pour l'accueil (Landing Page) */}
-          <Route path="/" element={<LandingPage />} />
+          {/* Page d'accueil publique */}
+          <Route path="/" element={<Home />} />
 
-          {/* Route pour la connexion */}
+          {/* Auth routes (publiques) */}
           <Route path="/signin" element={<SignIn />} />
-
-          {/* Route pour l'inscription */}
           <Route path="/signup" element={<SignUp />} />
 
-          <Route path="/staking" element={<Staking />} />
+          {/* Produits protégés */}
+          <Route
+            path="/staking"
+            element={
+              <ProtectedRoute>
+                <Staking />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/arima"
+            element={
+              <ProtectedRoute>
+                <TradingDashboard />
+              </ProtectedRoute>
+            }
+          />
 
-          <Route path="/admin" element={<AdminDashboard />} />
+          {/* Fallback */}
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </div>
     </Router>

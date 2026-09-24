@@ -5,21 +5,40 @@ import { Link } from "react-router-dom";
 const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 10);
     };
     window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
+    
+    // Vérifier si l'utilisateur est connecté
+    const checkAuth = () => {
+      setIsLoggedIn(!!localStorage.getItem('access_token'));
+    };
+    checkAuth();
+    
+    // Écouter les changements de localStorage
+    window.addEventListener('storage', checkAuth);
+    
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+      window.removeEventListener('storage', checkAuth);
+    };
   }, []);
 
+  const handleLogout = () => {
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('refresh_token');
+    setIsLoggedIn(false);
+    window.location.href = '/';
+  };
+
   const navLinks = [
-    { name: "Dashboard", href: "/staking" },
-    { name: "Backtest", href: "/backtest" },
-    { name: "Performance", href: "/#performance" },
-    { name: "Team", href: "/#team" },
-    { name: "About", href: "/#about" },
+    { name: "Home", href: "/" },
+    { name: "Trading Bot", href: "/arima" },
+    { name: "Staking", href: "/staking" },
   ];
 
   return (
@@ -48,31 +67,25 @@ const Navbar = () => {
               {link.name}
             </Link>
           ))}
-
-          <button className="flex items-center gap-1 text-dark hover:text-gold font-medium text-[15px]">
-            <Globe className="w-4 h-4" /> EN
-          </button>
         </div>
 
-        {/* BOUTONS D'ACTION */}
+        {/* BOUTONS D'ACTION (Desktop) */}
         <div className="hidden lg:flex items-center gap-4">
-          <Link
-            to="/signin"
-            className="px-6 py-2 rounded-md border border-gold text-primary font-heading font-semibold hover:bg-gold/10 transition"
-          >
-            Sign In
-          </Link>
-
-          <Link
-            to="/signin"
-            onClick={() => {
-              localStorage.removeItem('access_token');
-              localStorage.removeItem('refresh_token');
-          }}
-          className="bg-gold hover:bg-gold-hover text-white px-6 py-2 rounded-md font-heading font-semibold transition shadow-sm"
-        >
-          Logout
-        </Link>
+          {isLoggedIn ? (
+            <button
+              onClick={handleLogout}
+              className="bg-gold hover:bg-gold-hover text-white px-6 py-2 rounded-md font-heading font-semibold transition shadow-sm"
+            >
+              Logout
+            </button>
+          ) : (
+            <Link
+              to="/signin"
+              className="bg-gold hover:bg-gold-hover text-white px-6 py-2 rounded-md font-heading font-semibold transition shadow-sm"
+            >
+              Sign In
+            </Link>
+          )}
         </div>
 
         {/* MOBILE MENU TOGGLE */}
@@ -88,34 +101,35 @@ const Navbar = () => {
       {isMobileMenuOpen && (
         <div className="lg:hidden bg-white border-t border-gray-100 absolute top-full left-0 w-full shadow-lg py-6 px-6 flex flex-col space-y-4">
           {navLinks.map((link) => (
-            <a
+            <Link
               key={link.name}
-              href={link.href}
+              to={link.href}
               className="text-dark font-heading font-bold text-lg"
               onClick={() => setIsMobileMenuOpen(false)}
             >
               {link.name}
-            </a>
+            </Link>
           ))}
           <div className="flex flex-col gap-3 mt-4">
-            <Link
-              to="/signin"
-              className="w-full py-3 rounded-lg border border-gold text-primary font-bold text-center"
-              onClick={() => setIsMobileMenuOpen(false)}
-            >
-              Sign In
-            </Link>
-
-            <Link
-              to="/signin"
-              onClick={() => {
-                localStorage.removeItem('access_token');
-                localStorage.removeItem('refresh_token');
-            }}
-            className="bg-gold hover:bg-gold-hover text-white px-6 py-2 rounded-md font-heading font-semibold transition shadow-sm"
-          >
-            Logout
-          </Link>
+            {isLoggedIn ? (
+              <button
+                onClick={() => {
+                  handleLogout();
+                  setIsMobileMenuOpen(false);
+                }}
+                className="w-full py-3 rounded-lg bg-gold text-white font-bold"
+              >
+                Logout
+              </button>
+            ) : (
+              <Link
+                to="/signin"
+                className="w-full py-3 rounded-lg bg-gold text-white font-bold text-center"
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                Sign In
+              </Link>
+            )}
           </div>
         </div>
       )}

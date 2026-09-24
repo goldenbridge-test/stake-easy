@@ -19,7 +19,7 @@ const SignIn = () => {
 
     try {
       await login(username, password);
-      navigate('/staking'); // ← Dashboard (route existante dans App.tsx)
+      navigate('/'); // ← Redirection vers Home au lieu de /staking
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Identifiants invalides');
     } finally {
@@ -29,7 +29,6 @@ const SignIn = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
-      {/* Bouton Retour */}
       <div className="w-full max-w-md mb-8">
         <Link to="/" className="inline-flex items-center text-primary font-bold hover:text-gold transition gap-2">
           <ArrowLeft className="w-5 h-5" />
@@ -37,22 +36,18 @@ const SignIn = () => {
         </Link>
       </div>
 
-      {/* Carte */}
       <div className="bg-white w-full max-w-md p-8 md:p-10 rounded-xl shadow-lg border border-gray-100">
-        {/* En-tête */}
         <div className="text-center mb-8">
           <h1 className="text-3xl font-heading font-bold text-gold mb-2">GoldenBridge</h1>
-          <p className="text-gray-500">Connectez-vous à votre espace trading</p>
+          <p className="text-gray-500">Connectez-vous à votre espace</p>
         </div>
 
-        {/* Erreur */}
         {error && (
           <div className="bg-red-50 text-red-600 p-3 rounded-lg mb-4 text-sm font-medium">
             {error}
           </div>
         )}
 
-        {/* Formulaire */}
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
             <label className="block text-sm font-bold text-primary mb-2">Nom d'utilisateur</label>
