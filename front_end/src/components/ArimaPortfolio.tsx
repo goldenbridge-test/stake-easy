@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Play, Loader2, CheckCircle, Trophy, TrendingDown, BarChart3, Shield, Activity } from 'lucide-react';
+import { Play, Loader2, CheckCircle, Trophy, TrendingDown, BarChart3, Shield, Activity, XCircle } from 'lucide-react';
 import Navbar from './Navbar';
 import Footer from './Footer';
 import api from '../services/api';
@@ -13,9 +13,15 @@ interface RankingItem {
   id: number;
   symbol: string;
   status: string;
-  pnl: number;
-  pnl_pct: number;
+  capital_allocated: number;
+  realized_pnl: number;
+  realized_pnl_pct: number;
+  unrealized_pnl: number;
+  unrealized_pnl_pct: number;
+  total_pnl: number;
+  total_pnl_pct: number;
   win_rate_pct: number;
+  win_rate_sample_size: number;
   max_drawdown_pct: number;
   sharpe_ratio: number;
   total_buys: number;
@@ -23,14 +29,20 @@ interface RankingItem {
   candles_analyzed: number;
   open_positions: number;
   closed_positions: number;
+  invested_in_open: number;
 }
 
 interface PortfolioSummary {
   total_assets: number;
+  total_capital: number;
   total_pnl: number;
-  avg_pnl_pct: number;
-  avg_sharpe_ratio: number;
-  worst_drawdown_pct: number;
+  total_pnl_pct: number;
+  total_realized_pnl: number;
+  total_realized_pct: number;
+  total_unrealized_pnl: number;
+  total_unrealized_pct: number;
+  sharpe_ratio: number;
+  max_drawdown_pct: number;
   best_performer: string | null;
   worst_performer: string | null;
 }
@@ -54,7 +66,9 @@ const ArimaPortfolio = () => {
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
-    return () => { if (pollRef.current) clearInterval(pollRef.current); };
+    return () => { 
+      if (pollRef.current) clearInterval(pollRef.current); 
+    };
   }, []);
 
   const toggleSymbol = (symbol: string) => {
@@ -89,12 +103,14 @@ const ArimaPortfolio = () => {
           const params = ids.map((id: number) => `ids=${id}`).join('&');
           const { data: updated } = await api.get(`/execution/portfolio-simulation/?${params}`);
           setResult(updated);
+          
           if (updated.status === 'completed') {
             if (pollRef.current) clearInterval(pollRef.current);
             pollRef.current = null;
             setLoading(false);
           }
-        } catch {
+        } catch (err) {
+          console.error('Polling error:', err);
           if (pollRef.current) clearInterval(pollRef.current);
           pollRef.current = null;
           setLoading(false);
@@ -109,6 +125,11 @@ const ArimaPortfolio = () => {
 
   const StatusIcon = result?.status === 'completed' ? CheckCircle : Loader2;
   const isSpinning = result?.status === 'running';
+
+  // Calculer la progression
+  const completedCount = result?.rankings?.filter(r => r.status === 'completed').length || 0;
+  const totalCount = result?.rankings?.length || selectedSymbols.length;
+  const progressPercent = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
 
   return (
     <div className="bg-gray-50 min-h-screen font-body text-dark flex flex-col">
@@ -183,7 +204,7 @@ const ArimaPortfolio = () => {
               <div className="bg-blue-50/50 rounded-lg p-4 border border-blue-100">
                 <p className="text-sm text-gray-600 flex items-start gap-2">
                   <Shield className="w-4 h-4 text-blue-500 mt-0.5 shrink-0" />
-                  Les paramètres de risk management (discount, sealing, TP ladders) sont gérés automatiquement par ARIMA. Vous n'avez rien à configurer.
+                  Le capital est automatiquement divisé entre les actifs sélectionnés. Les paramètres de risk management sont gérés par ARIMA.
                 </p>
               </div>
 
@@ -197,7 +218,12 @@ const ArimaPortfolio = () => {
                 )}
               </button>
 
-              {error && <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm font-medium">{error}</div>}
+              {error && (
+                <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm font-medium flex items-center gap-2">
+                  <XCircle className="w-5 h-5" />
+                  {error}
+                </div>
+              )}
             </div>
           </div>
 
@@ -205,52 +231,86 @@ const ArimaPortfolio = () => {
           {result && (
             <div className="space-y-6">
 
-              {/* Status banner */}
-              <div className={`rounded-xl p-4 flex items-center gap-3 ${
-                result.status === 'completed' ? 'text-green-600 bg-green-50' : 'text-blue-600 bg-blue-50'
-              }`}>
-                <StatusIcon className={`w-6 h-6 ${isSpinning ? 'animate-spin' : ''}`} />
-                <span className="font-bold text-lg capitalize">
-                  {result.status === 'completed' ? 'Simulation terminée' : `Simulation en cours... (${result.progress})`}
-                </span>
-              </div>
+              {/* Progress Bar */}
+              {result.status === 'running' && (
+                <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-6">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-3">
+                      <Loader2 className="w-6 h-6 text-blue-500 animate-spin" />
+                      <span className="font-bold text-lg text-primary">Simulation en cours...</span>
+                    </div>
+                    <span className="text-sm font-bold text-gray-500">
+                      {completedCount} / {totalCount} actifs terminés
+                    </span>
+                  </div>
+                  
+                  {/* Barre de progression */}
+                  <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+                    <div 
+                      className="h-full bg-gradient-to-r from-blue-500 to-indigo-600 transition-all duration-500 ease-out"
+                      style={{ width: `${progressPercent}%` }}
+                    />
+                  </div>
+                  
+                  <p className="text-xs text-gray-400 mt-2 text-center">
+                    Les résultats s'affichent au fur et à mesure
+                  </p>
+                </div>
+              )}
 
-              {/* KPIs Portefeuille */}
-              {result.portfolio_summary.total_assets > 0 && (
+              {/* Status banner (terminé) */}
+              {result.status === 'completed' && (
+                <div className="rounded-xl p-4 flex items-center gap-3 text-green-600 bg-green-50">
+                  <CheckCircle className="w-6 h-6" />
+                  <span className="font-bold text-lg">Simulation terminée — {completedCount} actifs analysés</span>
+                </div>
+              )}
+
+              {/* KPIs Portefeuille (affichés dès qu'il y a des résultats) */}
+              {result.portfolio_summary?.total_assets > 0 && (
                 <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                   <div className="bg-white rounded-xl shadow-md border border-gray-100 p-5">
-                    <p className="text-xs font-bold text-gray-500 mb-1">Actifs testés</p>
-                    <p className="text-2xl font-heading font-bold text-primary">{result.portfolio_summary.total_assets}</p>
+                    <p className="text-xs font-bold text-gray-500 mb-1">Capital Alloué</p>
+                    <p className="text-2xl font-heading font-bold text-primary">
+                      {result.portfolio_summary.total_capital.toFixed(0)} USDT
+                    </p>
+                    <p className="text-xs text-gray-400 mt-1">{result.portfolio_summary.total_assets} actifs</p>
                   </div>
                   <div className="bg-white rounded-xl shadow-md border border-gray-100 p-5">
-                    <p className="text-xs font-bold text-gray-500 mb-1">P&L Total</p>
-                    <p className={`text-2xl font-heading font-bold ${result.portfolio_summary.total_pnl >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      {result.portfolio_summary.total_pnl >= 0 ? '+' : ''}{result.portfolio_summary.total_pnl.toFixed(2)} USDT
+                    <p className="text-xs font-bold text-gray-500 mb-1">P&L Réalisé</p>
+                    <p className={`text-2xl font-heading font-bold ${result.portfolio_summary.total_realized_pnl >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      {result.portfolio_summary.total_realized_pnl >= 0 ? '+' : ''}{result.portfolio_summary.total_realized_pnl.toFixed(2)}
+                    </p>
+                    <p className={`text-xs ${result.portfolio_summary.total_realized_pct >= 0 ? 'text-green-500' : 'text-red-500'} mt-1`}>
+                      {result.portfolio_summary.total_realized_pct >= 0 ? '+' : ''}{result.portfolio_summary.total_realized_pct.toFixed(1)}%
                     </p>
                   </div>
                   <div className="bg-white rounded-xl shadow-md border border-gray-100 p-5">
-                    <p className="text-xs font-bold text-gray-500 mb-1">P&L% Moyen</p>
-                    <p className={`text-2xl font-heading font-bold ${result.portfolio_summary.avg_pnl_pct >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      {result.portfolio_summary.avg_pnl_pct >= 0 ? '+' : ''}{result.portfolio_summary.avg_pnl_pct.toFixed(1)}%
+                    <p className="text-xs font-bold text-gray-500 mb-1">P&L Non Réalisé</p>
+                    <p className={`text-2xl font-heading font-bold ${result.portfolio_summary.total_unrealized_pnl >= 0 ? 'text-blue-600' : 'text-orange-600'}`}>
+                      {result.portfolio_summary.total_unrealized_pnl >= 0 ? '+' : ''}{result.portfolio_summary.total_unrealized_pnl.toFixed(2)}
+                    </p>
+                    <p className={`text-xs ${result.portfolio_summary.total_unrealized_pct >= 0 ? 'text-blue-500' : 'text-orange-500'} mt-1`}>
+                      {result.portfolio_summary.total_unrealized_pct >= 0 ? '+' : ''}{result.portfolio_summary.total_unrealized_pct.toFixed(1)}%
                     </p>
                   </div>
                   <div className="bg-white rounded-xl shadow-md border border-gray-100 p-5">
-                    <p className="text-xs font-bold text-gray-500 mb-1">Sharpe Moyen</p>
-                    <p className={`text-2xl font-heading font-bold ${result.portfolio_summary.avg_sharpe_ratio >= 2 ? 'text-green-600' : result.portfolio_summary.avg_sharpe_ratio >= 1 ? 'text-yellow-600' : 'text-red-600'}`}>
-                      {result.portfolio_summary.avg_sharpe_ratio.toFixed(2)}
+                    <p className="text-xs font-bold text-gray-500 mb-1">Sharpe</p>
+                    <p className={`text-2xl font-heading font-bold ${result.portfolio_summary.sharpe_ratio >= 2 ? 'text-green-600' : result.portfolio_summary.sharpe_ratio >= 1 ? 'text-yellow-600' : 'text-red-600'}`}>
+                      {result.portfolio_summary.sharpe_ratio.toFixed(2)}
                     </p>
                   </div>
                   <div className="bg-white rounded-xl shadow-md border border-gray-100 p-5">
                     <p className="text-xs font-bold text-gray-500 mb-1">Max Drawdown</p>
-                    <p className={`text-2xl font-heading font-bold ${result.portfolio_summary.worst_drawdown_pct < 10 ? 'text-green-600' : result.portfolio_summary.worst_drawdown_pct < 20 ? 'text-yellow-600' : 'text-red-600'}`}>
-                      {result.portfolio_summary.worst_drawdown_pct.toFixed(1)}%
+                    <p className={`text-2xl font-heading font-bold ${result.portfolio_summary.max_drawdown_pct < 20 ? 'text-green-600' : result.portfolio_summary.max_drawdown_pct < 40 ? 'text-yellow-600' : 'text-red-600'}`}>
+                      {result.portfolio_summary.max_drawdown_pct.toFixed(1)}%
                     </p>
                   </div>
                 </div>
               )}
 
-              {/* Best / Worst */}
-              {result.portfolio_summary.best_performer && (
+              {/* Best / Worst (seulement quand terminé) */}
+              {result.status === 'completed' && result.portfolio_summary?.best_performer && (
                 <div className="grid grid-cols-2 gap-4">
                   <div className="bg-green-50 border border-green-200 rounded-xl p-4 flex items-center gap-3">
                     <Trophy className="w-8 h-8 text-yellow-500" />
@@ -269,8 +329,8 @@ const ArimaPortfolio = () => {
                 </div>
               )}
 
-              {/* Classement détaillé */}
-              {result.rankings.length > 0 && (
+              {/* Classement détaillé (affiché dès qu'il y a des résultats) */}
+              {result.rankings?.length > 0 && (
                 <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-6">
                   <h3 className="text-lg font-heading font-bold text-primary mb-4 flex items-center gap-2">
                     <BarChart3 className="w-5 h-5 text-gold" />
@@ -282,12 +342,12 @@ const ArimaPortfolio = () => {
                         <tr className="text-gray-400 text-sm border-b border-gray-100">
                           <th className="pb-3 pl-2">#</th>
                           <th className="pb-3">Actif</th>
-                          <th className="pb-3 text-right">P&L%</th>
-                          <th className="pb-3 text-right">P&L (USDT)</th>
+                          <th className="pb-3 text-right">Capital</th>
+                          <th className="pb-3 text-right">P&L Réalisé</th>
+                          <th className="pb-3 text-right">P&L Non Réalisé</th>
                           <th className="pb-3 text-right">Sharpe</th>
                           <th className="pb-3 text-right">Max DD</th>
                           <th className="pb-3 text-right">Win Rate</th>
-                          <th className="pb-3 text-right">Trades</th>
                           <th className="pb-3 text-right pr-2">Positions</th>
                         </tr>
                       </thead>
@@ -297,27 +357,52 @@ const ArimaPortfolio = () => {
                           return (
                             <tr key={item.symbol} className={`group hover:bg-gray-50 transition ${isPending ? 'opacity-40' : ''} ${idx === 0 && !isPending ? 'bg-yellow-50/50' : ''}`}>
                               <td className="py-3 pl-2 font-bold text-gray-400">{idx + 1}</td>
-                              <td className="py-3 font-bold text-primary">{item.symbol}</td>
-                              <td className={`py-3 text-right font-mono font-bold ${!isPending && item.pnl_pct >= 0 ? 'text-green-600' : !isPending ? 'text-red-600' : 'text-gray-400'}`}>
-                                {isPending ? '...' : `${item.pnl_pct >= 0 ? '+' : ''}${item.pnl_pct.toFixed(1)}%`}
+                              <td className="py-3 font-bold text-primary">
+                                <div className="flex items-center gap-2">
+                                  {item.symbol}
+                                  {isPending && <Loader2 className="w-4 h-4 text-blue-500 animate-spin" />}
+                                </div>
                               </td>
-                              <td className={`py-3 text-right font-mono font-bold ${!isPending && item.pnl >= 0 ? 'text-green-600' : !isPending ? 'text-red-600' : 'text-gray-400'}`}>
-                                {isPending ? '...' : `${item.pnl >= 0 ? '+' : ''}${item.pnl.toFixed(2)}`}
+                              <td className="py-3 text-right font-mono text-sm text-gray-500">
+                                {item.capital_allocated?.toFixed(0) || '...'}
+                              </td>
+                              <td className={`py-3 text-right font-mono font-bold ${!isPending && item.realized_pnl >= 0 ? 'text-green-600' : !isPending ? 'text-red-600' : 'text-gray-400'}`}>
+                                {isPending ? '...' : (
+                                  <div>
+                                    <div>{item.realized_pnl >= 0 ? '+' : ''}{item.realized_pnl.toFixed(0)}</div>
+                                    <div className="text-xs text-gray-400">{item.realized_pnl_pct.toFixed(1)}%</div>
+                                  </div>
+                                )}
+                              </td>
+                              <td className={`py-3 text-right font-mono text-sm ${!isPending && item.unrealized_pnl >= 0 ? 'text-blue-500' : !isPending ? 'text-orange-500' : 'text-gray-400'}`}>
+                                {isPending ? '...' : (
+                                  <div>
+                                    <div>{item.unrealized_pnl >= 0 ? '+' : ''}{item.unrealized_pnl.toFixed(0)}</div>
+                                    <div className="text-xs text-gray-400">{item.unrealized_pnl_pct.toFixed(1)}%</div>
+                                  </div>
+                                )}
                               </td>
                               <td className={`py-3 text-right font-mono text-sm ${!isPending && item.sharpe_ratio >= 2 ? 'text-green-600' : !isPending && item.sharpe_ratio >= 1 ? 'text-yellow-600' : 'text-gray-500'}`}>
                                 {isPending ? '...' : item.sharpe_ratio.toFixed(2)}
                               </td>
-                              <td className={`py-3 text-right font-mono text-sm ${!isPending && item.max_drawdown_pct < 10 ? 'text-green-600' : !isPending && item.max_drawdown_pct < 20 ? 'text-yellow-600' : 'text-red-600'}`}>
+                              <td className={`py-3 text-right font-mono text-sm ${!isPending && item.max_drawdown_pct < 20 ? 'text-green-600' : !isPending && item.max_drawdown_pct < 40 ? 'text-yellow-600' : 'text-red-600'}`}>
                                 {isPending ? '...' : `${item.max_drawdown_pct.toFixed(1)}%`}
                               </td>
                               <td className="py-3 text-right font-mono text-sm">
-                                {isPending ? '...' : `${item.win_rate_pct}%`}
-                              </td>
-                              <td className="py-3 text-right font-mono text-sm text-gray-500">
-                                {isPending ? '...' : item.total_buys + item.total_sells}
+                                {isPending ? '...' : (
+                                  <div>
+                                    <div>{item.win_rate_pct}%</div>
+                                    <div className="text-xs text-gray-400">({item.win_rate_sample_size})</div>
+                                  </div>
+                                )}
                               </td>
                               <td className="py-3 text-right font-mono text-sm text-gray-500 pr-2">
-                                {isPending ? '...' : `${item.open_positions} / ${item.closed_positions}`}
+                                {isPending ? '...' : (
+                                  <div>
+                                    <div>{item.open_positions} ouv.</div>
+                                    <div className="text-xs">{item.closed_positions} ferm.</div>
+                                  </div>
+                                )}
                               </td>
                             </tr>
                           );
