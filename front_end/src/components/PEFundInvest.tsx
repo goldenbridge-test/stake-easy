@@ -16,6 +16,7 @@ const PEFundInvest = () => {
     getTotalAssets,
     getAssetBalance,
     getFundInfo,
+    getAssetSymbol,
     depositToFund,
     withdrawFromFund,
     redeemShares,
@@ -31,6 +32,7 @@ const PEFundInvest = () => {
   const [preview, setPreview] = useState('0');
   const [refreshing, setRefreshing] = useState(false);
   const [fundInfo, setFundInfo] = useState<any>(null);
+  const [assetSymbol, setAssetSymbol] = useState('');
 
   // Load balances when wallet connects
   const loadData = async () => {
@@ -41,10 +43,12 @@ const PEFundInvest = () => {
       const total = await getTotalAssets();
       const balance = await getAssetBalance(account);
       const info = await getFundInfo();
+      const symbol = await getAssetSymbol();
       setShareBalance(shares);
       setTotalAssets(total);
       setAssetBalance(balance);
       setFundInfo(info);
+      setAssetSymbol(symbol);
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {
@@ -82,14 +86,16 @@ const PEFundInvest = () => {
 
   const handleDeposit = async () => {
     if (!amount || parseFloat(amount) <= 0) return;
-    await depositToFund(amount);
+    const success = await depositToFund(amount);
+    if (!success) return;
     setAmount('');
     await loadData();
   };
 
   const handleRedeem = async () => {
     if (!amount || parseFloat(amount) <= 0) return;
-    await redeemShares(amount);
+    const success = await redeemShares(amount);
+    if (!success) return;
     setAmount('');
     await loadData();
   };
@@ -122,7 +128,7 @@ const PEFundInvest = () => {
             <div className="bg-blue-50 rounded-xl p-5 text-center">
               <p className="text-sm text-gray-500 mb-1">Valeur totale du fonds</p>
               <p className="text-2xl font-heading font-bold text-primary">
-                {formatNumber(totalAssets)} <span className="text-sm font-normal">USDC</span>
+                {formatNumber(totalAssets)} <span className="text-sm font-normal">{assetSymbol}</span>
               </p>
             </div>
             <div className="bg-blue-50 rounded-xl p-5 text-center">
@@ -134,7 +140,7 @@ const PEFundInvest = () => {
             <div className="bg-blue-50 rounded-xl p-5 text-center">
               <p className="text-sm text-gray-500 mb-1">Mon solde disponible</p>
               <p className="text-2xl font-heading font-bold text-primary">
-                {formatNumber(assetBalance)} <span className="text-sm font-normal">USDC</span>
+                {formatNumber(assetBalance)} <span className="text-sm font-normal">{assetSymbol}</span>
               </p>
             </div>
           </div>
@@ -188,7 +194,7 @@ const PEFundInvest = () => {
                 </div>
                 <div>
                   <p className="text-gray-400">Limite de dépôt max</p>
-                  <p className="font-medium text-dark">{parseFloat(fundInfo.maxDeposit).toLocaleString('fr-FR')} USDC</p>
+                  <p className="font-medium text-dark">{parseFloat(fundInfo.maxDeposit).toLocaleString('fr-FR')} {assetSymbol}</p>
                 </div>
               </div>
             </div>
@@ -248,7 +254,7 @@ const PEFundInvest = () => {
                 {/* Amount input */}
                 <div>
                   <label className="block text-sm font-medium text-gray-600 mb-2">
-                    {activeTab === 'deposit' ? 'Montant à déposer (USDC)' : 'Nombre de parts à retirer (GPEF)'}
+                    {activeTab === 'deposit' ? `Montant à déposer (${assetSymbol})` : 'Nombre de parts à retirer (GPEF)'}
                   </label>
                   <div className="relative">
                     <input
@@ -261,7 +267,7 @@ const PEFundInvest = () => {
                       className="w-full border border-gray-200 rounded-xl px-4 py-4 text-lg font-heading focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition"
                     />
                     <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-gray-400 font-medium">
-                      {activeTab === 'deposit' ? 'USDC' : 'GPEF'}
+                      {activeTab === 'deposit' ? assetSymbol : 'GPEF'}
                     </span>
                   </div>
                 </div>
@@ -274,11 +280,11 @@ const PEFundInvest = () => {
                       <p className="text-sm text-gray-600">
                         {activeTab === 'deposit'
                           ? `Vous recevrez environ ${formatNumber(preview)} parts GPEF`
-                          : `Vous récupérerez environ ${formatNumber(preview)} USDC`
+                          : `Vous récupérerez environ ${formatNumber(preview)} ${assetSymbol}`
                         }
                       </p>
                       <p className="text-xs text-gray-400 mt-1">
-                        Estimation avant frais — le montant exact peut varier légèrement
+                        Estimation nette des frais d'entrée/sortie — le montant exact peut varier légèrement
                       </p>
                     </div>
                   </div>

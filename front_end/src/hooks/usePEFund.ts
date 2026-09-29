@@ -5,6 +5,7 @@ import { PEFUND_ABI, PEFUND_ADDRESS } from '../constants/pefund';
 const ERC20_ABI = [
   "function approve(address spender, uint256 amount) public returns (bool)",
   "function decimals() public view returns (uint8)",
+  "function symbol() public view returns (string)",
   "function balanceOf(address account) public view returns (uint256)"
 ];
 
@@ -104,7 +105,10 @@ export const usePEFund = () => {
     try {
       const contract = new ethers.Contract(PEFUND_ADDRESS, PEFUND_ABI, provider);
       const total = await contract.totalAssets();
-      const decimals = await contract.decimals();
+      // totalAssets is denominated in the underlying asset, not in shares
+      const assetAddress = await contract.asset();
+      const assetContract = new ethers.Contract(assetAddress, ERC20_ABI, provider);
+      const decimals = await assetContract.decimals();
       return ethers.utils.formatUnits(total, decimals);
     } catch (error) {
       console.error('Erreur getTotalAssets:', error);
@@ -113,7 +117,7 @@ export const usePEFund = () => {
   };
 
   const depositToFund = async (amount: string) => {
-    if (!provider || !account) return;
+    if (!provider || !account) return false;
     setLoading(true);
     try {
       const signer = provider.getSigner();
@@ -124,6 +128,18 @@ export const usePEFund = () => {
       const decimals = await assetContract.decimals();
 
       const formattedAmount = ethers.utils.parseUnits(amount, decimals);
+
+      // Pre-checks before opening MetaMask: deposits revert when paused or above the limit
+      if (await pefundContract.paused()) {
+        alert("Le fonds est actuellement en pause : les dépôts sont temporairement suspendus.");
+        return false;
+      }
+      const maxDeposit = await pefundContract.maxDeposit(account);
+      if (formattedAmount.gt(maxDeposit)) {
+        const symbol = await assetContract.symbol();
+        alert(`Montant trop élevé : vous pouvez déposer au maximum ${ethers.utils.formatUnits(maxDeposit, decimals)} ${symbol} (limite de dépôt du fonds).`);
+        return false;
+      }
 
       const txApprove = await assetContract.approve(PEFUND_ADDRESS, formattedAmount);
       await txApprove.wait();
@@ -132,9 +148,11 @@ export const usePEFund = () => {
       await txDeposit.wait();
 
       alert("Dépôt réussi !");
+      return true;
     } catch (error) {
       console.error("Erreur durant le dépôt:", error);
       alert("Erreur transaction (voir console)");
+      return false;
     } finally {
       setLoading(false);
     }
@@ -142,7 +160,7 @@ export const usePEFund = () => {
 
   // Withdraw: "I want exactly X stablecoins back, burn whatever shares needed"
   const withdrawFromFund = async (amount: string) => {
-    if (!provider || !account) return;
+    if (!provider || !account) return false;
     setLoading(true);
     try {
       const signer = provider.getSigner();
@@ -154,14 +172,24 @@ export const usePEFund = () => {
 
       const formattedAmount = ethers.utils.parseUnits(amount, decimals);
 
+      // Pre-check before opening MetaMask (withdrawals are not blocked by pause in the contract)
+      const maxWithdraw = await pefundContract.maxWithdraw(account);
+      if (formattedAmount.gt(maxWithdraw)) {
+        const symbol = await assetContract.symbol();
+        alert(`Montant trop élevé : vous pouvez retirer au maximum ${ethers.utils.formatUnits(maxWithdraw, decimals)} ${symbol}.`);
+        return false;
+      }
+
       // withdraw(assets, receiver, owner) — one single transaction, no approve needed
       const tx = await pefundContract.withdraw(formattedAmount, account, account);
       await tx.wait();
 
     alert("Retrait Réussi!");
+      return true;
     } catch (error) {
       console.error("Erreur durant le retrait :", error);
       alert("Erreur transaction (voir console)");
+      return false;
     } finally {
       setLoading(false);
     }
@@ -169,7 +197,7 @@ export const usePEFund = () => {
 
   // Redeem: "I want to burn exactly X shares, give me whatever stablecoins they're worth"
   const redeemShares = async (shares: string) => {
-    if (!provider || !account) return;
+    if (!provider || !account) return false;
     setLoading(true);
     try {
       const signer = provider.getSigner();
@@ -178,14 +206,23 @@ export const usePEFund = () => {
 
       const formattedShares = ethers.utils.parseUnits(shares, decimals);
 
+      // Pre-check before opening MetaMask (withdrawals are not blocked by pause in the contract)
+      const maxRedeem = await pefundContract.maxRedeem(account);
+      if (formattedShares.gt(maxRedeem)) {
+        alert(`Nombre de parts trop élevé : vous pouvez racheter au maximum ${ethers.utils.formatUnits(maxRedeem, decimals)} parts.`);
+        return false;
+      }
+
       // redeem(shares, receiver, owner) — one single transaction, no approve needed
       const tx = await pefundContract.redeem(formattedShares, account, account);
       await tx.wait();
 
     alert("Rachat réussi !");
+      return true;
     } catch (error) {
       console.error("Erreur durant le Rachat:", error);
       alert("Erreur transaction (voir console)");
+      return false;
     } finally {
       setLoading(false);
     }
@@ -261,7 +298,10 @@ export const usePEFund = () => {
         contract.name(),
         contract.symbol(),
       ]);
-      const decimals = await contract.decimals();
+      // maxDepositLimit is denominated in the underlying asset, not in shares
+      const assetAddress = await contract.asset();
+      const assetContract = new ethers.Contract(assetAddress, ERC20_ABI, provider);
+      const decimals = await assetContract.decimals();
       return {
         entryFee: entryFee.toNumber() / 100,     // basis points → percentage
         exitFee: exitFee.toNumber() / 100,
@@ -275,6 +315,20 @@ export const usePEFund = () => {
     } catch (error) {
       console.error('Error getFundInfo:', error);
       return null;
+    }
+  };
+
+  // Get the underlying stablecoin's symbol (e.g. "USDC") for display
+  const getAssetSymbol = async (): Promise<string> => {
+    if (!provider) return "";
+    try {
+      const pefundContract = new ethers.Contract(PEFUND_ADDRESS, PEFUND_ABI, provider);
+      const assetAddress = await pefundContract.asset();
+      const assetContract = new ethers.Contract(assetAddress, ERC20_ABI, provider);
+      return await assetContract.symbol();
+    } catch (error) {
+      console.error('Error getAssetSymbol:', error);
+      return "";
     }
   };
 
@@ -292,5 +346,6 @@ return {
     getPreviewRedeem,
     getAssetBalance,
     getFundInfo,
+    getAssetSymbol,
   };
 };
