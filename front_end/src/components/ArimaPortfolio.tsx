@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Play, Loader2, CheckCircle, Trophy, TrendingDown, BarChart3, Shield, Activity, XCircle } from 'lucide-react';
+import { Play, Loader2, CheckCircle, Trophy, TrendingDown, BarChart3, Shield, Activity, XCircle, TrendingUp } from 'lucide-react';
 import Navbar from './Navbar';
 import Footer from './Footer';
 import api from '../services/api';
@@ -8,6 +8,12 @@ const AVAILABLE_SYMBOLS = [
   'BTC/USDT', 'ETH/USDT', 'SOL/USDT', 'BNB/USDT', 'XRP/USDT',
   'ADA/USDT', 'AVAX/USDT', 'DOT/USDT', 'LINK/USDT', 'MATIC/USDT',
 ];
+
+interface CAGRData {
+  performance_totale_pct: number;
+  moyenne_annualisee_pct: number;
+  cagr_pct: number;
+}
 
 interface RankingItem {
   id: number;
@@ -30,11 +36,16 @@ interface RankingItem {
   open_positions: number;
   closed_positions: number;
   invested_in_open: number;
+  cagr: CAGRData;
+  nb_years: number;
+  final_capital: number;
 }
 
 interface PortfolioSummary {
   total_assets: number;
   total_capital: number;
+  final_capital: number;
+  nb_years: number;
   total_pnl: number;
   total_pnl_pct: number;
   total_realized_pnl: number;
@@ -43,6 +54,7 @@ interface PortfolioSummary {
   total_unrealized_pct: number;
   sharpe_ratio: number;
   max_drawdown_pct: number;
+  cagr: CAGRData;
   best_performer: string | null;
   worst_performer: string | null;
 }
@@ -126,7 +138,6 @@ const ArimaPortfolio = () => {
   const StatusIcon = result?.status === 'completed' ? CheckCircle : Loader2;
   const isSpinning = result?.status === 'running';
 
-  // Calculer la progression
   const completedCount = result?.rankings?.filter(r => r.status === 'completed').length || 0;
   const totalCount = result?.rankings?.length || selectedSymbols.length;
   const progressPercent = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
@@ -137,7 +148,6 @@ const ArimaPortfolio = () => {
       <main className="flex-grow pt-32 pb-20 px-4 sm:px-6">
         <div className="max-w-7xl mx-auto space-y-8">
 
-          {/* Header */}
           <div className="text-center mb-12">
             <div className="inline-flex items-center gap-2 bg-gold/10 text-gold px-4 py-1.5 rounded-full text-sm font-bold mb-4">
               <Shield className="w-4 h-4" />
@@ -152,12 +162,10 @@ const ArimaPortfolio = () => {
             </p>
           </div>
 
-          {/* Configuration */}
           <div className="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden max-w-4xl mx-auto">
             <div className="h-1 w-full bg-gradient-to-r from-blue-600 to-indigo-700" />
             <div className="p-6 md:p-8 space-y-6">
 
-              {/* Sélection actifs */}
               <div>
                 <div className="flex items-center justify-between mb-3">
                   <label className="block text-sm font-bold text-gray-700">
@@ -186,7 +194,6 @@ const ArimaPortfolio = () => {
                 </div>
               </div>
 
-              {/* Capital + Date */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-bold text-gray-700 mb-2">Capital (USDT)</label>
@@ -200,7 +207,6 @@ const ArimaPortfolio = () => {
                 </div>
               </div>
 
-              {/* Info box */}
               <div className="bg-blue-50/50 rounded-lg p-4 border border-blue-100">
                 <p className="text-sm text-gray-600 flex items-start gap-2">
                   <Shield className="w-4 h-4 text-blue-500 mt-0.5 shrink-0" />
@@ -208,7 +214,6 @@ const ArimaPortfolio = () => {
                 </p>
               </div>
 
-              {/* Bouton */}
               <button onClick={launchSimulation} disabled={loading || selectedSymbols.length === 0}
                 className="w-full bg-gold hover:bg-gold-hover text-white font-heading font-bold py-4 rounded-xl shadow-lg transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
                 {loading ? (
@@ -227,11 +232,9 @@ const ArimaPortfolio = () => {
             </div>
           </div>
 
-          {/* Résultats */}
           {result && (
             <div className="space-y-6">
 
-              {/* Progress Bar */}
               {result.status === 'running' && (
                 <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-6">
                   <div className="flex items-center justify-between mb-3">
@@ -244,7 +247,6 @@ const ArimaPortfolio = () => {
                     </span>
                   </div>
                   
-                  {/* Barre de progression */}
                   <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
                     <div 
                       className="h-full bg-gradient-to-r from-blue-500 to-indigo-600 transition-all duration-500 ease-out"
@@ -258,7 +260,6 @@ const ArimaPortfolio = () => {
                 </div>
               )}
 
-              {/* Status banner (terminé) */}
               {result.status === 'completed' && (
                 <div className="rounded-xl p-4 flex items-center gap-3 text-green-600 bg-green-50">
                   <CheckCircle className="w-6 h-6" />
@@ -266,50 +267,85 @@ const ArimaPortfolio = () => {
                 </div>
               )}
 
-              {/* KPIs Portefeuille (affichés dès qu'il y a des résultats) */}
               {result.portfolio_summary?.total_assets > 0 && (
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                  <div className="bg-white rounded-xl shadow-md border border-gray-100 p-5">
-                    <p className="text-xs font-bold text-gray-500 mb-1">Capital Alloué</p>
-                    <p className="text-2xl font-heading font-bold text-primary">
-                      {result.portfolio_summary.total_capital.toFixed(0)} USDT
-                    </p>
-                    <p className="text-xs text-gray-400 mt-1">{result.portfolio_summary.total_assets} actifs</p>
+                <>
+                  {/* KPIs principaux */}
+                  <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                    <div className="bg-white rounded-xl shadow-md border border-gray-100 p-5">
+                      <p className="text-xs font-bold text-gray-500 mb-1">Capital Alloué</p>
+                      <p className="text-2xl font-heading font-bold text-primary">
+                        {result.portfolio_summary.total_capital.toFixed(0)} USDT
+                      </p>
+                      <p className="text-xs text-gray-400 mt-1">{result.portfolio_summary.total_assets} actifs</p>
+                    </div>
+                    <div className="bg-white rounded-xl shadow-md border border-gray-100 p-5">
+                      <p className="text-xs font-bold text-gray-500 mb-1">P&L Réalisé</p>
+                      <p className={`text-2xl font-heading font-bold ${result.portfolio_summary.total_realized_pnl >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        {result.portfolio_summary.total_realized_pnl >= 0 ? '+' : ''}{result.portfolio_summary.total_realized_pnl.toFixed(2)}
+                      </p>
+                      <p className={`text-xs ${result.portfolio_summary.total_realized_pct >= 0 ? 'text-green-500' : 'text-red-500'} mt-1`}>
+                        {result.portfolio_summary.total_realized_pct >= 0 ? '+' : ''}{result.portfolio_summary.total_realized_pct.toFixed(1)}%
+                      </p>
+                    </div>
+                    <div className="bg-white rounded-xl shadow-md border border-gray-100 p-5">
+                      <p className="text-xs font-bold text-gray-500 mb-1">P&L Non Réalisé</p>
+                      <p className={`text-2xl font-heading font-bold ${result.portfolio_summary.total_unrealized_pnl >= 0 ? 'text-blue-600' : 'text-orange-600'}`}>
+                        {result.portfolio_summary.total_unrealized_pnl >= 0 ? '+' : ''}{result.portfolio_summary.total_unrealized_pnl.toFixed(2)}
+                      </p>
+                      <p className={`text-xs ${result.portfolio_summary.total_unrealized_pct >= 0 ? 'text-blue-500' : 'text-orange-500'} mt-1`}>
+                        {result.portfolio_summary.total_unrealized_pct >= 0 ? '+' : ''}{result.portfolio_summary.total_unrealized_pct.toFixed(1)}%
+                      </p>
+                    </div>
+                    <div className="bg-white rounded-xl shadow-md border border-gray-100 p-5">
+                      <p className="text-xs font-bold text-gray-500 mb-1">Sharpe</p>
+                      <p className={`text-2xl font-heading font-bold ${result.portfolio_summary.sharpe_ratio >= 2 ? 'text-green-600' : result.portfolio_summary.sharpe_ratio >= 1 ? 'text-yellow-600' : 'text-red-600'}`}>
+                        {result.portfolio_summary.sharpe_ratio.toFixed(2)}
+                      </p>
+                    </div>
+                    <div className="bg-white rounded-xl shadow-md border border-gray-100 p-5">
+                      <p className="text-xs font-bold text-gray-500 mb-1">Max Drawdown</p>
+                      <p className={`text-2xl font-heading font-bold ${result.portfolio_summary.max_drawdown_pct < 20 ? 'text-green-600' : result.portfolio_summary.max_drawdown_pct < 40 ? 'text-yellow-600' : 'text-red-600'}`}>
+                        {result.portfolio_summary.max_drawdown_pct.toFixed(1)}%
+                      </p>
+                    </div>
                   </div>
-                  <div className="bg-white rounded-xl shadow-md border border-gray-100 p-5">
-                    <p className="text-xs font-bold text-gray-500 mb-1">P&L Réalisé</p>
-                    <p className={`text-2xl font-heading font-bold ${result.portfolio_summary.total_realized_pnl >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      {result.portfolio_summary.total_realized_pnl >= 0 ? '+' : ''}{result.portfolio_summary.total_realized_pnl.toFixed(2)}
-                    </p>
-                    <p className={`text-xs ${result.portfolio_summary.total_realized_pct >= 0 ? 'text-green-500' : 'text-red-500'} mt-1`}>
-                      {result.portfolio_summary.total_realized_pct >= 0 ? '+' : ''}{result.portfolio_summary.total_realized_pct.toFixed(1)}%
-                    </p>
-                  </div>
-                  <div className="bg-white rounded-xl shadow-md border border-gray-100 p-5">
-                    <p className="text-xs font-bold text-gray-500 mb-1">P&L Non Réalisé</p>
-                    <p className={`text-2xl font-heading font-bold ${result.portfolio_summary.total_unrealized_pnl >= 0 ? 'text-blue-600' : 'text-orange-600'}`}>
-                      {result.portfolio_summary.total_unrealized_pnl >= 0 ? '+' : ''}{result.portfolio_summary.total_unrealized_pnl.toFixed(2)}
-                    </p>
-                    <p className={`text-xs ${result.portfolio_summary.total_unrealized_pct >= 0 ? 'text-blue-500' : 'text-orange-500'} mt-1`}>
-                      {result.portfolio_summary.total_unrealized_pct >= 0 ? '+' : ''}{result.portfolio_summary.total_unrealized_pct.toFixed(1)}%
-                    </p>
-                  </div>
-                  <div className="bg-white rounded-xl shadow-md border border-gray-100 p-5">
-                    <p className="text-xs font-bold text-gray-500 mb-1">Sharpe</p>
-                    <p className={`text-2xl font-heading font-bold ${result.portfolio_summary.sharpe_ratio >= 2 ? 'text-green-600' : result.portfolio_summary.sharpe_ratio >= 1 ? 'text-yellow-600' : 'text-red-600'}`}>
-                      {result.portfolio_summary.sharpe_ratio.toFixed(2)}
-                    </p>
-                  </div>
-                  <div className="bg-white rounded-xl shadow-md border border-gray-100 p-5">
-                    <p className="text-xs font-bold text-gray-500 mb-1">Max Drawdown</p>
-                    <p className={`text-2xl font-heading font-bold ${result.portfolio_summary.max_drawdown_pct < 20 ? 'text-green-600' : result.portfolio_summary.max_drawdown_pct < 40 ? 'text-yellow-600' : 'text-red-600'}`}>
-                      {result.portfolio_summary.max_drawdown_pct.toFixed(1)}%
-                    </p>
-                  </div>
-                </div>
+
+                  {/* CAGR Card */}
+                  {result.portfolio_summary.cagr && result.portfolio_summary.nb_years > 0 && (
+                    <div className="bg-gradient-to-r from-gold/10 to-gold/5 rounded-xl shadow-lg border border-gold/20 p-6">
+                      <div className="flex items-center gap-3 mb-4">
+                        <TrendingUp className="w-6 h-6 text-gold" />
+                        <h3 className="text-lg font-heading font-bold text-primary">
+                          CAGR sur {result.portfolio_summary.nb_years.toFixed(1)} ans
+                        </h3>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div>
+                          <p className="text-xs font-bold text-gray-500 mb-1">Performance Totale</p>
+                          <p className={`text-3xl font-heading font-bold ${result.portfolio_summary.cagr.performance_totale_pct >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                            {result.portfolio_summary.cagr.performance_totale_pct >= 0 ? '+' : ''}{result.portfolio_summary.cagr.performance_totale_pct.toFixed(1)}%
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs font-bold text-gray-500 mb-1">CAGR</p>
+                          <p className={`text-3xl font-heading font-bold ${result.portfolio_summary.cagr.cagr_pct >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                            {result.portfolio_summary.cagr.cagr_pct >= 0 ? '+' : ''}{result.portfolio_summary.cagr.cagr_pct.toFixed(2)}%
+                          </p>
+                          <p className="text-xs text-gray-400 mt-1">Croissance annualisée composée</p>
+                        </div>
+                        <div>
+                          <p className="text-xs font-bold text-gray-500 mb-1">Moyenne Annualisée</p>
+                          <p className={`text-3xl font-heading font-bold ${result.portfolio_summary.cagr.moyenne_annualisee_pct >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                            {result.portfolio_summary.cagr.moyenne_annualisee_pct >= 0 ? '+' : ''}{result.portfolio_summary.cagr.moyenne_annualisee_pct.toFixed(2)}%
+                          </p>
+                          <p className="text-xs text-gray-400 mt-1">Moyenne arithmétique</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
 
-              {/* Best / Worst (seulement quand terminé) */}
               {result.status === 'completed' && result.portfolio_summary?.best_performer && (
                 <div className="grid grid-cols-2 gap-4">
                   <div className="bg-green-50 border border-green-200 rounded-xl p-4 flex items-center gap-3">
@@ -329,7 +365,6 @@ const ArimaPortfolio = () => {
                 </div>
               )}
 
-              {/* Classement détaillé (affiché dès qu'il y a des résultats) */}
               {result.rankings?.length > 0 && (
                 <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-6">
                   <h3 className="text-lg font-heading font-bold text-primary mb-4 flex items-center gap-2">
@@ -345,6 +380,7 @@ const ArimaPortfolio = () => {
                           <th className="pb-3 text-right">Capital</th>
                           <th className="pb-3 text-right">P&L Réalisé</th>
                           <th className="pb-3 text-right">P&L Non Réalisé</th>
+                          <th className="pb-3 text-right">CAGR</th>
                           <th className="pb-3 text-right">Sharpe</th>
                           <th className="pb-3 text-right">Max DD</th>
                           <th className="pb-3 text-right">Win Rate</th>
@@ -382,6 +418,14 @@ const ArimaPortfolio = () => {
                                   </div>
                                 )}
                               </td>
+                              <td className={`py-3 text-right font-mono text-sm ${!isPending && item.cagr?.cagr_pct >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                {isPending ? '...' : (
+                                  <div>
+                                    <div>{item.cagr?.cagr_pct >= 0 ? '+' : ''}{item.cagr?.cagr_pct.toFixed(1)}%</div>
+                                    <div className="text-xs text-gray-400">{item.nb_years?.toFixed(1)} ans</div>
+                                  </div>
+                                )}
+                              </td>
                               <td className={`py-3 text-right font-mono text-sm ${!isPending && item.sharpe_ratio >= 2 ? 'text-green-600' : !isPending && item.sharpe_ratio >= 1 ? 'text-yellow-600' : 'text-gray-500'}`}>
                                 {isPending ? '...' : item.sharpe_ratio.toFixed(2)}
                               </td>
@@ -415,7 +459,6 @@ const ArimaPortfolio = () => {
             </div>
           )}
 
-          {/* Empty state */}
           {!result && !loading && (
             <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-16 text-center max-w-3xl mx-auto">
               <div className="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-6">
