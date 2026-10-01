@@ -9,6 +9,8 @@ import TradingDashboard from './components/TradingDashboard';
 import ArimaBacktest from './components/ArimaBacktest';
 import ArimaPortfolio from './components/ArimaPortfolio';
 import ProtectedRoute from './components/ProtectedRoute';
+import AssetChart from './components/AssetChart';
+import ChartPage from './components/ChartPage';
 
 function App() {
   return (
@@ -24,6 +26,8 @@ function App() {
           <Route path="/arima" element={<ProtectedRoute><TradingDashboard /></ProtectedRoute>} />
           <Route path="/arima/backtest" element={<ProtectedRoute><ArimaBacktest /></ProtectedRoute>} />
           <Route path="/arima/portfolio" element={<ProtectedRoute><ArimaPortfolio /></ProtectedRoute>} />
+          <Route path="/arima/charts" element={<ProtectedRoute><ChartPage /></ProtectedRoute>} />
+          <Route path="/arima/charts/:symbol" element={<ProtectedRoute><AssetChart /></ProtectedRoute>} />
 
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

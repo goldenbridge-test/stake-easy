@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Coins, TrendingUp, Activity, ArrowUpRight, ArrowDownRight, Play, BarChart3 } from 'lucide-react';
+import { Coins, TrendingUp, Activity, ArrowUpRight, ArrowDownRight, Play, BarChart3, LineChart } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import Navbar from './Navbar';
 import Footer from './Footer';
@@ -62,6 +62,13 @@ const TradingDashboard = () => {
               >
                 <BarChart3 className="w-4 h-4" />
                 Portfolio
+              </Link>
+              <Link
+                to="/arima/charts"
+                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-heading font-bold transition shadow-md"
+              >
+                <LineChart className="w-4 h-4" />
+                Charts
               </Link>
             </div>
           </div>
