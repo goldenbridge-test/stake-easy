@@ -1,7 +1,7 @@
 import { AlertCircle, ArrowDown, ArrowUp, Info, RefreshCw, Wallet } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { PEFUND_ADDRESS } from '../constants/pefund';
-import { usePEFund } from '../hooks/usePEFund';
+import { usePEFund, validateAmount } from '../hooks/usePEFund';
 import Footer from './Footer';
 import Navbar from './Navbar';
 
@@ -25,6 +25,7 @@ const PEFundInvest = () => {
     getPreviewWithdraw,
     getPreviewRedeem,
     getMaxWithdrawable,
+    getTokenDecimals,
   } = usePEFund();
 
   const [activeTab, setActiveTab] = useState<Tab>('deposit');
@@ -33,10 +34,12 @@ const PEFundInvest = () => {
   const [shareBalance, setShareBalance] = useState('0');
   const [totalAssets, setTotalAssets] = useState('0');
   const [assetBalance, setAssetBalance] = useState('0');
-  const [preview, setPreview] = useState('0');
+  // null = nothing to preview (empty/invalid input or failed read)
+  const [preview, setPreview] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [fundInfo, setFundInfo] = useState<any>(null);
   const [assetSymbol, setAssetSymbol] = useState('');
+  const [tokenDecimals, setTokenDecimals] = useState<{ asset: number; shares: number } | null>(null);
 
   // Load balances when wallet connects
   const loadData = async () => {
@@ -48,11 +51,13 @@ const PEFundInvest = () => {
       const balance = await getAssetBalance(account);
       const info = await getFundInfo();
       const symbol = await getAssetSymbol();
+      const decimals = await getTokenDecimals();
       setShareBalance(shares);
       setTotalAssets(total);
       setAssetBalance(balance);
       setFundInfo(info);
       setAssetSymbol(symbol);
+      setTokenDecimals(decimals);
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {
@@ -63,16 +68,24 @@ const PEFundInvest = () => {
     if (account) loadData();
   }, [account]);
 
+  // Input is stablecoin in deposit and withdraw-by-amount, GPEF shares in withdraw-by-shares
+  const inputDecimals = tokenDecimals
+    ? (activeTab === 'deposit' || withdrawMode === 'amount' ? tokenDecimals.asset : tokenDecimals.shares)
+    : null;
+  // Inline error for the current input (skipped until the real decimals are loaded)
+  const validation = amount && inputDecimals !== null ? validateAmount(amount, inputDecimals) : null;
+  const inputError = validation && !validation.ok ? validation.error : null;
+
   // Live preview when amount changes
   useEffect(() => {
     // Ignore results from a previous input that arrive after the user typed something else
     let cancelled = false;
     const timer = setTimeout(async () => {
-      if (!amount || parseFloat(amount) <= 0) {
-        setPreview('0');
+      if (!amount || parseFloat(amount) <= 0 || inputError) {
+        setPreview(null);
         return;
       }
-      let result: string;
+      let result: string | null;
       if (activeTab === 'deposit') {
         result = await getPreviewDeposit(amount);
       } else if (withdrawMode === 'amount') {
@@ -87,12 +100,12 @@ const PEFundInvest = () => {
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [amount, activeTab, withdrawMode]);
+  }, [amount, activeTab, withdrawMode, inputError]);
 
   // Reset amount when switching tabs or withdraw mode (the input unit changes)
   useEffect(() => {
     setAmount('');
-    setPreview('0');
+    setPreview(null);
   }, [activeTab, withdrawMode]);
 
   const handleDeposit = async () => {
@@ -334,8 +347,16 @@ const PEFundInvest = () => {
                   </div>
                 </div>
 
+                {/* Invalid input: clear message instead of a preview */}
+                {inputError && (
+                  <div className="bg-red-50 rounded-xl p-4 flex items-start gap-3">
+                    <AlertCircle className="w-5 h-5 text-red-500 mt-0.5 flex-shrink-0" />
+                    <p className="text-sm text-red-600">{inputError}</p>
+                  </div>
+                )}
+
                 {/* Preview */}
-                {amount && parseFloat(amount) > 0 && (
+                {!inputError && preview !== null && amount && parseFloat(amount) > 0 && (
                   <div className="bg-blue-50 rounded-xl p-4 flex items-start gap-3">
                     <Info className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
                     <div>
@@ -368,7 +389,7 @@ const PEFundInvest = () => {
                 {/* Action button */}
                 <button
                   onClick={activeTab === 'deposit' ? handleDeposit : handleWithdraw}
-                  disabled={loading || !amount || parseFloat(amount) <= 0}
+                  disabled={loading || !amount || parseFloat(amount) <= 0 || !!inputError}
                   className="w-full bg-primary hover:bg-blue-900 disabled:bg-gray-300 disabled:cursor-not-allowed text-white py-4 rounded-xl font-heading font-bold text-lg transition shadow-lg"
                 >
                   {loading

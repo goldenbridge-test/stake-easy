@@ -15,14 +15,36 @@ const BASIS_POINT_SCALE = 10000;
 const grossWithExitFee = (assets: BigNumber, exitFeeBp: BigNumber): BigNumber =>
   assets.add(assets.mul(exitFeeBp).add(BASIS_POINT_SCALE - 1).div(BASIS_POINT_SCALE));
 
-// parseUnits throws on malformed input or too many decimals; return null instead so the UI can explain
-const parseAmount = (value: string, decimals: number): BigNumber | null => {
-  try {
-    const parsed = ethers.utils.parseUnits(value, decimals);
-    return parsed.gt(0) ? parsed : null;
-  } catch {
-    return null;
+export type AmountValidation =
+  | { ok: true; value: BigNumber }
+  | { ok: false; error: string };
+
+// Validates a user-typed amount against the token's real decimals BEFORE parseUnits,
+// which would otherwise throw NUMERIC_FAULT on too many decimals.
+// Rejects empty, NaN, negative, zero and too many decimals; returns a French message for the UI.
+export const validateAmount = (input: string, decimals: number): AmountValidation => {
+  const value = input.trim();
+  // Plain decimal notation only (also rejects "-1", "1e3", "abc")
+  if (!/^\d*\.?\d*$/.test(value) || value === '' || value === '.') {
+    return { ok: false, error: 'Montant invalide : saisissez un nombre positif' };
   }
+  // Trailing zeros do not count ("1.1000000" is fine for 6 decimals). They are also stripped
+  // before parseUnits: ethers 5.2.0 accepts them but mis-parses ("1.1000000", 6) as 2.0.
+  const [whole, rawFraction = ''] = value.split('.');
+  const fraction = rawFraction.replace(/0+$/, '');
+  if (fraction.length > decimals) {
+    return { ok: false, error: `Montant invalide : ${decimals} décimales maximum` };
+  }
+  let parsed: BigNumber;
+  try {
+    parsed = ethers.utils.parseUnits(fraction ? `${whole || '0'}.${fraction}` : whole || '0', decimals);
+  } catch {
+    return { ok: false, error: 'Montant invalide : saisissez un nombre positif' };
+  }
+  if (parsed.isZero()) {
+    return { ok: false, error: 'Montant invalide : le montant doit être supérieur à zéro' };
+  }
+  return { ok: true, value: parsed };
 };
 
 export const usePEFund = () => {
@@ -143,7 +165,12 @@ export const usePEFund = () => {
       const assetContract = new ethers.Contract(assetAddress, ERC20_ABI, signer);
       const decimals = await assetContract.decimals();
 
-      const formattedAmount = ethers.utils.parseUnits(amount, decimals);
+      const validation = validateAmount(amount, decimals);
+      if (!validation.ok) {
+        alert(validation.error);
+        return false;
+      }
+      const formattedAmount = validation.value;
 
       // Pre-checks before opening MetaMask: deposits revert when paused or above the limit
       if (await pefundContract.paused()) {
@@ -231,11 +258,12 @@ export const usePEFund = () => {
     try {
       const ctx = await getWithdrawContext(account);
 
-      const formattedAmount = parseAmount(amount, ctx.assetDecimals);
-      if (!formattedAmount) {
-        alert(`Montant invalide : saisissez un nombre positif avec au maximum ${ctx.assetDecimals} décimales.`);
+      const validation = validateAmount(amount, ctx.assetDecimals);
+      if (!validation.ok) {
+        alert(validation.error);
         return false;
       }
+      const formattedAmount = validation.value;
 
       // Pre-checks before opening MetaMask (withdrawals are not blocked by pause in the contract)
       if (formattedAmount.gt(ctx.maxAssets)) {
@@ -267,11 +295,12 @@ export const usePEFund = () => {
     try {
       const ctx = await getWithdrawContext(account);
 
-      const formattedShares = parseAmount(shares, ctx.shareDecimals);
-      if (!formattedShares) {
-        alert(`Nombre de parts invalide : saisissez un nombre positif avec au maximum ${ctx.shareDecimals} décimales.`);
+      const validation = validateAmount(shares, ctx.shareDecimals);
+      if (!validation.ok) {
+        alert(validation.error);
         return false;
       }
+      const formattedShares = validation.value;
 
       // Pre-checks before opening MetaMask (maxRedeem is the full share balance in OpenZeppelin 4.9)
       if (formattedShares.gt(ctx.shareBalance)) {
@@ -297,9 +326,10 @@ export const usePEFund = () => {
     }
   };
 
-  // Preview functions — no gas, just simulations for the UI
-  const getPreviewDeposit = async (amount: string): Promise<string> => {
-    if (!provider) return "0";
+  // Preview functions — no gas, just simulations for the UI.
+  // They return null for an invalid amount or a failed read, so the UI never shows a fake "0,00".
+  const getPreviewDeposit = async (amount: string): Promise<string | null> => {
+    if (!provider) return null;
     try {
       const pefundContract = new ethers.Contract(PEFUND_ADDRESS, PEFUND_ABI, provider);
 
@@ -307,43 +337,46 @@ export const usePEFund = () => {
       const assetContract = new ethers.Contract(assetAddress, ERC20_ABI, provider);
       const decimals = await assetContract.decimals();
 
-      const formattedAmount = ethers.utils.parseUnits(amount, decimals);
-      const shares = await pefundContract.previewDeposit(formattedAmount);
+      const validation = validateAmount(amount, decimals);
+      if (!validation.ok) return null;
+      const shares = await pefundContract.previewDeposit(validation.value);
       const shareDecimals = await pefundContract.decimals();
       return ethers.utils.formatUnits(shares, shareDecimals);
     } catch (error) {
       console.error("Error previewDeposit:", error);
-      return "0";
+      return null;
     }
   };
 
   // Shares that withdraw(amount) would burn, exit fee included (previewWithdraw adds it on top)
-  const getPreviewWithdraw = async (amount: string): Promise<string> => {
-    if (!provider) return "0";
+  const getPreviewWithdraw = async (amount: string): Promise<string | null> => {
+    if (!provider) return null;
     try {
       const pefundContract = new ethers.Contract(PEFUND_ADDRESS, PEFUND_ABI, provider);
       const assetAddress = await pefundContract.asset();
       const assetContract = new ethers.Contract(assetAddress, ERC20_ABI, provider);
       const assetDecimals = await assetContract.decimals();
-      const formattedAmount = ethers.utils.parseUnits(amount, assetDecimals);
+      const validation = validateAmount(amount, assetDecimals);
+      if (!validation.ok) return null;
 
-      const shares = await pefundContract.previewWithdraw(formattedAmount);
+      const shares = await pefundContract.previewWithdraw(validation.value);
       const shareDecimals = await pefundContract.decimals();
       return ethers.utils.formatUnits(shares, shareDecimals);
     } catch (error) {
       console.error("Error previewWithdraw:", error);
-      return "0";
+      return null;
     }
   };
 
-  const getPreviewRedeem = async (shares: string): Promise<string> => {
-    if (!provider) return "0";
+  const getPreviewRedeem = async (shares: string): Promise<string | null> => {
+    if (!provider) return null;
     try {
       const pefundContract = new ethers.Contract(PEFUND_ADDRESS, PEFUND_ABI, provider);
       const shareDecimals = await pefundContract.decimals();
-      const formattedShares = ethers.utils.parseUnits(shares, shareDecimals);
+      const validation = validateAmount(shares, shareDecimals);
+      if (!validation.ok) return null;
 
-      const assets = await pefundContract.previewRedeem(formattedShares);
+      const assets = await pefundContract.previewRedeem(validation.value);
 
       const assetAddress = await pefundContract.asset();
       const assetContract = new ethers.Contract(assetAddress, ERC20_ABI, provider);
@@ -351,7 +384,7 @@ export const usePEFund = () => {
       return ethers.utils.formatUnits(assets, assetDecimals);
     } catch (error) {
       console.error("Error previewRedeem:", error);
-      return "0";
+      return null;
     }
   };
 
@@ -406,6 +439,21 @@ export const usePEFund = () => {
     }
   };
 
+  // Real decimals of the stablecoin and of the GPEF share, for validating input as the user types
+  const getTokenDecimals = async (): Promise<{ asset: number; shares: number } | null> => {
+    if (!provider) return null;
+    try {
+      const pefundContract = new ethers.Contract(PEFUND_ADDRESS, PEFUND_ABI, provider);
+      const assetAddress = await pefundContract.asset();
+      const assetContract = new ethers.Contract(assetAddress, ERC20_ABI, provider);
+      const [asset, shares] = await Promise.all([assetContract.decimals(), pefundContract.decimals()]);
+      return { asset, shares };
+    } catch (error) {
+      console.error('Error getTokenDecimals:', error);
+      return null;
+    }
+  };
+
   // Get the underlying stablecoin's symbol (e.g. "USDC") for display
   const getAssetSymbol = async (): Promise<string> => {
     if (!provider) return "";
@@ -437,5 +485,6 @@ return {
     getAssetBalance,
     getFundInfo,
     getAssetSymbol,
+    getTokenDecimals,
   };
 };
