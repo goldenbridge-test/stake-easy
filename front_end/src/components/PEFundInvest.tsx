@@ -1,7 +1,8 @@
 import { AlertCircle, ArrowDown, ArrowUp, Info, RefreshCw, Wallet } from 'lucide-react';
+import { ethers } from 'ethers';
 import { useEffect, useState } from 'react';
 import { PEFUND_ADDRESS } from '../constants/pefund';
-import { usePEFund, validateAmount } from '../hooks/usePEFund';
+import { UserLimits, grossWithExitFee, liquidityErrorMessage, usePEFund, validateAmount } from '../hooks/usePEFund';
 import Footer from './Footer';
 import Navbar from './Navbar';
 
@@ -26,6 +27,7 @@ const PEFundInvest = () => {
     getPreviewRedeem,
     getMaxWithdrawable,
     getTokenDecimals,
+    getUserLimits,
   } = usePEFund();
 
   const [activeTab, setActiveTab] = useState<Tab>('deposit');
@@ -40,6 +42,7 @@ const PEFundInvest = () => {
   const [fundInfo, setFundInfo] = useState<any>(null);
   const [assetSymbol, setAssetSymbol] = useState('');
   const [tokenDecimals, setTokenDecimals] = useState<{ asset: number; shares: number } | null>(null);
+  const [limits, setLimits] = useState<UserLimits | null>(null);
 
   // Load balances when wallet connects
   const loadData = async () => {
@@ -52,12 +55,14 @@ const PEFundInvest = () => {
       const info = await getFundInfo();
       const symbol = await getAssetSymbol();
       const decimals = await getTokenDecimals();
+      const userLimits = await getUserLimits(account);
       setShareBalance(shares);
       setTotalAssets(total);
       setAssetBalance(balance);
       setFundInfo(info);
       setAssetSymbol(symbol);
       setTokenDecimals(decimals);
+      setLimits(userLimits);
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {
@@ -74,7 +79,40 @@ const PEFundInvest = () => {
     : null;
   // Inline error for the current input (skipped until the real decimals are loaded)
   const validation = amount && inputDecimals !== null ? validateAmount(amount, inputDecimals) : null;
-  const inputError = validation && !validation.ok ? validation.error : null;
+  const validationError = validation && !validation.ok ? validation.error : null;
+
+  // Inline limit check, in base units (BigNumber) against limits loaded in loadData.
+  // The hook re-checks at click time with fresh on-chain values as a second line of defence.
+  const getLimitError = (): string | null => {
+    if (!validation || !validation.ok || !limits) return null;
+    const value = validation.value;
+    const formatAsset = (raw: ethers.BigNumber) =>
+      `${ethers.utils.formatUnits(raw, limits.assetDecimals)} ${limits.symbol}`;
+
+    if (activeTab === 'deposit') {
+      if (limits.isPaused) return 'Le fonds est actuellement en pause : les dépôts sont temporairement suspendus.';
+      if (value.gt(limits.assetBalance)) return `Solde ${limits.symbol} insuffisant : ${formatAsset(limits.assetBalance)}`;
+      if (value.gt(limits.maxDeposit)) return `Limite de dépôt dépassée : ${formatAsset(limits.maxDeposit)}`;
+      return null;
+    }
+    if (withdrawMode === 'amount') {
+      if (value.gt(limits.maxWithdrawAssets)) {
+        return `Montant supérieur à votre maximum retirable (${formatAsset(limits.maxWithdrawAssets)})`;
+      }
+      const gross = grossWithExitFee(value, limits.exitFeeBp);
+      if (gross.gt(limits.vaultLiquidity)) {
+        return liquidityErrorMessage(limits.vaultLiquidity, gross, limits.assetDecimals, limits.symbol);
+      }
+      return null;
+    }
+    // Shares mode: the liquidity need depends on previewRedeem(shares), a contract call,
+    // so it is only checked at click time by the hook
+    if (value.gt(limits.shareBalance)) {
+      return `Vous ne possédez que ${ethers.utils.formatUnits(limits.shareBalance, limits.shareDecimals)} parts GPEF`;
+    }
+    return null;
+  };
+  const inputError = validationError ?? getLimitError();
 
   // Live preview when amount changes
   useEffect(() => {
@@ -111,8 +149,8 @@ const PEFundInvest = () => {
   const handleDeposit = async () => {
     if (!amount || parseFloat(amount) <= 0) return;
     const success = await depositToFund(amount);
-    if (!success) return;
-    setAmount('');
+    // Refresh even on failure: the click-time guard may have seen newer on-chain values
+    if (success) setAmount('');
     await loadData();
   };
 
@@ -121,8 +159,7 @@ const PEFundInvest = () => {
     const success = withdrawMode === 'amount'
       ? await withdrawFromFund(amount)
       : await redeemShares(amount);
-    if (!success) return;
-    setAmount('');
+    if (success) setAmount('');
     await loadData();
   };
 

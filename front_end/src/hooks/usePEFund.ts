@@ -12,12 +12,32 @@ const ERC20_ABI = [
 const BASIS_POINT_SCALE = 10000;
 
 // Mirrors GoldenPEFund._feeOnRaw (rounded up): the vault sends out assets + this fee on every withdrawal
-const grossWithExitFee = (assets: BigNumber, exitFeeBp: BigNumber): BigNumber =>
+export const grossWithExitFee = (assets: BigNumber, exitFeeBp: BigNumber): BigNumber =>
   assets.add(assets.mul(exitFeeBp).add(BASIS_POINT_SCALE - 1).div(BASIS_POINT_SCALE));
 
 export type AmountValidation =
   | { ok: true; value: BigNumber }
   | { ok: false; error: string };
+
+// Shared wording for the liquidity guard, used both inline in the UI and in the click-time alert
+export const liquidityErrorMessage = (vaultLiquidity: BigNumber, gross: BigNumber, assetDecimals: number, symbol: string): string =>
+  `Liquidité insuffisante : le fonds ne dispose actuellement que de ${ethers.utils.formatUnits(vaultLiquidity, assetDecimals)} ${symbol} disponibles ` +
+  `(une partie des actifs est investie dans la stratégie). Ce retrait nécessite ${ethers.utils.formatUnits(gross, assetDecimals)} ${symbol} frais de sortie inclus. ` +
+  `Réessayez plus tard ou retirez un montant plus faible.`;
+
+// User and vault limits in raw base units, loaded once per refresh so the UI can compare with BigNumber
+export type UserLimits = {
+  assetDecimals: number;
+  shareDecimals: number;
+  symbol: string;
+  assetBalance: BigNumber;      // user's stablecoin wallet balance
+  maxDeposit: BigNumber;        // contract maxDeposit (0 when paused or the fund is full)
+  isPaused: boolean;
+  shareBalance: BigNumber;      // user's GPEF balance (= maxRedeem)
+  maxWithdrawAssets: BigNumber; // previewRedeem(shareBalance), net of exit fee — same value as the Max button
+  vaultLiquidity: BigNumber;    // stablecoins physically held by the vault
+  exitFeeBp: BigNumber;
+};
 
 // Validates a user-typed amount against the token's real decimals BEFORE parseUnits,
 // which would otherwise throw NUMERIC_FAULT on too many decimals.
@@ -243,12 +263,37 @@ export const usePEFund = () => {
   const checkVaultLiquidity = (netAssets: BigNumber, ctx: Awaited<ReturnType<typeof getWithdrawContext>>): boolean => {
     const gross = grossWithExitFee(netAssets, ctx.exitFeeBp);
     if (gross.lte(ctx.vaultLiquidity)) return true;
-    alert(
-      `Liquidité insuffisante : le fonds ne dispose actuellement que de ${ethers.utils.formatUnits(ctx.vaultLiquidity, ctx.assetDecimals)} ${ctx.symbol} disponibles ` +
-      `(une partie des actifs est investie dans la stratégie). Ce retrait nécessite ${ethers.utils.formatUnits(gross, ctx.assetDecimals)} ${ctx.symbol} frais de sortie inclus. ` +
-      `Réessayez plus tard ou retirez un montant plus faible.`
-    );
+    alert(liquidityErrorMessage(ctx.vaultLiquidity, gross, ctx.assetDecimals, ctx.symbol));
     return false;
+  };
+
+  // All limits needed for inline validation, in one batch of reads
+  const getUserLimits = async (owner: string): Promise<UserLimits | null> => {
+    try {
+      const ctx = await getWithdrawContext(owner);
+      const assetAddress = await ctx.pefundContract.asset();
+      const assetContract = new ethers.Contract(assetAddress, ERC20_ABI, ctx.pefundContract.provider);
+      const [assetBalance, maxDeposit, isPaused] = await Promise.all([
+        assetContract.balanceOf(owner),
+        ctx.pefundContract.maxDeposit(owner),
+        ctx.pefundContract.paused(),
+      ]);
+      return {
+        assetDecimals: ctx.assetDecimals,
+        shareDecimals: ctx.shareDecimals,
+        symbol: ctx.symbol,
+        assetBalance,
+        maxDeposit,
+        isPaused,
+        shareBalance: ctx.shareBalance,
+        maxWithdrawAssets: ctx.maxAssets,
+        vaultLiquidity: ctx.vaultLiquidity,
+        exitFeeBp: ctx.exitFeeBp,
+      };
+    } catch (error) {
+      console.error('Error getUserLimits:', error);
+      return null;
+    }
   };
 
   // Withdraw: "I want exactly X stablecoins back, burn whatever shares needed"
@@ -486,5 +531,6 @@ return {
     getFundInfo,
     getAssetSymbol,
     getTokenDecimals,
+    getUserLimits,
   };
 };
