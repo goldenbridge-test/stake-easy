@@ -6,6 +6,7 @@ import Footer from './Footer';
 import Navbar from './Navbar';
 
 type Tab = 'deposit' | 'withdraw';
+type WithdrawMode = 'amount' | 'shares';
 
 const PEFundInvest = () => {
   const {
@@ -21,10 +22,13 @@ const PEFundInvest = () => {
     withdrawFromFund,
     redeemShares,
     getPreviewDeposit,
+    getPreviewWithdraw,
     getPreviewRedeem,
+    getMaxWithdrawable,
   } = usePEFund();
 
   const [activeTab, setActiveTab] = useState<Tab>('deposit');
+  const [withdrawMode, setWithdrawMode] = useState<WithdrawMode>('amount');
   const [amount, setAmount] = useState('');
   const [shareBalance, setShareBalance] = useState('0');
   const [totalAssets, setTotalAssets] = useState('0');
@@ -61,28 +65,35 @@ const PEFundInvest = () => {
 
   // Live preview when amount changes
   useEffect(() => {
+    // Ignore results from a previous input that arrive after the user typed something else
+    let cancelled = false;
     const timer = setTimeout(async () => {
       if (!amount || parseFloat(amount) <= 0) {
         setPreview('0');
         return;
       }
+      let result: string;
       if (activeTab === 'deposit') {
-        const result = await getPreviewDeposit(amount);
-        setPreview(result);
+        result = await getPreviewDeposit(amount);
+      } else if (withdrawMode === 'amount') {
+        result = await getPreviewWithdraw(amount);
       } else {
-        const result = await getPreviewRedeem(amount);
-        setPreview(result);
+        result = await getPreviewRedeem(amount);
       }
+      if (!cancelled) setPreview(result);
     }, 500); // debounce 500ms
 
-    return () => clearTimeout(timer);
-  }, [amount, activeTab]);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [amount, activeTab, withdrawMode]);
 
-  // Reset amount when switching tabs
+  // Reset amount when switching tabs or withdraw mode (the input unit changes)
   useEffect(() => {
     setAmount('');
     setPreview('0');
-  }, [activeTab]);
+  }, [activeTab, withdrawMode]);
 
   const handleDeposit = async () => {
     if (!amount || parseFloat(amount) <= 0) return;
@@ -92,13 +103,28 @@ const PEFundInvest = () => {
     await loadData();
   };
 
-  const handleRedeem = async () => {
+  const handleWithdraw = async () => {
     if (!amount || parseFloat(amount) <= 0) return;
-    const success = await redeemShares(amount);
+    const success = withdrawMode === 'amount'
+      ? await withdrawFromFund(amount)
+      : await redeemShares(amount);
     if (!success) return;
     setAmount('');
     await loadData();
   };
+
+  // Fill the input with the real maximum: net of exit fee in amount mode, full share balance in shares mode
+  const handleMax = async () => {
+    if (!account) return;
+    const max = await getMaxWithdrawable(account);
+    if (!max) {
+      alert('Impossible de calculer le montant maximum (voir la console).');
+      return;
+    }
+    setAmount(withdrawMode === 'amount' ? max.assets : max.shares);
+  };
+
+  const inputUnit = activeTab === 'deposit' || withdrawMode === 'amount' ? assetSymbol : 'GPEF';
 
   const formatNumber = (value: string) => {
     const num = parseFloat(value);
@@ -251,11 +277,47 @@ const PEFundInvest = () => {
               {/* Form body */}
               <div className="p-6 space-y-6">
 
+                {/* Withdraw mode selector */}
+                {activeTab === 'withdraw' && (
+                  <div className="flex bg-gray-100 rounded-xl p-1">
+                    {([
+                      ['amount', `Par montant (${assetSymbol})`],
+                      ['shares', 'Par parts (GPEF)'],
+                    ] as [WithdrawMode, string][]).map(([mode, label]) => (
+                      <button
+                        key={mode}
+                        type="button"
+                        onClick={() => setWithdrawMode(mode)}
+                        className={`flex-1 py-2 rounded-lg text-sm font-medium transition
+                          ${withdrawMode === mode ? 'bg-white text-primary shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
                 {/* Amount input */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-600 mb-2">
-                    {activeTab === 'deposit' ? `Montant à déposer (${assetSymbol})` : 'Nombre de parts à retirer (GPEF)'}
-                  </label>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="block text-sm font-medium text-gray-600">
+                      {activeTab === 'deposit'
+                        ? `Montant à déposer (${assetSymbol})`
+                        : withdrawMode === 'amount'
+                          ? `Montant à récupérer (${assetSymbol})`
+                          : 'Nombre de parts à retirer (GPEF)'}
+                    </label>
+                    {activeTab === 'withdraw' && (
+                      <button
+                        type="button"
+                        onClick={handleMax}
+                        disabled={loading}
+                        className="text-xs font-bold text-primary hover:underline disabled:opacity-50"
+                      >
+                        Max
+                      </button>
+                    )}
+                  </div>
                   <div className="relative">
                     <input
                       type="number"
@@ -267,7 +329,7 @@ const PEFundInvest = () => {
                       className="w-full border border-gray-200 rounded-xl px-4 py-4 text-lg font-heading focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition"
                     />
                     <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-gray-400 font-medium">
-                      {activeTab === 'deposit' ? assetSymbol : 'GPEF'}
+                      {inputUnit}
                     </span>
                   </div>
                 </div>
@@ -280,7 +342,9 @@ const PEFundInvest = () => {
                       <p className="text-sm text-gray-600">
                         {activeTab === 'deposit'
                           ? `Vous recevrez environ ${formatNumber(preview)} parts GPEF`
-                          : `Vous récupérerez environ ${formatNumber(preview)} ${assetSymbol}`
+                          : withdrawMode === 'amount'
+                            ? `Environ ${formatNumber(preview)} parts GPEF seront brûlées (frais de sortie inclus)`
+                            : `Vous récupérerez environ ${formatNumber(preview)} ${assetSymbol}`
                         }
                       </p>
                       <p className="text-xs text-gray-400 mt-1">
@@ -303,7 +367,7 @@ const PEFundInvest = () => {
 
                 {/* Action button */}
                 <button
-                  onClick={activeTab === 'deposit' ? handleDeposit : handleRedeem}
+                  onClick={activeTab === 'deposit' ? handleDeposit : handleWithdraw}
                   disabled={loading || !amount || parseFloat(amount) <= 0}
                   className="w-full bg-primary hover:bg-blue-900 disabled:bg-gray-300 disabled:cursor-not-allowed text-white py-4 rounded-xl font-heading font-bold text-lg transition shadow-lg"
                 >
@@ -311,7 +375,9 @@ const PEFundInvest = () => {
                     ? 'Transaction en cours...'
                     : activeTab === 'deposit'
                       ? 'Déposer'
-                      : 'Retirer mes parts'
+                      : withdrawMode === 'amount'
+                        ? 'Retirer ce montant'
+                        : 'Retirer mes parts'
                   }
                 </button>
 

@@ -1,4 +1,4 @@
-import { ethers } from 'ethers';
+import { BigNumber, ethers } from 'ethers';
 import { useEffect, useState } from 'react';
 import { PEFUND_ABI, PEFUND_ADDRESS } from '../constants/pefund';
 
@@ -8,6 +8,22 @@ const ERC20_ABI = [
   "function symbol() public view returns (string)",
   "function balanceOf(address account) public view returns (uint256)"
 ];
+
+const BASIS_POINT_SCALE = 10000;
+
+// Mirrors GoldenPEFund._feeOnRaw (rounded up): the vault sends out assets + this fee on every withdrawal
+const grossWithExitFee = (assets: BigNumber, exitFeeBp: BigNumber): BigNumber =>
+  assets.add(assets.mul(exitFeeBp).add(BASIS_POINT_SCALE - 1).div(BASIS_POINT_SCALE));
+
+// parseUnits throws on malformed input or too many decimals; return null instead so the UI can explain
+const parseAmount = (value: string, decimals: number): BigNumber | null => {
+  try {
+    const parsed = ethers.utils.parseUnits(value, decimals);
+    return parsed.gt(0) ? parsed : null;
+  } catch {
+    return null;
+  }
+};
 
 export const usePEFund = () => {
   const [account, setAccount] = useState<string | null>(null);
@@ -150,12 +166,62 @@ export const usePEFund = () => {
       alert("Dépôt réussi !");
       return true;
     } catch (error) {
-      console.error("Erreur durant le dépôt:", error);
-      alert("Erreur transaction (voir console)");
+      console.error("Error during deposit:", error);
+      alert("Échec du dépôt (voir la console).");
       return false;
     } finally {
       setLoading(false);
     }
+  };
+
+  // Reads everything needed to validate a withdrawal, as raw on-chain integers.
+  // Asset (stablecoin) and share (GPEF) decimals are read separately: they can differ.
+  const getWithdrawContext = async (owner: string) => {
+    if (!provider) throw new Error("No provider");
+    const pefundContract = new ethers.Contract(PEFUND_ADDRESS, PEFUND_ABI, provider);
+    const assetAddress = await pefundContract.asset();
+    const assetContract = new ethers.Contract(assetAddress, ERC20_ABI, provider);
+    const [assetDecimals, shareDecimals, symbol, shareBalance, exitFeeBp, vaultLiquidity] = await Promise.all([
+      assetContract.decimals(),
+      pefundContract.decimals(),
+      assetContract.symbol(),
+      pefundContract.balanceOf(owner),
+      pefundContract.exitFeeBasisPoints(),
+      // Stablecoins physically held by the vault; funds sent to the strategy are not in here
+      assetContract.balanceOf(PEFUND_ADDRESS),
+    ]);
+    // maxWithdraw() (inherited from OpenZeppelin) ignores the exit fee, so withdrawing that amount
+    // would need more shares than the user owns and revert. previewRedeem(full share balance) is
+    // the net amount the user can really receive once the exit fee is deducted.
+    const maxAssets: BigNumber = await pefundContract.previewRedeem(shareBalance);
+    return { pefundContract, assetDecimals, shareDecimals, symbol, shareBalance, exitFeeBp, vaultLiquidity, maxAssets };
+  };
+
+  // Max withdrawable for the "Max" buttons: net stablecoin amount (amount mode) and full share balance (shares mode)
+  const getMaxWithdrawable = async (owner: string): Promise<{ assets: string; shares: string } | null> => {
+    try {
+      const ctx = await getWithdrawContext(owner);
+      return {
+        assets: ethers.utils.formatUnits(ctx.maxAssets, ctx.assetDecimals),
+        shares: ethers.utils.formatUnits(ctx.shareBalance, ctx.shareDecimals),
+      };
+    } catch (error) {
+      console.error('Error getMaxWithdrawable:', error);
+      return null;
+    }
+  };
+
+  // Rejects the withdrawal before MetaMask opens if the vault does not hold enough stablecoins.
+  // The vault pays out assets + exit fee from its own balance, so that gross amount is what must be available.
+  const checkVaultLiquidity = (netAssets: BigNumber, ctx: Awaited<ReturnType<typeof getWithdrawContext>>): boolean => {
+    const gross = grossWithExitFee(netAssets, ctx.exitFeeBp);
+    if (gross.lte(ctx.vaultLiquidity)) return true;
+    alert(
+      `Liquidité insuffisante : le fonds ne dispose actuellement que de ${ethers.utils.formatUnits(ctx.vaultLiquidity, ctx.assetDecimals)} ${ctx.symbol} disponibles ` +
+      `(une partie des actifs est investie dans la stratégie). Ce retrait nécessite ${ethers.utils.formatUnits(gross, ctx.assetDecimals)} ${ctx.symbol} frais de sortie inclus. ` +
+      `Réessayez plus tard ou retirez un montant plus faible.`
+    );
+    return false;
   };
 
   // Withdraw: "I want exactly X stablecoins back, burn whatever shares needed"
@@ -163,32 +229,31 @@ export const usePEFund = () => {
     if (!provider || !account) return false;
     setLoading(true);
     try {
-      const signer = provider.getSigner();
-      const pefundContract = new ethers.Contract(PEFUND_ADDRESS, PEFUND_ABI, signer);
+      const ctx = await getWithdrawContext(account);
 
-      const assetAddress = await pefundContract.asset();
-      const assetContract = new ethers.Contract(assetAddress, ERC20_ABI, signer);
-      const decimals = await assetContract.decimals();
-
-      const formattedAmount = ethers.utils.parseUnits(amount, decimals);
-
-      // Pre-check before opening MetaMask (withdrawals are not blocked by pause in the contract)
-      const maxWithdraw = await pefundContract.maxWithdraw(account);
-      if (formattedAmount.gt(maxWithdraw)) {
-        const symbol = await assetContract.symbol();
-        alert(`Montant trop élevé : vous pouvez retirer au maximum ${ethers.utils.formatUnits(maxWithdraw, decimals)} ${symbol}.`);
+      const formattedAmount = parseAmount(amount, ctx.assetDecimals);
+      if (!formattedAmount) {
+        alert(`Montant invalide : saisissez un nombre positif avec au maximum ${ctx.assetDecimals} décimales.`);
         return false;
       }
 
+      // Pre-checks before opening MetaMask (withdrawals are not blocked by pause in the contract)
+      if (formattedAmount.gt(ctx.maxAssets)) {
+        alert(`Montant trop élevé : vous pouvez retirer au maximum ${ethers.utils.formatUnits(ctx.maxAssets, ctx.assetDecimals)} ${ctx.symbol} (frais de sortie déduits).`);
+        return false;
+      }
+      if (!checkVaultLiquidity(formattedAmount, ctx)) return false;
+
       // withdraw(assets, receiver, owner) — one single transaction, no approve needed
-      const tx = await pefundContract.withdraw(formattedAmount, account, account);
+      const pefundWithSigner = ctx.pefundContract.connect(provider.getSigner());
+      const tx = await pefundWithSigner.withdraw(formattedAmount, account, account);
       await tx.wait();
 
-    alert("Retrait Réussi!");
+      alert("Retrait par montant réussi !");
       return true;
     } catch (error) {
-      console.error("Erreur durant le retrait :", error);
-      alert("Erreur transaction (voir console)");
+      console.error("Error during withdraw:", error);
+      alert("Échec du retrait par montant (voir la console).");
       return false;
     } finally {
       setLoading(false);
@@ -200,28 +265,32 @@ export const usePEFund = () => {
     if (!provider || !account) return false;
     setLoading(true);
     try {
-      const signer = provider.getSigner();
-      const pefundContract = new ethers.Contract(PEFUND_ADDRESS, PEFUND_ABI, signer);
-      const decimals = await pefundContract.decimals();
+      const ctx = await getWithdrawContext(account);
 
-      const formattedShares = ethers.utils.parseUnits(shares, decimals);
-
-      // Pre-check before opening MetaMask (withdrawals are not blocked by pause in the contract)
-      const maxRedeem = await pefundContract.maxRedeem(account);
-      if (formattedShares.gt(maxRedeem)) {
-        alert(`Nombre de parts trop élevé : vous pouvez racheter au maximum ${ethers.utils.formatUnits(maxRedeem, decimals)} parts.`);
+      const formattedShares = parseAmount(shares, ctx.shareDecimals);
+      if (!formattedShares) {
+        alert(`Nombre de parts invalide : saisissez un nombre positif avec au maximum ${ctx.shareDecimals} décimales.`);
         return false;
       }
 
+      // Pre-checks before opening MetaMask (maxRedeem is the full share balance in OpenZeppelin 4.9)
+      if (formattedShares.gt(ctx.shareBalance)) {
+        alert(`Nombre de parts trop élevé : vous pouvez retirer au maximum ${ethers.utils.formatUnits(ctx.shareBalance, ctx.shareDecimals)} parts GPEF.`);
+        return false;
+      }
+      const netAssets: BigNumber = await ctx.pefundContract.previewRedeem(formattedShares);
+      if (!checkVaultLiquidity(netAssets, ctx)) return false;
+
       // redeem(shares, receiver, owner) — one single transaction, no approve needed
-      const tx = await pefundContract.redeem(formattedShares, account, account);
+      const pefundWithSigner = ctx.pefundContract.connect(provider.getSigner());
+      const tx = await pefundWithSigner.redeem(formattedShares, account, account);
       await tx.wait();
 
-    alert("Rachat réussi !");
+      alert("Retrait par parts réussi !");
       return true;
     } catch (error) {
-      console.error("Erreur durant le Rachat:", error);
-      alert("Erreur transaction (voir console)");
+      console.error("Error during redeem:", error);
+      alert("Échec du retrait par parts (voir la console).");
       return false;
     } finally {
       setLoading(false);
@@ -244,6 +313,25 @@ export const usePEFund = () => {
       return ethers.utils.formatUnits(shares, shareDecimals);
     } catch (error) {
       console.error("Error previewDeposit:", error);
+      return "0";
+    }
+  };
+
+  // Shares that withdraw(amount) would burn, exit fee included (previewWithdraw adds it on top)
+  const getPreviewWithdraw = async (amount: string): Promise<string> => {
+    if (!provider) return "0";
+    try {
+      const pefundContract = new ethers.Contract(PEFUND_ADDRESS, PEFUND_ABI, provider);
+      const assetAddress = await pefundContract.asset();
+      const assetContract = new ethers.Contract(assetAddress, ERC20_ABI, provider);
+      const assetDecimals = await assetContract.decimals();
+      const formattedAmount = ethers.utils.parseUnits(amount, assetDecimals);
+
+      const shares = await pefundContract.previewWithdraw(formattedAmount);
+      const shareDecimals = await pefundContract.decimals();
+      return ethers.utils.formatUnits(shares, shareDecimals);
+    } catch (error) {
+      console.error("Error previewWithdraw:", error);
       return "0";
     }
   };
@@ -343,7 +431,9 @@ return {
     withdrawFromFund,
     redeemShares,
     getPreviewDeposit,
+    getPreviewWithdraw,
     getPreviewRedeem,
+    getMaxWithdrawable,
     getAssetBalance,
     getFundInfo,
     getAssetSymbol,
