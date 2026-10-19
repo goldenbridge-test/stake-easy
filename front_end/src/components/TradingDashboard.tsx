@@ -128,7 +128,7 @@ const TradingDashboard = () => {
               <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-6">
                 <div className="flex items-center gap-2 mb-2">
                   <TrendingUp className="w-5 h-5 text-blue-500" />
-                  <span className="text-sm font-bold text-gray-500">Sharpe Ratio</span>
+                  <span className="text-sm font-bold text-gray-500">Sharpe (Rf=4%)</span>
                 </div>
                 <p className={`text-3xl font-heading font-bold ${performance.sharpe_ratio >= 2 ? 'text-green-600' : performance.sharpe_ratio >= 1 ? 'text-yellow-600' : 'text-red-600'}`}>
                   {performance.sharpe_ratio}

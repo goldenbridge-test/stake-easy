@@ -65,7 +65,6 @@ const AssetChart = () => {
     }
   };
 
-  // === Télécharger PNG ===
   const downloadPNG = () => {
     if (!svgRef.current) return;
 
@@ -77,7 +76,7 @@ const AssetChart = () => {
 
     const img = new Image();
     const canvas = document.createElement('canvas');
-    const scale = 2; // Haute résolution
+    const scale = 2;
     canvas.width = 1200 * scale;
     canvas.height = 600 * scale;
     const ctx = canvas.getContext('2d');
@@ -136,7 +135,6 @@ const AssetChart = () => {
     );
   }
 
-  // === Dimensions ===
   const width = 1200;
   const height = 600;
   const margin = { top: 30, right: 80, bottom: 50, left: 70 };
@@ -146,11 +144,9 @@ const AssetChart = () => {
   const candles = data.candles;
   const zones = data.zones;
 
-  // Map date -> index pour zones (first_seen)
   const dateToIndex = new Map<string, number>();
   candles.forEach((c, i) => dateToIndex.set(c.date, i));
 
-  // Prix min/max uniquement sur les bougies (pas les zones, pour éviter de zoomer sur des zones lointaines)
   const allPrices = candles.flatMap(c => [c.high, c.low]);
   const minPrice = Math.min(...allPrices) * 0.99;
   const maxPrice = Math.max(...allPrices) * 1.01;
@@ -161,13 +157,11 @@ const AssetChart = () => {
 
   const candleWidth = Math.max(1.5, Math.min(8, chartWidth / candles.length * 0.6));
 
-  // Ticks prix (seulement 5)
   const priceTicks = 5;
   const priceTickValues = Array.from({ length: priceTicks }, (_, i) =>
     minPrice + (priceRange * i) / (priceTicks - 1)
   );
 
-  // Ticks dates (6 max)
   const dateTicks = Math.min(6, candles.length);
   const dateTickIndices = Array.from({ length: dateTicks }, (_, i) =>
     Math.floor((candles.length - 1) * i / (dateTicks - 1))
@@ -184,7 +178,6 @@ const AssetChart = () => {
     }
   };
 
-  // Trouver l'index de la bougie courante pour le tooltip
   const currentIdx = tooltip ? candles.findIndex(c => c.date === tooltip.candle.date) : -1;
 
   return (
@@ -193,7 +186,6 @@ const AssetChart = () => {
       <main className="flex-grow pt-32 pb-20 px-4 sm:px-6">
         <div className="max-w-7xl mx-auto space-y-6">
 
-          {/* Header */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <Link to="/arima/charts" className="p-2 hover:bg-gray-200 rounded-lg transition">
@@ -226,7 +218,6 @@ const AssetChart = () => {
             </div>
           </div>
 
-          {/* Graphique SVG */}
           <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-4">
             <svg
               ref={svgRef}
@@ -236,10 +227,8 @@ const AssetChart = () => {
               onMouseLeave={() => setTooltip(null)}
               style={{ cursor: 'crosshair' }}
             >
-              {/* Fond blanc pour export PNG */}
               <rect width={width} height={height} fill="#ffffff" />
 
-              {/* Grille horizontale uniquement */}
               {priceTickValues.map((price, i) => (
                 <g key={i}>
                   <line
@@ -262,7 +251,6 @@ const AssetChart = () => {
                 </g>
               ))}
 
-              {/* Dates en bas */}
               {dateTickIndices.map((idx, i) => (
                 <text
                   key={i}
@@ -275,7 +263,6 @@ const AssetChart = () => {
                 </text>
               ))}
 
-              {/* Zones affichées uniquement à partir de first_seen */}
               {showZones && zones.map((zone) => {
                 const startIdx = dateToIndex.get(zone.first_seen);
                 if (startIdx === undefined) return null;
@@ -312,7 +299,6 @@ const AssetChart = () => {
                 );
               })}
 
-              {/* Bougies */}
               {candles.map((c, i) => {
                 const x = xScale(i);
                 const isBullish = c.close >= c.open;
@@ -344,7 +330,6 @@ const AssetChart = () => {
                 );
               })}
 
-              {/* Crosshair vertical discret */}
               {tooltip && currentIdx >= 0 && (
                 <line
                   x1={xScale(currentIdx)}
@@ -357,7 +342,6 @@ const AssetChart = () => {
                 />
               )}
 
-              {/* Cadre léger */}
               <rect
                 x={margin.left}
                 y={margin.top}
@@ -369,7 +353,6 @@ const AssetChart = () => {
               />
             </svg>
 
-            {/* Tooltip minimaliste sous le graphique */}
             {tooltip && (
               <div className="mt-3 flex flex-wrap items-center gap-4 text-sm font-mono text-gray-700">
                 <span className="font-bold text-primary">
@@ -386,7 +369,6 @@ const AssetChart = () => {
             )}
           </div>
 
-          {/* Légende compacte */}
           <div className="flex flex-wrap items-center justify-center gap-6 text-xs text-gray-600">
             <div className="flex items-center gap-2">
               <div className="w-3 h-3 border border-green-500 bg-white" />

@@ -297,7 +297,7 @@ const ArimaPortfolio = () => {
                       </p>
                     </div>
                     <div className="bg-white rounded-xl shadow-md border border-gray-100 p-5">
-                      <p className="text-xs font-bold text-gray-500 mb-1">Sharpe</p>
+                      <p className="text-xs font-bold text-gray-500 mb-1">Sharpe (Rf=4%)</p>
                       <p className={`text-2xl font-heading font-bold ${result.portfolio_summary.sharpe_ratio >= 2 ? 'text-green-600' : result.portfolio_summary.sharpe_ratio >= 1 ? 'text-yellow-600' : 'text-red-600'}`}>
                         {result.portfolio_summary.sharpe_ratio.toFixed(2)}
                       </p>
@@ -381,7 +381,7 @@ const ArimaPortfolio = () => {
                           <th className="pb-3 text-right">P&L Réalisé</th>
                           <th className="pb-3 text-right">P&L Non Réalisé</th>
                           <th className="pb-3 text-right">CAGR</th>
-                          <th className="pb-3 text-right">Sharpe</th>
+                          <th className="pb-3 text-right">Sharpe (Rf=4%)</th>
                           <th className="pb-3 text-right">Max DD</th>
                           <th className="pb-3 text-right">Win Rate</th>
                           <th className="pb-3 text-right pr-2">Positions</th>
