@@ -17,7 +17,7 @@
     "chai": "4.2.0",
     "chai-as-promised": "7.1.1",
     "chai-bignumber": "3.0.0",
-    "ethers": "5.2.0",
+    "ethers": "5.8.0",
     "lucide-react": "^0.300.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
@@ -46,8 +46,8 @@
     "not op_mini all"
   ],
   "resolutions": {
-    "@ethersproject/abi": "5.2.0",
-    "@ethersproject/contracts": "5.2.0",
-    "ethers": "5.2.0"
+    "@ethersproject/abi": "5.8.0",
+    "@ethersproject/contracts": "5.8.0",
+    "ethers": "5.8.0"
   }
 }
