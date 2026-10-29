@@ -119,6 +119,10 @@ const PEFundInvest = () => {
   };
   const inputError = validationError ?? getLimitError();
 
+  // Display only: the hook re-reads the allowance at click time before deciding to skip approve
+  const allowanceCoversDeposit =
+    activeTab === 'deposit' && !!validation && validation.ok && !!limits?.allowance && limits.allowance.gte(validation.value);
+
   // Live preview when amount changes
   useEffect(() => {
     // Ignore results from a previous input that arrive after the user typed something else
@@ -447,8 +451,9 @@ const PEFundInvest = () => {
                   <div className="flex items-start gap-3 text-sm text-gray-400">
                     <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
                     <p>
-                      Le dépôt nécessite deux confirmations MetaMask : 
-                      une autorisation puis le dépôt lui-même.
+                      {allowanceCoversDeposit
+                        ? 'Votre autorisation couvre déjà ce montant : une seule confirmation MetaMask (le dépôt).'
+                        : 'Le dépôt nécessite deux confirmations MetaMask : une autorisation puis le dépôt lui-même.'}
                     </p>
                   </div>
                 )}

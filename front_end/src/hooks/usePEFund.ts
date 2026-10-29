@@ -4,6 +4,7 @@ import { PEFUND_ABI, PEFUND_ADDRESS } from '../constants/pefund';
 
 const ERC20_ABI = [
   "function approve(address spender, uint256 amount) public returns (bool)",
+  "function allowance(address owner, address spender) public view returns (uint256)",
   "function decimals() public view returns (uint8)",
   "function symbol() public view returns (string)",
   "function balanceOf(address account) public view returns (uint256)"
@@ -31,6 +32,7 @@ export type UserLimits = {
   shareDecimals: number;
   symbol: string;
   assetBalance: BigNumber;      // user's stablecoin wallet balance
+  allowance: BigNumber | null;  // stablecoins the vault may already pull from the user; null if the read failed
   maxDeposit: BigNumber;        // contract maxDeposit (0 when paused or the fund is full)
   isPaused: boolean;
   shareBalance: BigNumber;      // user's GPEF balance (= maxRedeem)
@@ -231,17 +233,35 @@ export const usePEFund = () => {
         return false;
       }
 
-      const txApprove = await assetContract.approve(PEFUND_ADDRESS, formattedAmount);
-      await txApprove.wait();
+      // Skip approve when the existing allowance already covers the amount (read fresh at click time):
+      // one MetaMask confirmation instead of two. Otherwise approve exactly the amount, as before.
+      // A failed read counts as insufficient: approve is never skipped without a successful read.
+      let allowanceCovers = false;
+      try {
+        const allowance: BigNumber = await assetContract.allowance(account, PEFUND_ADDRESS);
+        allowanceCovers = allowance.gte(formattedAmount);
+      } catch (error) {
+        console.error("Error reading allowance, approving anyway:", error);
+      }
+      if (!allowanceCovers) {
+        const txApprove = await assetContract.approve(PEFUND_ADDRESS, formattedAmount);
+        await txApprove.wait();
+      }
 
       const txDeposit = await pefundContract.deposit(formattedAmount, account);
       await txDeposit.wait();
 
       alert("Dépôt réussi !");
       return true;
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error during deposit:", error);
-      alert("Échec du dépôt (voir la console).");
+      // ethers 5 maps a MetaMask rejection (approve or deposit) to ACTION_REJECTED,
+      // but only for "user denied" messages; other wallets surface the raw EIP-1193 code 4001
+      if (error?.code === 'ACTION_REJECTED' || error?.code === 4001) {
+        alert("Transaction refusée dans MetaMask : aucun dépôt n'a été effectué.");
+      } else {
+        alert("Échec du dépôt (voir la console).");
+      }
       return false;
     } finally {
       setLoading(false);
@@ -305,11 +325,19 @@ export const usePEFund = () => {
         ctx.pefundContract.maxDeposit(owner),
         ctx.pefundContract.paused(),
       ]);
+      // Read on its own so a failure only affects the approve hint, not the other limits
+      let allowance: BigNumber | null = null;
+      try {
+        allowance = await assetContract.allowance(owner, PEFUND_ADDRESS);
+      } catch (error) {
+        console.error('Error reading allowance:', error);
+      }
       return {
         assetDecimals: ctx.assetDecimals,
         shareDecimals: ctx.shareDecimals,
         symbol: ctx.symbol,
         assetBalance,
+        allowance,
         maxDeposit,
         isPaused,
         shareBalance: ctx.shareBalance,
