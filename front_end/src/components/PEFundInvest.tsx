@@ -285,6 +285,24 @@ const PEFundInvest = () => {
                   <p className="font-medium text-dark">{parseFloat(fundInfo.maxDeposit).toLocaleString('fr-FR')} {assetSymbol}</p>
                 </div>
               </div>
+              {/* Address read from fundManager() in getFundInfo, never hardcoded */}
+              {fundInfo.fundManager && (
+                <div className="mt-4 pt-4 border-t border-gray-100 text-sm">
+                  <p className="text-gray-400">Gestionnaire du fonds</p>
+                  <a
+                    href={`https://sepolia.etherscan.io/address/${fundInfo.fundManager}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title={fundInfo.fundManager}
+                    className="font-mono text-xs text-primary hover:underline"
+                  >
+                    {fundInfo.fundManager.slice(0, 6)}...{fundInfo.fundManager.slice(-4)}
+                  </a>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Les frais d'entrée et de sortie sont versés au gestionnaire du fonds.
+                  </p>
+                </div>
+              )}
             </div>
           )}
 
