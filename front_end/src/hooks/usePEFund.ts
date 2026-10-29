@@ -158,6 +158,33 @@ export const usePEFund = () => {
     }
   };
 
+  // Value of the user's shares and of one share, in the underlying asset (gross, before exit fee).
+  // One share = 10^shareDecimals base units; both decimals are read on-chain, never assumed.
+  const getShareValue = async (account: string): Promise<{ value: string; pricePerShare: string } | null> => {
+    if (!provider) return null;
+    try {
+      const contract = new ethers.Contract(PEFUND_ADDRESS, PEFUND_ABI, provider);
+      const assetAddress = await contract.asset();
+      const assetContract = new ethers.Contract(assetAddress, ERC20_ABI, provider);
+      const [shareBalance, shareDecimals, assetDecimals] = await Promise.all([
+        contract.balanceOf(account),
+        contract.decimals(),
+        assetContract.decimals(),
+      ]);
+      const [value, pricePerShare] = await Promise.all([
+        contract.convertToAssets(shareBalance),
+        contract.convertToAssets(BigNumber.from(10).pow(shareDecimals)),
+      ]);
+      return {
+        value: ethers.utils.formatUnits(value, assetDecimals),
+        pricePerShare: ethers.utils.formatUnits(pricePerShare, assetDecimals),
+      };
+    } catch (error) {
+      console.error('Error getShareValue:', error);
+      return null;
+    }
+  };
+
   const getTotalAssets = async (): Promise<string> => {
     if (!provider) return "0";
     try {
@@ -519,6 +546,7 @@ return {
     loading,
     connectWallet,
     getShareBalance,
+    getShareValue,
     getTotalAssets,
     depositToFund,
     withdrawFromFund,

@@ -15,6 +15,7 @@ const PEFundInvest = () => {
     loading,
     connectWallet,
     getShareBalance,
+    getShareValue,
     getTotalAssets,
     getAssetBalance,
     getFundInfo,
@@ -34,6 +35,8 @@ const PEFundInvest = () => {
   const [withdrawMode, setWithdrawMode] = useState<WithdrawMode>('amount');
   const [amount, setAmount] = useState('');
   const [shareBalance, setShareBalance] = useState('0');
+  // null = not loaded yet or failed read, so no fake "0,00 USDC" is shown
+  const [shareValue, setShareValue] = useState<{ value: string; pricePerShare: string } | null>(null);
   const [totalAssets, setTotalAssets] = useState('0');
   const [assetBalance, setAssetBalance] = useState('0');
   // null = nothing to preview (empty/invalid input or failed read)
@@ -50,6 +53,7 @@ const PEFundInvest = () => {
     setRefreshing(true);
     try {
       const shares = await getShareBalance(account);
+      const value = await getShareValue(account);
       const total = await getTotalAssets();
       const balance = await getAssetBalance(account);
       const info = await getFundInfo();
@@ -57,6 +61,7 @@ const PEFundInvest = () => {
       const decimals = await getTokenDecimals();
       const userLimits = await getUserLimits(account);
       setShareBalance(shares);
+      setShareValue(value);
       setTotalAssets(total);
       setAssetBalance(balance);
       setFundInfo(info);
@@ -212,6 +217,13 @@ const PEFundInvest = () => {
               <p className="text-2xl font-heading font-bold text-primary">
                 {formatNumber(shareBalance)}
               </p>
+              {shareValue && (
+                <div className="mt-2 text-xs text-gray-500 space-y-0.5">
+                  <p>Valeur : {formatNumber(shareValue.value)} {assetSymbol}</p>
+                  <p>Prix d'une part : {formatNumber(shareValue.pricePerShare)} {assetSymbol}</p>
+                  <p className="text-gray-400">avant frais de sortie</p>
+                </div>
+              )}
             </div>
             <div className="bg-blue-50 rounded-xl p-5 text-center">
               <p className="text-sm text-gray-500 mb-1">Mon solde disponible</p>
