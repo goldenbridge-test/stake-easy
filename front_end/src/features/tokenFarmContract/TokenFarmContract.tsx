@@ -38,7 +38,7 @@ export const TokenFarmContract = ({
   const classes = useStyles()
   const [selectedTokenIndex, setSelectedTokenIndex] = useState<number>(0)
 
-  const handleChange = (event: React.ChangeEvent<{}>, newValue: string) => {
+  const handleChange = (_event: React.ChangeEvent<{}>, newValue: string) => {
     setSelectedTokenIndex(parseInt(newValue))
   }
 

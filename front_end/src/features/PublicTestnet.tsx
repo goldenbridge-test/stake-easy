@@ -1,4 +1,3 @@
-import testnetlaunch from '../assets/testnetlaunch.jpg';
 
 const  PublicTestnet = () => {
     return (
@@ -152,8 +151,3 @@ const  PublicTestnet = () => {
 }
 
 export default PublicTestnet;
-
-
-
-
-

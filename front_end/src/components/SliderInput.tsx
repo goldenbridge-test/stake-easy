@@ -30,7 +30,7 @@ export const SliderInput = ({
   disabled = false,
   ...rest
 }: SliderInputProps) => {
-  const handleSliderChange = (event: any, newValue: number | number[]) => {
+  const handleSliderChange = (_event: any, newValue: number | number[]) => {
     onChange(newValue);
   };
 
@@ -39,9 +39,10 @@ export const SliderInput = ({
   };
 
   const handleBlur = () => {
-    if (value < 0) {
+    const numeric = Number(value);
+    if (numeric < 0) {
       onChange(0);
-    } else if (value > maxValue) {
+    } else if (numeric > maxValue) {
       onChange(maxValue);
     }
   };

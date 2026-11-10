@@ -1,4 +1,4 @@
-import { ArrowRight, TrendingUp, Coins, Shield, Brain, BarChart3 } from 'lucide-react';
+import { ArrowRight, Coins, Shield, Brain, BarChart3 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import Navbar from './Navbar';
 import Footer from './Footer';

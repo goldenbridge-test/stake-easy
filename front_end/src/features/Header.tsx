@@ -1,6 +1,5 @@
 import { Button, makeStyles } from "@material-ui/core"
 import { useEthers } from "@usedapp/core"
-import logo from '../assets/logo.svg';
 import easy from '../assets/easy.png';
 // import { Link } from 'react-router-dom';
 

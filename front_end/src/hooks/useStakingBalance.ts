@@ -11,7 +11,7 @@ export const useStakingBalance = (address: string): BigNumber | undefined => {
   const { account, chainId } = useEthers()
 
   const { abi } = TokenFarm
-  const tokenFarmContractAddress = chainId ? networkMapping[String(chainId)]["TokenFarm"][0] : constants.AddressZero
+  const tokenFarmContractAddress = chainId ? (networkMapping as Record<string, Record<string, string[]>>)[String(chainId)]["TokenFarm"][0] : constants.AddressZero
 
   const tokenFarmInterface = new utils.Interface(abi)
 

@@ -1,5 +1,4 @@
  // Import Assets
- import React from 'react';
 
  
  export const Roadmap = () => {

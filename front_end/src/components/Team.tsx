@@ -1,4 +1,3 @@
-import React from 'react';
 import { Linkedin, Twitter, Globe } from 'lucide-react';
 
 const Team = () => {

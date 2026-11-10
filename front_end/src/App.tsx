@@ -1,4 +1,3 @@
-import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 
 import SignIn from './components/SignIn';
@@ -11,6 +10,7 @@ import ArimaPortfolio from './components/ArimaPortfolio';
 import ProtectedRoute from './components/ProtectedRoute';
 import AssetChart from './components/AssetChart';
 import ChartPage from './components/ChartPage';
+import AdminDashboard from './components/AdminDashboard';
 
 function App() {
   return (
@@ -22,6 +22,8 @@ function App() {
           <Route path="/signup" element={<SignUp />} />
 
           <Route path="/staking" element={<ProtectedRoute><Staking /></ProtectedRoute>} />
+
+          <Route path="/admin" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
 
           <Route path="/arima" element={<ProtectedRoute><TradingDashboard /></ProtectedRoute>} />
           <Route path="/arima/backtest" element={<ProtectedRoute><ArimaBacktest /></ProtectedRoute>} />

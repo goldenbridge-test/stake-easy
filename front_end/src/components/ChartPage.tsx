@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { LineChart, ArrowRight, BarChart3, Shield } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import Navbar from './Navbar';

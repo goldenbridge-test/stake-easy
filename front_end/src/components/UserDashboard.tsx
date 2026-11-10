@@ -1,13 +1,11 @@
 import React, { useState, useEffect } from "react";
 import {
   TrendingUp,
-  TrendingDown,
   Briefcase,
   Gift,
   ArrowRight,
   ExternalLink,
   Clock,
-  Wallet,
   ChevronRight,
   BarChart3,
   Coins,
@@ -323,7 +321,7 @@ const UserDashboard = () => {
                 <Clock className="w-5 h-5 text-gold" /> Recent Activity
               </h3>
               <div className="space-y-6">
-                {activities.map((act, i) => (
+                {activities.map((act, _i) => (
                   <div
                     key={act.id}
                     className="relative pl-6 border-l-2 border-gray-100 last:border-0"

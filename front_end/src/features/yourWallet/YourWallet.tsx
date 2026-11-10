@@ -37,7 +37,7 @@ export const YourWallet = ({ supportedTokens }: YourWalletProps) => {
   // You'd have to pass it through as a prop to have another component use it 
   const [selectedTokenIndex, setSelectedTokenIndex] = useState<number>(0)
 
-  const handleChange = (event: React.ChangeEvent<{}>, newValue: string) => {
+  const handleChange = (_event: React.ChangeEvent<{}>, newValue: string) => {
     setSelectedTokenIndex(parseInt(newValue))
   }
 
@@ -65,7 +65,7 @@ export const YourWallet = ({ supportedTokens }: YourWalletProps) => {
                   )
                 })}
               </TabList>
-              {supportedTokens.map((token, index) => {
+              {supportedTokens.map((_token, index) => {
                 return (
                   <TabPanel value={index.toString()} key={index}>
                     <div className={classes.tabContent}>

@@ -10,6 +10,7 @@ interface User {
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isStaff, setIsStaff] = useState(false);
 
   const checkAuth = useCallback(async () => {
     const token = localStorage.getItem('access_token');
@@ -20,10 +21,18 @@ export function useAuth() {
     try {
       const { data } = await api.get('/accounts/profile/');
       setUser(data);
+      // Droit admin : appel isole, un echec ici ne deconnecte pas l'utilisateur.
+      try {
+        const { data: me } = await api.get('/accounts/me/');
+        setIsStaff(me?.is_staff === true);
+      } catch {
+        setIsStaff(false);
+      }
     } catch {
       localStorage.removeItem('access_token');
       localStorage.removeItem('refresh_token');
       setUser(null);
+      setIsStaff(false);
     } finally {
       setLoading(false);
     }
@@ -44,7 +53,8 @@ export function useAuth() {
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
     setUser(null);
+    setIsStaff(false);
   };
 
-  return { user, loading, login, logout, isAuthenticated: !!user };
+  return { user, loading, login, logout, isAuthenticated: !!user, isStaff };
 }

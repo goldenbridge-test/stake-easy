@@ -1,4 +1,3 @@
-import React from "react";
 import { Play, CheckCircle, Users, Award } from "lucide-react";
 import { Link } from "react-router-dom";
 import Navbar from "../../components/Navbar";

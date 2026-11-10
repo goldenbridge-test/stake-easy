@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react"
+import { useEffect, useState } from "react"
 import { SliderInput } from "../../components"
 import { useEthers, useTokenBalance, useNotifications } from "@usedapp/core"
 import { formatUnits } from "@ethersproject/units"

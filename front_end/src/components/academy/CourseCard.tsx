@@ -1,5 +1,4 @@
-import React from "react";
-import { Star, Clock, User, ArrowRight } from "lucide-react";
+import { Star, Clock, User } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const CourseCard = ({ course, progress }: any) => {

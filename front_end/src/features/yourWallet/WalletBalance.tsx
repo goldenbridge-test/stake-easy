@@ -1,4 +1,3 @@
-import React from "react";
 import { Token } from "../Main";
 import { useEthers, useTokenBalance } from "@usedapp/core";
 import { formatUnits } from "@ethersproject/units";

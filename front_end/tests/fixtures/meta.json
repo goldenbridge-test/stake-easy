@@ -1,0 +1,161 @@
+{
+ "params": [
+  {
+   "name": "discount_pct",
+   "label": "Discount (fib %)",
+   "description": "Profondeur de correction minimale (retracement fib) pour acheter. 75 = discount profond, 50 = equilibre.",
+   "kind": "decimal",
+   "default": "75.00",
+   "min": "0",
+   "max": "100",
+   "decimal_places": 2,
+   "unit": "%",
+   "config_field": "discount_pct",
+   "affects_zones": false
+  },
+  {
+   "name": "buy_streak_schedule",
+   "label": "Schedule d'achats (streak)",
+   "description": "% du capital par achat successif sur une meme zone, ex [2, 2, 1] = 3 achats (2%, 2%, 1%).",
+   "kind": "schedule",
+   "default": [
+    2.0,
+    2.0,
+    1.0
+   ],
+   "min": "0",
+   "max": "100",
+   "decimal_places": null,
+   "unit": "%",
+   "config_field": "buy_streak_schedule",
+   "affects_zones": false
+  },
+  {
+   "name": "min_touch_count",
+   "label": "Touches minimales",
+   "description": "Nombre de touches pour qu'un support soit confirme (achat direct sans confirmation momentum).",
+   "kind": "int",
+   "default": 2,
+   "min": 1,
+   "max": 20,
+   "decimal_places": null,
+   "unit": "",
+   "config_field": null,
+   "affects_zones": false
+  },
+  {
+   "name": "leave_atr_multiplier",
+   "label": "Multiplicateur ATR (sceller)",
+   "description": "Multiplicateur d'ATR au-dessus de la zone pour sceller l'accumulation (eloignement).",
+   "kind": "decimal",
+   "default": "2.00",
+   "min": "0.1",
+   "max": "20",
+   "decimal_places": 2,
+   "unit": "x ATR",
+   "config_field": "leave_atr_multiplier",
+   "affects_zones": false
+  },
+  {
+   "name": "fast_break_candles",
+   "label": "Cassure rapide (bougies)",
+   "description": "Cassure de la zone en N bougies ou moins apres le 1er achat = zone invalidee.",
+   "kind": "int",
+   "default": 3,
+   "min": 1,
+   "max": 30,
+   "decimal_places": null,
+   "unit": "bougies",
+   "config_field": "fast_break_candles",
+   "affects_zones": false
+  },
+  {
+   "name": "tolerance_pct",
+   "label": "Tolerance de fusion des zones",
+   "description": "Ecart max (%) pour fusionner des pivots proches en une meme zone.",
+   "kind": "decimal",
+   "default": "0.60",
+   "min": "0.05",
+   "max": "5",
+   "decimal_places": 2,
+   "unit": "%",
+   "config_field": null,
+   "affects_zones": true
+  },
+  {
+   "name": "swing_left",
+   "label": "Swing : bougies a gauche",
+   "description": "Nombre de bougies a gauche pour detecter un swing high/low.",
+   "kind": "int",
+   "default": 8,
+   "min": 2,
+   "max": 30,
+   "decimal_places": null,
+   "unit": "bougies",
+   "config_field": null,
+   "affects_zones": true
+  },
+  {
+   "name": "swing_right",
+   "label": "Swing : bougies a droite",
+   "description": "Nombre de bougies a droite pour detecter un swing high/low.",
+   "kind": "int",
+   "default": 8,
+   "min": 2,
+   "max": 30,
+   "decimal_places": null,
+   "unit": "bougies",
+   "config_field": null,
+   "affects_zones": true
+  },
+  {
+   "name": "min_band_pct",
+   "label": "Largeur minimale d'une zone",
+   "description": "Largeur minimale garantie d'une zone (% du prix bas).",
+   "kind": "decimal",
+   "default": "0.30",
+   "min": "0.05",
+   "max": "5",
+   "decimal_places": 2,
+   "unit": "%",
+   "config_field": null,
+   "affects_zones": true
+  },
+  {
+   "name": "capital_weight",
+   "label": "Ponderation du capital",
+   "description": "Coefficient multiplicateur applique au montant de chaque achat (1 = inchange, 0.5 = moitie).",
+   "kind": "decimal",
+   "default": "1.000",
+   "min": "0.01",
+   "max": "10",
+   "decimal_places": 3,
+   "unit": "x",
+   "config_field": null,
+   "affects_zones": false
+  },
+  {
+   "name": "max_position_per_asset",
+   "label": "Capital max investi",
+   "description": "Plafond (devise de cotation) du total investi dans les positions ouvertes de l'actif. Au-dela, les achats sont ignores. Vide = pas de plafond.",
+   "kind": "decimal",
+   "default": null,
+   "min": "1E-10",
+   "max": "1000000000000",
+   "decimal_places": 10,
+   "unit": "quote",
+   "config_field": null,
+   "affects_zones": false
+  }
+ ],
+ "zone_affecting": [
+  "tolerance_pct",
+  "swing_left",
+  "swing_right",
+  "min_band_pct"
+ ],
+ "apply_modes": [
+  "test",
+  "live"
+ ]
+}

@@ -1,5 +1,4 @@
 /* eslint-disable spaced-comment */
-/// <reference types="react-scripts" />
 import React, { useEffect, useState } from "react"
 import eth from "../assets/eth.png"
 import gld from "../assets/gld.png"
@@ -8,7 +7,6 @@ import { YourWallet } from "./yourWallet"
 import { TokenFarmContract } from "./tokenFarmContract"
 import { useEthers } from "@usedapp/core"
 import { constants } from "ethers"
-import GoldenToken from "../chain-info/GoldenToken.json"
 import { Snackbar, Typography, makeStyles } from "@material-ui/core"
 import Alert from "@material-ui/lab/Alert"
 import networkMapping from "../chain-info/map.json"
@@ -38,13 +36,13 @@ export const Main = () => {
   const { chainId, error } = useEthers()
 
   const classes = useStyles()
-  const networkName = chainId ? helperConfig[chainId] : "ganache"
+  const networkName = chainId ? (helperConfig as Record<string, string>)[chainId] : "ganache"
   console.log(typeof chainId)
   console.log(networkName)
   // We need to pull the Golden token address from the .json file written to by Brownie
-  const goldenTokenAddress = chainId ? networkMapping[String(chainId)]["GoldenToken"][0] : constants.AddressZero
-  const wethTokenAddress = chainId ? brownieConfig["networks"][networkName]["weth_token"] : constants.AddressZero
-  const fauTokenAddress = chainId ? brownieConfig["networks"][networkName]["fau_token"] : constants.AddressZero
+  const goldenTokenAddress = chainId ? (networkMapping as Record<string, Record<string, string[]>>)[String(chainId)]["GoldenToken"][0] : constants.AddressZero
+  const wethTokenAddress = chainId ? (brownieConfig["networks"] as Record<string, Record<string, any>>)[networkName]["weth_token"] : constants.AddressZero
+  const fauTokenAddress = chainId ? (brownieConfig["networks"] as Record<string, Record<string, any>>)[networkName]["fau_token"] : constants.AddressZero
   console.log(goldenTokenAddress)
   console.log(wethTokenAddress)
   /**
@@ -75,7 +73,7 @@ export const Main = () => {
   const [showNetworkError, setShowNetworkError] = useState(false)
 
   const handleCloseNetworkError = (
-    event: React.SyntheticEvent | React.MouseEvent,
+    _event: React.SyntheticEvent | React.MouseEvent,
     reason?: string
   ) => {
     if (reason === "clickaway") {

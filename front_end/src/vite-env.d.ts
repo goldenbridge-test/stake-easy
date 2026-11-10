@@ -7,3 +7,8 @@ interface ImportMetaEnv {
 interface ImportMeta {
   readonly env: ImportMetaEnv;
 }
+
+// Fournisseur injecte par MetaMask (utilise par hooks/useWeb3.ts)
+interface Window {
+  ethereum?: any;
+}

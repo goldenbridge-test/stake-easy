@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Coins, TrendingUp, Activity, ArrowUpRight, ArrowDownRight, Play, BarChart3, LineChart } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import Navbar from './Navbar';

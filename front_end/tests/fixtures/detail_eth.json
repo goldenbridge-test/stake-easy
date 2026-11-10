@@ -1,0 +1,146 @@
+{
+ "exchange": "binance",
+ "symbol": "ETH/USDT",
+ "has_overrides": false,
+ "params": [
+  {
+   "name": "discount_pct",
+   "override": null,
+   "default": "75.00",
+   "config_values": [
+    "75.00"
+   ],
+   "source": "config",
+   "effective": "75.00",
+   "varies": false,
+   "affects_zones": false
+  },
+  {
+   "name": "buy_streak_schedule",
+   "override": null,
+   "default": [
+    2.0,
+    2.0,
+    1.0
+   ],
+   "config_values": [],
+   "source": "default",
+   "effective": [
+    2.0,
+    2.0,
+    1.0
+   ],
+   "varies": false,
+   "affects_zones": false
+  },
+  {
+   "name": "min_touch_count",
+   "override": null,
+   "default": 2,
+   "config_values": [],
+   "source": "default",
+   "effective": 2,
+   "varies": false,
+   "affects_zones": false
+  },
+  {
+   "name": "leave_atr_multiplier",
+   "override": null,
+   "default": "2.00",
+   "config_values": [
+    "2.00"
+   ],
+   "source": "config",
+   "effective": "2.00",
+   "varies": false,
+   "affects_zones": false
+  },
+  {
+   "name": "fast_break_candles",
+   "override": null,
+   "default": 3,
+   "config_values": [
+    3
+   ],
+   "source": "config",
+   "effective": 3,
+   "varies": false,
+   "affects_zones": false
+  },
+  {
+   "name": "tolerance_pct",
+   "override": null,
+   "default": "0.60",
+   "config_values": [],
+   "source": "default",
+   "effective": "0.60",
+   "varies": false,
+   "affects_zones": true
+  },
+  {
+   "name": "swing_left",
+   "override": null,
+   "default": 8,
+   "config_values": [],
+   "source": "default",
+   "effective": 8,
+   "varies": false,
+   "affects_zones": true
+  },
+  {
+   "name": "swing_right",
+   "override": null,
+   "default": 8,
+   "config_values": [],
+   "source": "default",
+   "effective": 8,
+   "varies": false,
+   "affects_zones": true
+  },
+  {
+   "name": "min_band_pct",
+   "override": null,
+   "default": "0.30",
+   "config_values": [],
+   "source": "default",
+   "effective": "0.30",
+   "varies": false,
+   "affects_zones": true
+  },
+  {
+   "name": "capital_weight",
+   "override": null,
+   "default": "1.000",
+   "config_values": [],
+   "source": "default",
+   "effective": "1.000",
+   "varies": false,
+   "affects_zones": false
+  },
+  {
+   "name": "max_position_per_asset",
+   "override": null,
+   "default": null,
+   "config_values": [],
+   "source": "default",
+   "effective": null,
+   "varies": false,
+   "affects_zones": false
+  }
+ ],
+ "configs": {
+  "live_active": 0,
+  "test_active": 1,
+  "live_total": 0,
+  "test_total": 1
+ },
+ "zones_need_regen": false,
+ "zone_params": {
+  "tolerance_pct": 0.6,
+  "left": 8,
+  "right": 8,
+  "min_band_pct": 0.3
+ },
+ "updated_at": null,
+ "updated_by": null
+}

@@ -7,15 +7,16 @@ import {
   Trash2,
   Plus,
   Copy,
-  ExternalLink,
-  AlertTriangle,
   CheckCircle,
   Wrench,
   ArrowLeft,
+  SlidersHorizontal,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import Navbar from "./Navbar";
 import Footer from "./Footer";
+import ArimaParams from "./admin/ArimaParams";
+import { useAuth } from "../hooks/useAuth";
 
 // Types pour les données
 type AllowedToken = {
@@ -38,7 +39,11 @@ type AdminLog = {
 
 const AdminDashboard = () => {
   // --- STATES ---
-  const [isAdmin, setIsAdmin] = useState(false);
+  // Droit admin reel : is_staff renvoye par /accounts/me/ (la vraie protection reste cote serveur).
+  const { isStaff, loading: authLoading } = useAuth();
+  const [devAdmin, setDevAdmin] = useState(false); // simulation [DEV], build de dev uniquement
+  const isAdmin = isStaff || devAdmin;
+  const [tab, setTab] = useState<"staking" | "arima">("staking");
   const [isLoading, setIsLoading] = useState(false);
   const [distributeLoading, setDistributeLoading] = useState(false);
 
@@ -83,6 +88,7 @@ const AdminDashboard = () => {
       hash: "0xdef...456",
     },
   ];
+  void logs; // journal d'actions factice, pas encore affiche (conserve pour une future section)
 
   // --- HELPER FUNCTIONS ---
   const truncateAddress = (addr: string) =>
@@ -125,6 +131,15 @@ const AdminDashboard = () => {
     }
   };
 
+  // --- VUE 0 : VÉRIFICATION DES DROITS ---
+  if (authLoading && !devAdmin) {
+    return (
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center font-body text-gray-500 text-sm">
+        Vérification des droits…
+      </div>
+    );
+  }
+
   // --- VUE 1 : ACCÈS REFUSÉ ---
   if (!isAdmin) {
     return (
@@ -145,12 +160,14 @@ const AdminDashboard = () => {
           >
             <ArrowLeft className="w-4 h-4" /> Go Back Home
           </Link>
-          <button
-            onClick={() => setIsAdmin(true)}
-            className="mt-8 text-xs text-gray-400 hover:text-primary underline"
-          >
-            [DEV] Simulate Admin Login
-          </button>
+          {import.meta.env.DEV && (
+            <button
+              onClick={() => setDevAdmin(true)}
+              className="mt-8 text-xs text-gray-400 hover:text-primary underline"
+            >
+              [DEV] Simulate Admin Login
+            </button>
+          )}
         </div>
       </div>
     );
@@ -190,189 +207,215 @@ const AdminDashboard = () => {
             </div>
           </div>
 
-          {/* STATS OVERVIEW (Grid 1 col mobile -> 3 cols desktop) */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
-            <StatCard
-              title="Total Value Locked"
-              value="$1,245,890"
-              sub="Across all tokens"
-              icon={<Coins />}
-              color="border-gold"
-              iconColor="text-gold bg-gold/10"
-            />
-            <StatCard
-              title="Active Stakers"
-              value="156 users"
-              sub="Currently staking"
-              icon={<Users />}
-              color="border-blue-500"
-              iconColor="text-blue-500 bg-blue-50"
-            />
-            <StatCard
-              title="Pending Rewards"
-              value="12,450 DAPP"
-              sub="Ready to distribute"
-              icon={<Gift />}
-              color="border-green-500"
-              iconColor="text-green-500 bg-green-50"
-            />
+          {/* ONGLETS */}
+          <div role="tablist" aria-label="Sections d'administration" className="flex gap-2 border-b border-gray-200">
+            {([
+              ["staking", "Staking", <Coins key="s" className="w-4 h-4" />],
+              ["arima", "Arima", <SlidersHorizontal key="a" className="w-4 h-4" />],
+            ] as const).map(([id, label, icon]) => (
+              <button
+                key={id}
+                role="tab"
+                aria-selected={tab === id}
+                onClick={() => setTab(id)}
+                className={`flex items-center gap-2 px-4 py-2 text-sm font-bold border-b-2 -mb-px transition ${
+                  tab === id ? "border-gold text-primary" : "border-transparent text-gray-400 hover:text-primary"
+                }`}
+              >
+                {icon} {label}
+              </button>
+            ))}
           </div>
 
-          {/* MANAGE TOKENS */}
-          <div className="bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden">
-            <div className="p-4 md:p-6 border-b border-gray-100 bg-gray-50">
-              <h2 className="text-lg font-heading font-bold text-primary">
-                🪙 Manage Tokens
-              </h2>
-            </div>
+          {tab === "arima" && <ArimaParams />}
 
-            {/* RESPONSIVE TABLE CONTAINER */}
-            <div className="w-full overflow-x-auto">
-              <table className="w-full text-left min-w-[600px]">
-                {" "}
-                {/* min-w force le scroll si trop petit */}
-                <thead className="bg-gray-50 text-gray-500 text-xs uppercase font-bold">
-                  <tr>
-                    <th className="px-4 md:px-6 py-3">Token</th>
-                    <th className="px-4 md:px-6 py-3 hidden md:table-cell">
-                      Symbol
-                    </th>
-                    <th className="px-4 md:px-6 py-3">Address</th>
-                    <th className="px-4 md:px-6 py-3 hidden lg:table-cell">
-                      Price Feed
-                    </th>
-                    <th className="px-4 md:px-6 py-3">Status</th>
-                    <th className="px-4 md:px-6 py-3 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {tokens.map((token) => (
-                    <tr key={token.id}>
-                      <td className="px-4 md:px-6 py-3 font-bold text-primary text-sm">
-                        {token.name}
-                      </td>
-                      <td className="px-4 md:px-6 py-3 text-xs font-mono hidden md:table-cell">
-                        {token.symbol}
-                      </td>
-                      <td className="px-4 md:px-6 py-3">
-                        <div className="flex items-center gap-2 font-mono text-xs text-gray-600">
-                          {truncateAddress(token.address)}
-                          <button
-                            onClick={() => copyToClipboard(token.address)}
-                            className="text-gray-400 hover:text-gold"
-                          >
-                            <Copy className="w-3 h-3" />
-                          </button>
-                        </div>
-                      </td>
-                      <td className="px-4 md:px-6 py-3 font-mono text-xs text-gray-500 hidden lg:table-cell">
-                        {truncateAddress(token.priceFeed)}
-                      </td>
-                      <td className="px-4 md:px-6 py-3">
-                        <span className="inline-flex items-center gap-1 bg-green-100 text-green-700 px-2 py-0.5 rounded-[4px] text-[10px] md:text-xs font-bold">
-                          <CheckCircle className="w-3 h-3" /> Active
-                        </span>
-                      </td>
-                      <td className="px-4 md:px-6 py-3 text-right">
-                        <button className="text-red-500 hover:bg-red-50 p-1.5 rounded transition">
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Formulaire Responsive (Stacké sur mobile) */}
-            <div className="p-4 md:p-6 bg-gray-50 border-t border-gray-100">
-              <h3 className="text-sm font-bold text-gray-700 mb-3">
-                Add New Token
-              </h3>
-              <div className="flex flex-col md:flex-row gap-3">
-                <input
-                  type="text"
-                  placeholder="Contract Address (0x...)"
-                  value={newTokenAddress}
-                  onChange={(e) => setNewTokenAddress(e.target.value)}
-                  className="flex-1 px-4 py-2 rounded-lg border border-gray-300 focus:border-gold outline-none font-mono text-xs md:text-sm"
+          {tab === "staking" && (
+            <>
+              {/* STATS OVERVIEW (Grid 1 col mobile -> 3 cols desktop) */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
+                <StatCard
+                  title="Total Value Locked"
+                  value="$1,245,890"
+                  sub="Across all tokens"
+                  icon={<Coins />}
+                  color="border-gold"
+                  iconColor="text-gold bg-gold/10"
                 />
-                <input
-                  type="text"
-                  placeholder="Price Feed (0x...)"
-                  value={newPriceFeed}
-                  onChange={(e) => setNewPriceFeed(e.target.value)}
-                  className="flex-1 px-4 py-2 rounded-lg border border-gray-300 focus:border-gold outline-none font-mono text-xs md:text-sm"
+                <StatCard
+                  title="Active Stakers"
+                  value="156 users"
+                  sub="Currently staking"
+                  icon={<Users />}
+                  color="border-blue-500"
+                  iconColor="text-blue-500 bg-blue-50"
                 />
-                <button
-                  onClick={handleAddToken}
-                  disabled={isLoading || !newTokenAddress}
-                  className="bg-gold hover:bg-gold-hover text-white font-bold px-6 py-2 rounded-lg transition flex items-center justify-center gap-2 text-sm disabled:opacity-50"
-                >
-                  {isLoading ? (
-                    "Adding..."
-                  ) : (
-                    <>
-                      <Plus className="w-4 h-4" /> Add
-                    </>
-                  )}
-                </button>
+                <StatCard
+                  title="Pending Rewards"
+                  value="12,450 DAPP"
+                  sub="Ready to distribute"
+                  icon={<Gift />}
+                  color="border-green-500"
+                  iconColor="text-green-500 bg-green-50"
+                />
               </div>
-            </div>
-          </div>
 
-          {/* REWARD DISTRIBUTION (Grid 1 col mobile -> 2 cols desktop) */}
-          <div className="bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden">
-            <div className="p-4 md:p-6 border-b border-gray-100 bg-gray-50">
-              <h2 className="text-lg font-heading font-bold text-primary flex items-center gap-2">
-                🎁 Reward Distribution
-              </h2>
-            </div>
+              {/* MANAGE TOKENS */}
+              <div className="bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden">
+                <div className="p-4 md:p-6 border-b border-gray-100 bg-gray-50">
+                  <h2 className="text-lg font-heading font-bold text-primary">
+                    🪙 Manage Tokens
+                  </h2>
+                </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 divide-y lg:divide-y-0 lg:divide-x divide-gray-100">
-              {/* GAUCHE */}
-              <div className="p-6 md:p-8">
-                <h3 className="font-bold text-base md:text-lg text-primary mb-2">
-                  Distribute to All
-                </h3>
-                <p className="text-gray-500 text-xs md:text-sm mb-4">
-                  Issue rewards to all stakers.
-                </p>
-                <button
-                  onClick={handleDistributeAll}
-                  disabled={distributeLoading}
-                  className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 md:py-4 rounded-xl shadow-lg transition flex items-center justify-center gap-2 text-sm md:text-base disabled:opacity-50"
-                >
-                  {distributeLoading ? (
-                    "Processing..."
-                  ) : (
-                    <>
-                      <Gift className="w-5 h-5" /> Distribute All
-                    </>
-                  )}
-                </button>
-              </div>
-              {/* DROITE */}
-              <div className="p-6 md:p-8">
-                <h3 className="font-bold text-base md:text-lg text-primary mb-2">
-                  Individual Reward
-                </h3>
-                <p className="text-gray-500 text-xs md:text-sm mb-4">
-                  Send to specific user.
-                </p>
-                <div className="flex flex-col gap-3">
-                  <input
-                    type="text"
-                    placeholder="User Address (0x...)"
-                    className="w-full px-4 py-2 rounded-lg border border-gray-300 font-mono text-xs md:text-sm"
-                  />
-                  <button className="w-full bg-white border border-primary text-primary hover:bg-primary hover:text-white font-bold py-2 rounded-lg transition text-sm">
-                    Issue Reward
-                  </button>
+                {/* RESPONSIVE TABLE CONTAINER */}
+                <div className="w-full overflow-x-auto">
+                  <table className="w-full text-left min-w-[600px]">
+                    {" "}
+                    {/* min-w force le scroll si trop petit */}
+                    <thead className="bg-gray-50 text-gray-500 text-xs uppercase font-bold">
+                      <tr>
+                        <th className="px-4 md:px-6 py-3">Token</th>
+                        <th className="px-4 md:px-6 py-3 hidden md:table-cell">
+                          Symbol
+                        </th>
+                        <th className="px-4 md:px-6 py-3">Address</th>
+                        <th className="px-4 md:px-6 py-3 hidden lg:table-cell">
+                          Price Feed
+                        </th>
+                        <th className="px-4 md:px-6 py-3">Status</th>
+                        <th className="px-4 md:px-6 py-3 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {tokens.map((token) => (
+                        <tr key={token.id}>
+                          <td className="px-4 md:px-6 py-3 font-bold text-primary text-sm">
+                            {token.name}
+                          </td>
+                          <td className="px-4 md:px-6 py-3 text-xs font-mono hidden md:table-cell">
+                            {token.symbol}
+                          </td>
+                          <td className="px-4 md:px-6 py-3">
+                            <div className="flex items-center gap-2 font-mono text-xs text-gray-600">
+                              {truncateAddress(token.address)}
+                              <button
+                                onClick={() => copyToClipboard(token.address)}
+                                className="text-gray-400 hover:text-gold"
+                              >
+                                <Copy className="w-3 h-3" />
+                              </button>
+                            </div>
+                          </td>
+                          <td className="px-4 md:px-6 py-3 font-mono text-xs text-gray-500 hidden lg:table-cell">
+                            {truncateAddress(token.priceFeed)}
+                          </td>
+                          <td className="px-4 md:px-6 py-3">
+                            <span className="inline-flex items-center gap-1 bg-green-100 text-green-700 px-2 py-0.5 rounded-[4px] text-[10px] md:text-xs font-bold">
+                              <CheckCircle className="w-3 h-3" /> Active
+                            </span>
+                          </td>
+                          <td className="px-4 md:px-6 py-3 text-right">
+                            <button className="text-red-500 hover:bg-red-50 p-1.5 rounded transition">
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Formulaire Responsive (Stacké sur mobile) */}
+                <div className="p-4 md:p-6 bg-gray-50 border-t border-gray-100">
+                  <h3 className="text-sm font-bold text-gray-700 mb-3">
+                    Add New Token
+                  </h3>
+                  <div className="flex flex-col md:flex-row gap-3">
+                    <input
+                      type="text"
+                      placeholder="Contract Address (0x...)"
+                      value={newTokenAddress}
+                      onChange={(e) => setNewTokenAddress(e.target.value)}
+                      className="flex-1 px-4 py-2 rounded-lg border border-gray-300 focus:border-gold outline-none font-mono text-xs md:text-sm"
+                    />
+                    <input
+                      type="text"
+                      placeholder="Price Feed (0x...)"
+                      value={newPriceFeed}
+                      onChange={(e) => setNewPriceFeed(e.target.value)}
+                      className="flex-1 px-4 py-2 rounded-lg border border-gray-300 focus:border-gold outline-none font-mono text-xs md:text-sm"
+                    />
+                    <button
+                      onClick={handleAddToken}
+                      disabled={isLoading || !newTokenAddress}
+                      className="bg-gold hover:bg-gold-hover text-white font-bold px-6 py-2 rounded-lg transition flex items-center justify-center gap-2 text-sm disabled:opacity-50"
+                    >
+                      {isLoading ? (
+                        "Adding..."
+                      ) : (
+                        <>
+                          <Plus className="w-4 h-4" /> Add
+                        </>
+                      )}
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
-          </div>
+
+              {/* REWARD DISTRIBUTION (Grid 1 col mobile -> 2 cols desktop) */}
+              <div className="bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden">
+                <div className="p-4 md:p-6 border-b border-gray-100 bg-gray-50">
+                  <h2 className="text-lg font-heading font-bold text-primary flex items-center gap-2">
+                    🎁 Reward Distribution
+                  </h2>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 divide-y lg:divide-y-0 lg:divide-x divide-gray-100">
+                  {/* GAUCHE */}
+                  <div className="p-6 md:p-8">
+                    <h3 className="font-bold text-base md:text-lg text-primary mb-2">
+                      Distribute to All
+                    </h3>
+                    <p className="text-gray-500 text-xs md:text-sm mb-4">
+                      Issue rewards to all stakers.
+                    </p>
+                    <button
+                      onClick={handleDistributeAll}
+                      disabled={distributeLoading}
+                      className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 md:py-4 rounded-xl shadow-lg transition flex items-center justify-center gap-2 text-sm md:text-base disabled:opacity-50"
+                    >
+                      {distributeLoading ? (
+                        "Processing..."
+                      ) : (
+                        <>
+                          <Gift className="w-5 h-5" /> Distribute All
+                        </>
+                      )}
+                    </button>
+                  </div>
+                  {/* DROITE */}
+                  <div className="p-6 md:p-8">
+                    <h3 className="font-bold text-base md:text-lg text-primary mb-2">
+                      Individual Reward
+                    </h3>
+                    <p className="text-gray-500 text-xs md:text-sm mb-4">
+                      Send to specific user.
+                    </p>
+                    <div className="flex flex-col gap-3">
+                      <input
+                        type="text"
+                        placeholder="User Address (0x...)"
+                        className="w-full px-4 py-2 rounded-lg border border-gray-300 font-mono text-xs md:text-sm"
+                      />
+                      <button className="w-full bg-white border border-primary text-primary hover:bg-primary hover:text-white font-bold py-2 rounded-lg transition text-sm">
+                        Issue Reward
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
         </div>
       </main>
       <Footer />

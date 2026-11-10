@@ -1,20 +1,23 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { SUPPORTED_TOKENS } from "../constants/tokens";
 import { 
   Wallet, Info, Check, ChevronDown, Coins, 
-  ArrowRight, ExternalLink, AlertCircle, History, TrendingUp 
+  ExternalLink, History 
 } from 'lucide-react';
 import Navbar from './Navbar';
 import Footer from './Footer';
 import { useWeb3 } from '../hooks/useWeb3';
 
 // Types pour nos données
+// Forme reelle des jetons (constants/tokens.ts). Les balances viennent du state `tokenBalances` (lues
+// on-chain) ; `price` n'existe pas encore (aucune source de prix) -> optionnel.
 type Token = {
   symbol: string;
   name: string;
-  balance: number;
-  price: number;
+  address: string;
+  decimals: number;
   iconColor: string;
+  price?: number;
 };
 
 const Staking = () => {
@@ -72,7 +75,10 @@ const Staking = () => {
   ];
 
   // Calcul valeur USD
-  const usdValue = amount && selectedToken ? (parseFloat(amount) * selectedToken.price).toLocaleString() : '0.00';
+  // Pas de source de prix : sans `price`, on affiche 0.00 (l'ancien code affichait NaN).
+  const usdValue = amount && selectedToken && selectedToken.price !== undefined
+    ? (parseFloat(amount) * selectedToken.price).toLocaleString()
+    : '0.00';
 
   // --- SKELETON LOADER COMPONENT ---
   const Skeleton = ({ className }: { className: string }) => (
@@ -173,7 +179,7 @@ const Staking = () => {
                                   {token.symbol}
                                 </span>
                                 <span className="ml-auto text-sm text-gray-400">
-                                  {token.balance} available
+                                  {tokenBalances[token.symbol] || "0.00"} available
                                 </span>
                               </div>
                             ))}
@@ -198,7 +204,7 @@ const Staking = () => {
                       />
                       <button
                         onClick={() =>
-                          setAmount(selectedToken?.balance.toString() || "0")
+                          setAmount(tokenBalances[selectedToken?.symbol || ""] || "0")
                         }
                         className="absolute right-2 top-1/2 -translate-y-1/2 bg-white border border-gray-200 text-xs font-bold text-primary px-3 py-1.5 rounded-lg hover:bg-gold hover:text-white hover:border-gold transition"
                       >

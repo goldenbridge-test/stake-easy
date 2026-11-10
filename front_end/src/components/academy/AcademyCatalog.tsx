@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { Filter, Search } from "lucide-react";
 import Navbar from "../../components/Navbar";
 import Footer from "../../components/Footer";

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Play, Loader2, CheckCircle, Trophy, TrendingDown, BarChart3, Shield, Activity, XCircle, TrendingUp } from 'lucide-react';
 import Navbar from './Navbar';
 import Footer from './Footer';
@@ -134,9 +134,6 @@ const ArimaPortfolio = () => {
       setLoading(false);
     }
   };
-
-  const StatusIcon = result?.status === 'completed' ? CheckCircle : Loader2;
-  const isSpinning = result?.status === 'running';
 
   const completedCount = result?.rankings?.filter(r => r.status === 'completed').length || 0;
   const totalCount = result?.rankings?.length || selectedSymbols.length;
