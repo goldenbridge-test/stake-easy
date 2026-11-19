@@ -79,6 +79,14 @@ class AuthService {
     return User.fromJson(Map<String, dynamic>.from(data as Map));
   }
 
+  /// Profil complet (`UserSerializer` : prénom et nom compris), que
+  /// `/accounts/me/` ne renvoie pas. `get_object` renvoie toujours
+  /// l'utilisateur connecté, d'où l'identifiant `me`.
+  Future<User> profile() async {
+    final data = await _api.get('/accounts/profile/me/');
+    return User.fromJson(Map<String, dynamic>.from(data as Map));
+  }
+
   /// Met à jour prénom / nom / e-mail. Le backend renvoie toujours
   /// l'utilisateur connecté quel que soit l'identifiant de l'URL.
   Future<User> updateProfile({

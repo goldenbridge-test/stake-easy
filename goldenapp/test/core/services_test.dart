@@ -115,6 +115,24 @@ void main() {
         '/api/accounts/me/',
       ]);
     });
+
+    test('profile lit prénom et nom via /accounts/profile/me/', () async {
+      final auth = AuthService(
+        client: client(MemoryTokenStorage(access: 'A'), (req) async {
+          expect(req.method, 'GET');
+          expect(req.url.path, '/api/accounts/profile/me/');
+          return json({
+            'id': 2,
+            'username': 'bob',
+            'email': 'bob@b.fr',
+            'first_name': 'Bob',
+            'last_name': 'Durand',
+          });
+        }),
+      );
+      final user = await auth.profile();
+      expect(user.displayName, 'Bob Durand');
+    });
   });
 
   group('ExecutionService', () {
