@@ -79,6 +79,7 @@ class StrategyConfig {
     'balance_quote': balanceQuote.toString(),
     if (discountPct != null) 'discount_pct': discountPct.toString(),
     if (isActive != null) 'is_active': isActive,
-    'exchange_connection': exchangeConnection,
+    // Le serializer refuse null : on n'envoie la connexion que si elle existe.
+    if (exchangeConnection != null) 'exchange_connection': exchangeConnection,
   };
 }
