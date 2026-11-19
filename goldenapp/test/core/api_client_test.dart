@@ -10,10 +10,10 @@ import 'package:http/testing.dart';
 const base = 'http://test/api';
 
 http.Response json(Object body, int status) => http.Response(
-      jsonEncode(body),
-      status,
-      headers: {'content-type': 'application/json; charset=utf-8'},
-    );
+  jsonEncode(body),
+  status,
+  headers: {'content-type': 'application/json; charset=utf-8'},
+);
 
 void main() {
   group('ApiClient', () {
@@ -26,7 +26,7 @@ void main() {
         httpClient: MockClient((req) async {
           captured = req;
           return json([
-            {'id': 1}
+            {'id': 1},
           ], 200);
         }),
       );
@@ -36,7 +36,7 @@ void main() {
       expect(captured.url.toString(), '$base/execution/positions/');
       expect(captured.headers['Authorization'], 'Bearer A1');
       expect(data, [
-        {'id': 1}
+        {'id': 1},
       ]);
     });
 
@@ -52,8 +52,11 @@ void main() {
         }),
       );
 
-      await client.post('/accounts/login/',
-          body: {'username': 'u', 'password': 'p'}, auth: false);
+      await client.post(
+        '/accounts/login/',
+        body: {'username': 'u', 'password': 'p'},
+        auth: false,
+      );
 
       expect(captured.headers.containsKey('Authorization'), isFalse);
       expect(jsonDecode(captured.body), {'username': 'u', 'password': 'p'});
@@ -62,9 +65,10 @@ void main() {
 
     test('encode les paramètres de requête multiples', () {
       final client = ApiClient(
-          baseUrl: base,
-          tokenStorage: MemoryTokenStorage(),
-          httpClient: MockClient((_) async => json({}, 200)));
+        baseUrl: base,
+        tokenStorage: MemoryTokenStorage(),
+        httpClient: MockClient((_) async => json({}, 200)),
+      );
       final uri = client.uri('/execution/portfolio-simulation/', {
         'ids': [3, 4],
         'skip': null,
@@ -79,7 +83,9 @@ void main() {
         baseUrl: base,
         tokenStorage: storage,
         httpClient: MockClient((req) async {
-          calls.add('${req.method} ${req.url.path} ${req.headers['Authorization'] ?? ''}');
+          calls.add(
+            '${req.method} ${req.url.path} ${req.headers['Authorization'] ?? ''}',
+          );
           if (req.url.path.endsWith('/accounts/token/refresh/')) {
             expect(jsonDecode(req.body), {'refresh': 'R1'});
             return json({'access': 'new'}, 200);
@@ -108,40 +114,43 @@ void main() {
       expect(expired, isFalse);
     });
 
-    test('refresh refusé : efface les jetons et notifie la déconnexion',
-        () async {
-      final storage = MemoryTokenStorage(access: 'old', refresh: 'R1');
-      var refreshCalls = 0;
-      var callbackCalled = false;
-      final client = ApiClient(
-        baseUrl: base,
-        tokenStorage: storage,
-        onLogout: () => callbackCalled = true,
-        httpClient: MockClient((req) async {
-          if (req.url.path.endsWith('/accounts/token/refresh/')) {
-            refreshCalls++;
-            return json({'detail': 'Token is invalid or expired'}, 401);
-          }
-          return json({'detail': 'Given token not valid'}, 401);
-        }),
-      );
+    test(
+      'refresh refusé : efface les jetons et notifie la déconnexion',
+      () async {
+        final storage = MemoryTokenStorage(access: 'old', refresh: 'R1');
+        var refreshCalls = 0;
+        var callbackCalled = false;
+        final client = ApiClient(
+          baseUrl: base,
+          tokenStorage: storage,
+          onLogout: () => callbackCalled = true,
+          httpClient: MockClient((req) async {
+            if (req.url.path.endsWith('/accounts/token/refresh/')) {
+              refreshCalls++;
+              return json({'detail': 'Token is invalid or expired'}, 401);
+            }
+            return json({'detail': 'Given token not valid'}, 401);
+          }),
+        );
 
-      final events = <void>[];
-      client.onSessionExpired.listen(events.add);
+        final events = <void>[];
+        client.onSessionExpired.listen(events.add);
 
-      await expectLater(
-        client.get('/execution/trades/'),
-        throwsA(isA<ApiException>()
-            .having((e) => e.statusCode, 'statusCode', 401)),
-      );
-      await Future<void>.delayed(Duration.zero);
+        await expectLater(
+          client.get('/execution/trades/'),
+          throwsA(
+            isA<ApiException>().having((e) => e.statusCode, 'statusCode', 401),
+          ),
+        );
+        await Future<void>.delayed(Duration.zero);
 
-      expect(refreshCalls, 1);
-      expect(await storage.access(), isNull);
-      expect(await storage.refresh(), isNull);
-      expect(callbackCalled, isTrue);
-      expect(events, hasLength(1));
-    });
+        expect(refreshCalls, 1);
+        expect(await storage.access(), isNull);
+        expect(await storage.refresh(), isNull);
+        expect(callbackCalled, isTrue);
+        expect(events, hasLength(1));
+      },
+    );
 
     test('sans refresh token : pas de tentative de refresh', () async {
       final storage = MemoryTokenStorage(access: 'old');
@@ -156,7 +165,9 @@ void main() {
       );
 
       await expectLater(
-          client.get('/accounts/me/'), throwsA(isA<ApiException>()));
+        client.get('/accounts/me/'),
+        throwsA(isA<ApiException>()),
+      );
       expect(refreshCalls, 0);
       expect(await storage.access(), isNull);
     });
@@ -170,14 +181,15 @@ void main() {
         httpClient: MockClient((req) async {
           if (req.url.path.endsWith('/accounts/token/refresh/')) refreshCalls++;
           return json({
-            'detail': 'No active account found with the given credentials'
+            'detail': 'No active account found with the given credentials',
           }, 401);
         }),
       );
 
       await expectLater(
-          client.post('/accounts/login/', body: {}, auth: false),
-          throwsA(isA<ApiException>()));
+        client.post('/accounts/login/', body: {}, auth: false),
+        throwsA(isA<ApiException>()),
+      );
       expect(refreshCalls, 0);
       expect(await storage.access(), 'A');
     });
@@ -186,10 +198,12 @@ void main() {
       final client = ApiClient(
         baseUrl: base,
         tokenStorage: MemoryTokenStorage(),
-        httpClient: MockClient((_) async => json({
-              'username': ['A user with that username already exists.'],
-              'password': ['This field may not be blank.'],
-            }, 400)),
+        httpClient: MockClient(
+          (_) async => json({
+            'username': ['A user with that username already exists.'],
+            'password': ['This field may not be blank.'],
+          }, 400),
+        ),
       );
 
       try {
@@ -197,16 +211,19 @@ void main() {
         fail('ApiException attendue');
       } on ApiException catch (e) {
         expect(e.statusCode, 400);
-        expect(e.fieldError('username'),
-            'A user with that username already exists.');
+        expect(
+          e.fieldError('username'),
+          'A user with that username already exists.',
+        );
         expect(e.message, contains("Nom d'utilisateur"));
         expect(e.message, contains('Mot de passe'));
       }
     });
 
     test('detail Django prioritaire', () {
-      final e = ApiException.fromResponse(
-          404, {'detail': 'Aucune stratégie trouvée.'});
+      final e = ApiException.fromResponse(404, {
+        'detail': 'Aucune stratégie trouvée.',
+      });
       expect(e.message, 'Aucune stratégie trouvée.');
       expect(e.isNotFound, isTrue);
     });
@@ -219,8 +236,13 @@ void main() {
       );
       await expectLater(
         client.get('/courses/'),
-        throwsA(isA<ApiException>()
-            .having((e) => e.isNetworkError, 'isNetworkError', isTrue)),
+        throwsA(
+          isA<ApiException>().having(
+            (e) => e.isNetworkError,
+            'isNetworkError',
+            isTrue,
+          ),
+        ),
       );
     });
 

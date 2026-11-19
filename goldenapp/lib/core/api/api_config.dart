@@ -18,10 +18,10 @@ class ApiConfig {
 
   /// URL de base, sans slash final (ex. `http://localhost:8000/api`).
   static String get baseUrl => resolveBaseUrl(
-        override: _fromEnvironment,
-        isWeb: kIsWeb,
-        platform: defaultTargetPlatform,
-      );
+    override: _fromEnvironment,
+    isWeb: kIsWeb,
+    platform: defaultTargetPlatform,
+  );
 
   /// Logique de résolution, isolée pour pouvoir être testée.
   @visibleForTesting

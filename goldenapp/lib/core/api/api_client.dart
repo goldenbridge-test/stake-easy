@@ -23,10 +23,10 @@ class ApiClient {
     String? baseUrl,
     this.timeout = ApiConfig.timeout,
     void Function()? onLogout,
-  })  : _http = httpClient ?? http.Client(),
-        tokens = tokenStorage ?? TokenStorage(),
-        baseUrl = _trim(baseUrl ?? ApiConfig.baseUrl),
-        _onLogout = onLogout;
+  }) : _http = httpClient ?? http.Client(),
+       tokens = tokenStorage ?? TokenStorage(),
+       baseUrl = _trim(baseUrl ?? ApiConfig.baseUrl),
+       _onLogout = onLogout;
 
   static const refreshPath = '/accounts/token/refresh/';
 
@@ -42,13 +42,18 @@ class ApiClient {
   /// Émis quand la session ne peut plus être renouvelée (jetons effacés).
   Stream<void> get onSessionExpired => _sessionExpired.stream;
 
-  Future<dynamic> get(String path,
-          {Map<String, dynamic>? query, bool auth = true}) =>
-      _send('GET', path, query: query, auth: auth);
+  Future<dynamic> get(
+    String path, {
+    Map<String, dynamic>? query,
+    bool auth = true,
+  }) => _send('GET', path, query: query, auth: auth);
 
-  Future<dynamic> post(String path,
-          {Object? body, Map<String, dynamic>? query, bool auth = true}) =>
-      _send('POST', path, body: body, query: query, auth: auth);
+  Future<dynamic> post(
+    String path, {
+    Object? body,
+    Map<String, dynamic>? query,
+    bool auth = true,
+  }) => _send('POST', path, body: body, query: query, auth: auth);
 
   Future<dynamic> put(String path, {Object? body, bool auth = true}) =>
       _send('PUT', path, body: body, auth: auth);
@@ -68,9 +73,10 @@ class ApiClient {
     final params = <String, dynamic>{};
     query.forEach((key, value) {
       if (value == null) return;
-      params[key] = value is Iterable
-          ? value.map((v) => v.toString()).toList()
-          : value.toString();
+      params[key] =
+          value is Iterable
+              ? value.map((v) => v.toString()).toList()
+              : value.toString();
     });
     return base.replace(queryParameters: params);
   }
@@ -99,7 +105,11 @@ class ApiClient {
   }
 
   Future<http.Response> _perform(
-      String method, Uri target, Object? body, bool auth) async {
+    String method,
+    Uri target,
+    Object? body,
+    bool auth,
+  ) async {
     final headers = <String, String>{'Accept': 'application/json'};
     if (body != null) headers['Content-Type'] = 'application/json';
     if (auth) {
@@ -133,8 +143,9 @@ class ApiClient {
     final refresh = await tokens.refresh();
     if (refresh == null || refresh.isEmpty) return false;
     try {
-      final response = await _perform(
-          'POST', uri(refreshPath), {'refresh': refresh}, false);
+      final response = await _perform('POST', uri(refreshPath), {
+        'refresh': refresh,
+      }, false);
       if (response.statusCode != 200) return false;
       final data = jsonDecode(utf8.decode(response.bodyBytes));
       final access = data is Map ? data['access'] : null;
@@ -143,7 +154,9 @@ class ApiClient {
       // nouveau refresh s'il est renvoyé un jour.
       final newRefresh = data['refresh'];
       await tokens.saveTokens(
-          access: access, refresh: newRefresh is String ? newRefresh : null);
+        access: access,
+        refresh: newRefresh is String ? newRefresh : null,
+      );
       return true;
     } on ApiException {
       return false;

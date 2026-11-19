@@ -31,16 +31,16 @@ class ApiException implements Exception {
   }
 
   factory ApiException.network([Object? cause]) => ApiException(
-        statusCode: 0,
-        message:
-            'Impossible de joindre le serveur. Vérifiez votre connexion et réessayez.',
-        data: cause,
-      );
+    statusCode: 0,
+    message:
+        'Impossible de joindre le serveur. Vérifiez votre connexion et réessayez.',
+    data: cause,
+  );
 
   factory ApiException.timeout() => ApiException(
-        statusCode: 0,
-        message: 'Le serveur met trop de temps à répondre. Réessayez.',
-      );
+    statusCode: 0,
+    message: 'Le serveur met trop de temps à répondre. Réessayez.',
+  );
 
   /// Construit l'exception à partir d'une réponse d'erreur Django REST Framework.
   ///

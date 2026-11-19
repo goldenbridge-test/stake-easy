@@ -14,7 +14,7 @@ abstract class TokenStorage {
 /// Implémentation par défaut, basée sur flutter_secure_storage.
 class SecureTokenStorage implements TokenStorage {
   SecureTokenStorage([FlutterSecureStorage? storage])
-      : _storage = storage ?? const FlutterSecureStorage();
+    : _storage = storage ?? const FlutterSecureStorage();
 
   static const _accessKey = 'gb_access_token';
   static const _refreshKey = 'gb_refresh_token';
@@ -45,8 +45,8 @@ class SecureTokenStorage implements TokenStorage {
 /// Stockage en mémoire : tests et prévisualisations.
 class MemoryTokenStorage implements TokenStorage {
   MemoryTokenStorage({String? access, String? refresh})
-      : _access = access,
-        _refresh = refresh;
+    : _access = access,
+      _refresh = refresh;
 
   String? _access;
   String? _refresh;
