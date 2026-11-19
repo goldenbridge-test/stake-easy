@@ -1,4 +1,5 @@
 // Point d'entrée des widgets partagés.
+export 'async_value_view.dart';
 export 'async_view.dart';
 export 'badges.dart';
 export 'cards.dart';
