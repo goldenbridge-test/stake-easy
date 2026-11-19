@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../app_theme.dart';
+import '../../core/models/course.dart';
+import '../../core/providers/providers.dart';
 import '../../shared/utils/formatters.dart';
 import '../../shared/widgets/widgets.dart';
-import 'learn_mock_data.dart';
-import 'models/course.dart';
 
 enum _PriceFilter {
   all('Tous'),
@@ -22,15 +23,15 @@ enum _PriceFilter {
       };
 }
 
-/// Centre d'apprentissage : liste des cours (CourseSerializer).
-class LearnPage extends StatelessWidget {
-  const LearnPage({super.key, this.loader = loadMockCourses, this.onOpenCourse});
+/// Centre d'apprentissage : liste des cours (`GET /courses/`).
+class LearnPage extends ConsumerWidget {
+  const LearnPage({super.key, this.onOpenCourse});
 
-  final DataLoader<List<Course>> loader;
   final ValueChanged<Course>? onOpenCourse;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    Future<void> refresh() => refreshQuietly(ref, coursesProvider.future);
     return Scaffold(
       backgroundColor: AppColors.white,
       appBar: AppBar(
@@ -39,13 +40,15 @@ class LearnPage extends StatelessWidget {
           style: GoogleFonts.montserrat(fontSize: 20, fontWeight: FontWeight.bold),
         ),
       ),
-      body: AsyncView<List<Course>>(
-        load: loader,
+      body: AsyncValueView<List<Course>>(
+        value: ref.watch(coursesProvider),
+        onRetry: () => ref.invalidate(coursesProvider),
+        onRefresh: refresh,
         loadingMessage: 'Chargement des cours…',
         isEmpty: (courses) => courses.isEmpty,
         emptyIcon: Icons.school_outlined,
         emptyMessage: 'Aucun cours n\'est disponible pour le moment.',
-        builder: (context, courses, refresh) => RefreshIndicator(
+        builder: (context, courses) => RefreshIndicator(
           onRefresh: refresh,
           child: _CourseCatalog(courses: courses, onOpenCourse: onOpenCourse),
         ),
@@ -311,7 +314,8 @@ class _CourseCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  'Par ${c.instructorName ?? 'formateur n°${c.instructor}'}',
+                  // CourseSerializer ne renvoie que l'identifiant du formateur.
+                  'Par le formateur n°${c.instructor}',
                   style: GoogleFonts.openSans(fontSize: 12, color: AppColors.mutedText),
                 ),
                 const SizedBox(height: 16),
