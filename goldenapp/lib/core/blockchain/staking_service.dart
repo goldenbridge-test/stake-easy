@@ -62,6 +62,23 @@ class StakingService {
       (await _call(await _tokenFarm(), 'stakingBalance', [token, user])).first
           as BigInt;
 
+  /// Valeur stakée de [token] par [user] :
+  /// `stakingBalance * prix / 10^décimales du price feed`, donc exprimée avec
+  /// les décimales du jeton (en USD pour les feeds Chainlink */USD).
+  Future<BigInt> tokenStakedValue(
+    EthereumAddress user,
+    EthereumAddress token,
+  ) async =>
+      (await _call(await _tokenFarm(), 'getUserTokenStakingBalanceEthValue', [
+            user,
+            token,
+          ])).first
+          as BigInt;
+
+  /// Plafond de stake par jeton et par utilisateur (unités brutes du jeton).
+  Future<BigInt> maxStakePerUser() async =>
+      (await _call(await _tokenFarm(), 'maxStakePerUser', [])).first as BigInt;
+
   Future<bool> tokenIsAllowed(EthereumAddress token) async =>
       (await _call(await _tokenFarm(), 'tokenIsAllowed', [token])).first
           as bool;
@@ -69,6 +86,15 @@ class StakingService {
   /// Solde de GoldenToken (GLD, 18 décimales) de [owner].
   Future<BigInt> goldenTokenBalance(EthereumAddress owner) async =>
       (await _call(await _goldenToken(), 'balanceOf', [owner])).first as BigInt;
+
+  /// GLD en circulation (18 décimales).
+  Future<BigInt> goldenTokenCirculatingSupply() async =>
+      (await _call(await _goldenToken(), 'circulatingSupply', [])).first
+          as BigInt;
+
+  /// Offre maximale de GLD (18 décimales).
+  Future<BigInt> goldenTokenMaxSupply() async =>
+      (await _call(await _goldenToken(), 'MAX_SUPPLY', [])).first as BigInt;
 
   /// Solde d'un ERC20 quelconque.
   Future<BigInt> tokenBalance(

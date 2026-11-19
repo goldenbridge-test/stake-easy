@@ -21,6 +21,13 @@ final stakingServiceProvider = Provider<StakingService>((ref) {
 /// demander ni stocker de clé privée dans l'application.
 final walletAddressProvider = StateProvider<String?>((ref) => null);
 
+/// Signataire des transactions fourni par le wallet externe, `null` tant que
+/// WalletConnect n'est pas branché : les écrans restent alors en lecture seule.
+///
+/// TODO(wallet): renseigner avec le `Credentials` (CustomTransactionSender)
+/// de la session WalletConnect.
+final walletCredentialsProvider = StateProvider<Credentials?>((ref) => null);
+
 /// Lecture on-chain du staking, `null` sans wallet connecté.
 final stakingProvider = FutureProvider<StakingSnapshot?>((ref) async {
   final address = ref.watch(walletAddressProvider);

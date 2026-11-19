@@ -22,7 +22,8 @@ class StakingSnapshot {
 
   final String address;
 
-  /// `getUserTotalValue` brut (unité des price feeds, 8 décimales en général).
+  /// `getUserTotalValue` brut : somme des `stakingBalance * prix / 10^8`,
+  /// chaque terme gardant les décimales de son jeton.
   final BigInt totalValueRaw;
 
   /// Solde GLD brut (18 décimales).
@@ -31,8 +32,10 @@ class StakingSnapshot {
 
   double get goldenTokenBalance => StakingService.fromUnits(goldenTokenRaw, 18);
 
-  /// Valeur totale en USD (price feeds Chainlink à 8 décimales).
-  double get totalValueUsd => StakingService.fromUnits(totalValueRaw, 8);
+  /// GLD versés au prochain `issueTokens` : le contrat transfère
+  /// `getUserTotalValue` tel quel, en unités GLD (18 décimales).
+  double get estimatedIssuanceGld =>
+      StakingService.fromUnits(totalValueRaw, 18);
 
   bool get hasStakes => stakes.any((s) => s.raw > BigInt.zero);
 }
