@@ -2,14 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../app_theme.dart';
-import '../models/exchange_connection.dart';
+import '../../../core/api/api_exception.dart';
+import '../../../core/models/exchange_connection.dart';
+import '../models/exchange_type.dart';
 
 /// Formulaire d'ajout d'une connexion (affiché dans une bottom sheet).
 class ExchangeConnectionForm extends StatefulWidget {
   const ExchangeConnectionForm({super.key, required this.onSubmit});
 
   /// Lève une exception si l'API refuse les clés.
-  final Future<void> Function(ExchangeConnectionDraft draft) onSubmit;
+  final Future<void> Function(ExchangeConnectionInput input) onSubmit;
 
   @override
   State<ExchangeConnectionForm> createState() => _ExchangeConnectionFormState();
@@ -45,8 +47,8 @@ class _ExchangeConnectionFormState extends State<ExchangeConnectionForm> {
     });
     try {
       await widget.onSubmit(
-        ExchangeConnectionDraft(
-          exchange: _exchange,
+        ExchangeConnectionInput(
+          exchange: _exchange.apiValue,
           label: _label.text.trim(),
           apiKey: _apiKey.text.trim(),
           apiSecret: _apiSecret.text.trim(),
@@ -54,8 +56,13 @@ class _ExchangeConnectionFormState extends State<ExchangeConnectionForm> {
         ),
       );
       if (mounted) Navigator.of(context).pop(true);
+    } on ApiException catch (e) {
+      // Le backend teste les clés avant de les enregistrer et renvoie la raison du refus.
+      if (mounted) setState(() => _error = e.message);
     } catch (_) {
-      setState(() => _error = 'Clés refusées par l\'exchange ou service injoignable. Vérifiez-les puis réessayez.');
+      if (mounted) {
+        setState(() => _error = 'Clés refusées par l\'exchange ou service injoignable. Vérifiez-les puis réessayez.');
+      }
     } finally {
       if (mounted) setState(() => _submitting = false);
     }

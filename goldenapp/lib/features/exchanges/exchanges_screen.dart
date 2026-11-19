@@ -1,45 +1,33 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../app_theme.dart';
+import '../../core/models/exchange_connection.dart';
+import '../../core/providers/providers.dart';
 import '../../shared/utils/formatters.dart';
 import '../../shared/widgets/widgets.dart';
-import 'exchanges_mock_data.dart';
-import 'models/exchange_connection.dart';
 import 'widgets/exchange_connection_form.dart';
 
-/// Connexions exchange : liste, ajout, test et suppression.
-class ExchangesScreen extends StatefulWidget {
-  const ExchangesScreen({
-    super.key,
-    this.loader = loadMockConnections,
-    this.onCreate = mockCreateConnection,
-    this.onDelete = mockDeleteConnection,
-    this.onTest = mockTestConnection,
-  });
-
-  final DataLoader<List<ExchangeConnection>> loader;
-  final Future<ExchangeConnection> Function(ExchangeConnectionDraft draft) onCreate;
-  final Future<void> Function(int id) onDelete;
-  final Future<ConnectionTestResult> Function(int id) onTest;
+/// Connexions exchange (`/exchanges/connections/`) : liste, ajout, test et suppression.
+class ExchangesScreen extends ConsumerStatefulWidget {
+  const ExchangesScreen({super.key});
 
   @override
-  State<ExchangesScreen> createState() => _ExchangesScreenState();
+  ConsumerState<ExchangesScreen> createState() => _ExchangesScreenState();
 }
 
-class _ExchangesScreenState extends State<ExchangesScreen> {
-  // Change de valeur pour forcer AsyncView à recharger après une action.
-  int _version = 0;
-
-  void _reload() => setState(() => _version++);
+class _ExchangesScreenState extends ConsumerState<ExchangesScreen> {
+  void _reload() => ref.invalidate(exchangeConnectionsProvider);
 
   Future<void> _openForm() async {
+    final service = ref.read(exchangeServiceProvider);
     final created = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
       backgroundColor: AppColors.white,
-      builder: (_) => ExchangeConnectionForm(onSubmit: widget.onCreate),
+      builder: (_) => ExchangeConnectionForm(onSubmit: service.createConnection),
     );
     if (created == true && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -70,7 +58,7 @@ class _ExchangesScreenState extends State<ExchangesScreen> {
     if (confirmed != true || !mounted) return;
     final messenger = ScaffoldMessenger.of(context);
     try {
-      await widget.onDelete(c.id);
+      await ref.read(exchangeServiceProvider).deleteConnection(c.id);
       messenger.showSnackBar(const SnackBar(content: Text('Connexion supprimée')));
       _reload();
     } catch (_) {
@@ -85,7 +73,7 @@ class _ExchangesScreenState extends State<ExchangesScreen> {
     messenger.showSnackBar(SnackBar(content: Text('Test de ${c.displayName}…')));
     ConnectionTestResult result;
     try {
-      result = await widget.onTest(c.id);
+      result = await ref.read(exchangeServiceProvider).testConnection(c.id);
     } catch (_) {
       result = const ConnectionTestResult(status: 'error');
     }
@@ -110,12 +98,12 @@ class _ExchangesScreenState extends State<ExchangesScreen> {
         icon: const Icon(Icons.add_link_rounded),
         label: Text('Ajouter', style: GoogleFonts.openSans(fontWeight: FontWeight.bold)),
       ),
-      body: AsyncView<List<ExchangeConnection>>(
-        key: ValueKey(_version),
-        load: widget.loader,
+      body: AsyncValueView<List<ExchangeConnection>>(
+        value: ref.watch(exchangeConnectionsProvider),
+        onRetry: _reload,
         loadingMessage: 'Chargement des connexions…',
-        builder: (context, connections, refresh) => RefreshIndicator(
-          onRefresh: refresh,
+        builder: (context, connections) => RefreshIndicator(
+          onRefresh: () => refreshQuietly(ref, exchangeConnectionsProvider.future),
           child: ListView(
             padding: const EdgeInsets.fromLTRB(20, 20, 20, 96),
             children: [
@@ -201,7 +189,7 @@ class _ConnectionCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
-                  c.exchange.label.substring(0, 1),
+                  c.exchangeName.substring(0, 1).toUpperCase(),
                   style: GoogleFonts.montserrat(
                     color: AppColors.gold,
                     fontWeight: FontWeight.bold,
@@ -215,12 +203,12 @@ class _ConnectionCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      c.displayName,
+                      c.label.isEmpty ? c.exchangeName : c.label,
                       style: GoogleFonts.openSans(fontWeight: FontWeight.w700, color: AppColors.darkGrey),
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      '${c.exchange.label} · ${c.apiKeyMasked}',
+                      '${c.exchangeName} · ${c.apiKeyMasked}',
                       style: GoogleFonts.robotoMono(fontSize: 12, color: AppColors.mutedText),
                     ),
                   ],
