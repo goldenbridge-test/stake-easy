@@ -1,6 +1,6 @@
 // Modèles d'affichage du staking (contrat TokenFarm).
-// Les montants on-chain sont en wei (uint256) : la couche d'intégration les
-// convertit en double (÷ 10^decimals) avant de construire ces objets.
+// Les montants on-chain (uint256) sont convertis en double (÷ 10^decimals)
+// par staking_providers.dart avant de construire ces objets.
 
 /// Token autorisé au staking (TokenFarm.allowedTokens).
 class AllowedToken {
@@ -11,10 +11,11 @@ class AllowedToken {
     required this.walletBalance,
     required this.stakingBalance,
     required this.stakedValue,
+    required this.maxStake,
     this.decimals = 18,
   });
 
-  /// Adresse du contrat ERC20 (allowedTokens[i]).
+  /// Adresse du contrat ERC20.
   final String address;
   final String symbol;
   final String name;
@@ -26,36 +27,40 @@ class AllowedToken {
   /// TokenFarm.stakingBalance(token, user).
   final double stakingBalance;
 
-  /// TokenFarm.getUserTokenStakingBalanceEthValue(user, token).
+  /// TokenFarm.getUserTokenStakingBalanceEthValue(user, token), dans l'unité
+  /// des price feeds (USD).
   final double stakedValue;
+
+  /// TokenFarm.maxStakePerUser, exprimé dans les décimales de ce token.
+  final double maxStake;
 
   bool get isStaked => stakingBalance > 0;
 }
 
-/// Vue d'ensemble du staking pour l'utilisateur connecté.
+/// Vue d'ensemble du staking pour l'adresse consultée.
 class StakingOverview {
   const StakingOverview({
     required this.walletAddress,
     required this.networkName,
     required this.userTotalValue,
-    required this.maxStakePerUser,
     required this.tokens,
-    this.valueUnit = 'ETH',
+    this.valueUnit = 'USD',
+    this.canSign = false,
   });
 
-  /// Adresse du wallet connecté (null si aucun wallet).
+  /// Adresse du wallet consulté (null si aucune).
   final String? walletAddress;
   final String networkName;
 
-  /// TokenFarm.getUserTotalValue(user), exprimé dans [valueUnit].
+  /// Somme des valeurs stakées par token, dans [valueUnit].
   final double userTotalValue;
 
-  /// Unité des valeurs renvoyées par les price feeds (ETH, BNB…).
+  /// Unité des valeurs renvoyées par les price feeds Chainlink (*/USD).
   final String valueUnit;
-
-  /// TokenFarm.maxStakePerUser (par token).
-  final double maxStakePerUser;
   final List<AllowedToken> tokens;
+
+  /// Vrai si un wallet peut signer les transactions (WalletConnect).
+  final bool canSign;
 
   bool get hasWallet => walletAddress != null && walletAddress!.isNotEmpty;
 

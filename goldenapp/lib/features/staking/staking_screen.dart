@@ -1,55 +1,55 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../app_theme.dart';
+import '../../core/providers/providers.dart';
 import '../../shared/utils/formatters.dart';
 import '../../shared/widgets/widgets.dart';
 import 'models/staking_overview.dart';
-import 'staking_mock_data.dart';
+import 'staking_providers.dart';
+import 'widgets/no_wallet_view.dart';
 
-typedef StakeAction = Future<void> Function(String tokenAddress, double amount);
-typedef UnstakeAction = Future<void> Function(String tokenAddress);
+typedef StakeAction = Future<void> Function(AllowedToken token, String amount);
+typedef UnstakeAction = Future<void> Function(AllowedToken token);
 
-/// Staking : solde staké, tokens autorisés, formulaire staker / retirer.
-class StakingScreen extends StatelessWidget {
-  const StakingScreen({
-    super.key,
-    this.loader = loadMockStakingOverview,
-    this.onStake = mockStake,
-    this.onUnstake = mockUnstake,
-    this.onConnectWallet,
-  });
-
-  final DataLoader<StakingOverview> loader;
-  final StakeAction onStake;
-  final UnstakeAction onUnstake;
-  final VoidCallback? onConnectWallet;
+/// Staking : solde staké, tokens autorisés, formulaire staker / retirer
+/// (lectures on-chain du TokenFarm).
+class StakingScreen extends ConsumerWidget {
+  const StakingScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final actions = ref.watch(stakingActionsProvider);
     return Scaffold(
-      appBar: AppBar(title: const Text('Staking')),
-      body: AsyncView<StakingOverview>(
-        load: loader,
+      appBar: AppBar(
+        title: const Text('Staking'),
+        actions: [
+          if (ref.watch(walletAddressProvider) != null)
+            IconButton(
+              tooltip: 'Changer d\'adresse',
+              icon: const Icon(Icons.swap_horiz_rounded),
+              onPressed: () => showWatchAddressDialog(context, ref),
+            ),
+        ],
+      ),
+      body: AsyncValueView<StakingOverview>(
+        value: ref.watch(stakingOverviewProvider),
+        onRetry: () => ref.invalidate(stakingOverviewProvider),
         loadingMessage: 'Lecture du contrat de staking…',
-        builder: (context, overview, refresh) {
+        builder: (context, overview) {
           if (!overview.hasWallet) {
-            return EmptyView(
-              icon: Icons.account_balance_wallet_outlined,
-              title: 'Aucun wallet connecté',
+            return const NoWalletView(
               message: 'Connectez votre wallet pour staker vos tokens et suivre vos dépôts.',
-              actionLabel: onConnectWallet == null ? null : 'Connecter un wallet',
-              onAction: onConnectWallet,
             );
           }
           return RefreshIndicator(
-            onRefresh: refresh,
+            onRefresh: () => refreshQuietly(ref, stakingOverviewProvider.future),
             child: _StakingContent(
               overview: overview,
-              onStake: onStake,
-              onUnstake: onUnstake,
-              onDone: refresh,
+              onStake: actions.stake,
+              onUnstake: actions.unstake,
             ),
           );
         },
@@ -63,13 +63,11 @@ class _StakingContent extends StatefulWidget {
     required this.overview,
     required this.onStake,
     required this.onUnstake,
-    required this.onDone,
   });
 
   final StakingOverview overview;
   final StakeAction onStake;
   final UnstakeAction onUnstake;
-  final Future<void> Function() onDone;
 
   @override
   State<_StakingContent> createState() => _StakingContentState();
@@ -108,7 +106,7 @@ class _StakingContentState extends State<_StakingContent> {
   double get _maxStakeable {
     final t = _token;
     if (t == null) return 0;
-    final room = widget.overview.maxStakePerUser - t.stakingBalance;
+    final room = t.maxStake - t.stakingBalance;
     return room < t.walletBalance ? room : t.walletBalance;
   }
 
@@ -117,8 +115,8 @@ class _StakingContentState extends State<_StakingContent> {
     if (value == null || value <= 0) return 'Saisissez un montant supérieur à 0';
     final t = _token!;
     if (value > t.walletBalance) return 'Solde insuffisant dans le wallet';
-    if (t.stakingBalance + value > widget.overview.maxStakePerUser) {
-      return 'Dépasse le plafond de ${formatAmount(widget.overview.maxStakePerUser, t.symbol, decimals: 0)}';
+    if (t.stakingBalance + value > t.maxStake) {
+      return 'Dépasse le plafond de ${formatAmount(t.maxStake, t.symbol, decimals: 0)}';
     }
     return null;
   }
@@ -131,24 +129,35 @@ class _StakingContentState extends State<_StakingContent> {
     setState(() => _submitting = true);
     try {
       if (_mode == _Mode.stake) {
-        final amount = double.parse(_amountController.text.replaceAll(',', '.').trim());
-        await widget.onStake(token.address, amount);
+        final text = _amountController.text.trim();
+        final amount = double.parse(text.replaceAll(',', '.'));
+        await widget.onStake(token, text);
         messenger.showSnackBar(
           SnackBar(content: Text('${formatAmount(amount, token.symbol, decimals: 4)} stakés avec succès')),
         );
         _amountController.clear();
       } else {
-        await widget.onUnstake(token.address);
+        await widget.onUnstake(token);
         messenger.showSnackBar(
           SnackBar(content: Text('Solde ${token.symbol} retiré du staking')),
         );
       }
-      await widget.onDone();
-    } catch (_) {
+    } on WalletRequiredException {
       messenger.showSnackBar(
         const SnackBar(
+          content: Text(
+            'Connectez votre wallet pour signer la transaction. '
+            'La signature via WalletConnect arrive bientôt.',
+          ),
+        ),
+      );
+    } catch (e) {
+      messenger.showSnackBar(
+        SnackBar(
           backgroundColor: AppColors.danger,
-          content: Text('La transaction a échoué. Vérifiez votre wallet puis réessayez.'),
+          content: Text(
+            e is StateError ? e.message : 'La transaction a échoué. Vérifiez votre wallet puis réessayez.',
+          ),
         ),
       );
     } finally {
@@ -174,8 +183,8 @@ class _StakingContentState extends State<_StakingContent> {
               ),
               Expanded(
                 child: HeroStat(
-                  label: 'Plafond par token',
-                  value: formatAmount(o.maxStakePerUser, '', decimals: 0).trim(),
+                  label: 'Plafond ${_token?.symbol ?? 'par token'}',
+                  value: _token == null ? '—' : formatAmount(_token!.maxStake, '', decimals: 0).trim(),
                 ),
               ),
             ],
@@ -275,6 +284,10 @@ class _StakingContentState extends State<_StakingContent> {
               const _InfoNote(
                 text: 'Votre wallet vous demandera deux signatures : l\'autorisation du token, puis le dépôt.',
               ),
+              if (!widget.overview.canSign) ...[
+                const SizedBox(height: 8),
+                const _InfoNote(text: 'Lecture seule : connectez votre wallet pour signer les transactions.'),
+              ],
             ] else ...[
               _UnstakeSummary(token: t),
               const SizedBox(height: 12),
