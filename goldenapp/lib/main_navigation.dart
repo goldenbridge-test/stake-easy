@@ -4,7 +4,6 @@ import 'package:goldenapp/features/staking/staking_screen.dart';
 import 'package:goldenapp/features/portfolio/portfolio_screen.dart';
 import 'package:goldenapp/features/settings/profile_screen.dart';
 import 'package:goldenapp/features/rewards/rewards_screen.dart';
-import 'package:goldenapp/learn.dart';
 import 'app_theme.dart';
 
 class MainNavigation extends StatefulWidget {
