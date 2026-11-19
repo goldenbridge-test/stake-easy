@@ -1,24 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../app_theme.dart';
+import '../../core/models/user.dart';
+import '../../core/providers/providers.dart';
 import '../../shared/utils/formatters.dart';
 import '../../shared/widgets/widgets.dart';
-import '../auth/login_screen.dart';
 import '../exchanges/exchanges_screen.dart';
-import 'models/user_profile.dart';
-import 'profile_mock_data.dart';
+import 'models/profile_data.dart';
+import 'profile_providers.dart';
 
 /// Profil : infos utilisateur, connexions exchange, paramètres, déconnexion.
-class ProfileScreen extends StatelessWidget {
-  const ProfileScreen({super.key, this.loader = loadMockProfile, this.onLogout});
+class ProfileScreen extends ConsumerWidget {
+  const ProfileScreen({super.key});
 
-  final DataLoader<ProfileData> loader;
-
-  /// Déconnexion (effacer les jetons JWT…). Par défaut : retour à l'écran de connexion.
-  final Future<void> Function()? onLogout;
-
-  Future<void> _confirmLogout(BuildContext context) async {
+  Future<void> _confirmLogout(BuildContext context, WidgetRef ref) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -35,86 +32,92 @@ class ProfileScreen extends StatelessWidget {
       ),
     );
     if (confirmed != true || !context.mounted) return;
-    // TODO(intégration) : effacer les jetons access/refresh via le service d'auth.
-    await onLogout?.call();
-    if (!context.mounted) return;
-    Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (_) => const LoginScreen()),
-      (_) => false,
-    );
+    // Efface les jetons : l'AuthGate (premier écran de la pile) repasse sur l'onboarding.
+    final navigator = Navigator.of(context, rootNavigator: true);
+    await ref.read(authStateProvider.notifier).logout();
+    navigator.popUntil((route) => route.isFirst);
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    Future<void> refresh() => refreshQuietly(ref, profileProvider.future);
     return Scaffold(
       appBar: AppBar(title: const Text('Mon profil')),
-      body: AsyncView<ProfileData>(
-        load: loader,
+      body: AsyncValueView<ProfileData?>(
+        value: ref.watch(profileProvider),
+        onRetry: () => ref.invalidate(profileProvider),
+        onRefresh: refresh,
+        isEmpty: (data) => data == null,
+        emptyIcon: Icons.person_off_outlined,
+        emptyMessage: 'Session terminée. Reconnectez-vous.',
         loadingMessage: 'Chargement du profil…',
-        builder: (context, data, refresh) => RefreshIndicator(
-          onRefresh: refresh,
-          child: ListView(
-            padding: const EdgeInsets.all(24),
-            children: [
-              _ProfileHeader(user: data.user),
-              const SizedBox(height: 32),
-              _Section(
-                title: 'Compte',
-                children: [
-                  _InfoTile(icon: Icons.alternate_email_rounded, title: 'Nom d\'utilisateur', value: data.user.username),
-                  _InfoTile(icon: Icons.email_outlined, title: 'Email', value: data.user.email),
-                  _InfoTile(
-                    icon: Icons.account_balance_wallet_outlined,
-                    title: 'Wallet',
-                    value: data.walletAddress == null ? 'Non connecté' : shortenAddress(data.walletAddress!),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 24),
-              _Section(
-                title: 'Connexions exchange',
-                children: [
-                  if (data.connections.isEmpty)
-                    const _InfoTile(icon: Icons.link_off_rounded, title: 'Aucune connexion', value: '')
-                  else
-                    for (final c in data.connections)
-                      _InfoTile(
-                        icon: Icons.link_rounded,
-                        title: c.displayName,
-                        value: c.exchange.label,
-                      ),
-                  _InfoTile(
-                    icon: Icons.settings_input_component_outlined,
-                    title: 'Gérer les connexions',
-                    value: '',
-                    showChevron: true,
-                    onTap: () async {
-                      await Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => const ExchangesScreen()),
-                      );
-                      await refresh();
-                    },
-                  ),
-                ],
-              ),
-              const SizedBox(height: 24),
-              const _Section(
-                title: 'Paramètres',
-                children: [
-                  _InfoTile(icon: Icons.translate_rounded, title: 'Langue', value: 'Français'),
-                  _InfoTile(icon: Icons.light_mode_outlined, title: 'Thème', value: 'Clair'),
-                  _InfoTile(icon: Icons.help_outline_rounded, title: 'Aide et support', value: ''),
-                ],
-              ),
-              const SizedBox(height: 32),
-              ElevatedButton.icon(
-                onPressed: () => _confirmLogout(context),
-                icon: const Icon(Icons.logout_rounded),
-                label: const Text('Déconnexion'),
-              ),
-            ],
-          ),
-        ),
+        builder: (context, profile) {
+          final data = profile!;
+          return RefreshIndicator(
+            onRefresh: refresh,
+            child: ListView(
+              padding: const EdgeInsets.all(24),
+              children: [
+                _ProfileHeader(user: data.user),
+                const SizedBox(height: 32),
+                _Section(
+                  title: 'Compte',
+                  children: [
+                    _InfoTile(icon: Icons.alternate_email_rounded, title: 'Nom d\'utilisateur', value: data.user.username),
+                    _InfoTile(icon: Icons.email_outlined, title: 'Email', value: data.user.email.isEmpty ? 'Non renseigné' : data.user.email),
+                    _InfoTile(
+                      icon: Icons.account_balance_wallet_outlined,
+                      title: 'Wallet',
+                      value: data.walletAddress == null ? 'Non connecté' : shortenAddress(data.walletAddress!),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                _Section(
+                  title: 'Connexions exchange',
+                  children: [
+                    if (data.connections.isEmpty)
+                      const _InfoTile(icon: Icons.link_off_rounded, title: 'Aucune connexion', value: '')
+                    else
+                      for (final c in data.connections)
+                        _InfoTile(
+                          icon: Icons.link_rounded,
+                          title: c.label.isEmpty ? c.exchangeName : c.label,
+                          value: c.exchangeName,
+                        ),
+                    _InfoTile(
+                      icon: Icons.settings_input_component_outlined,
+                      title: 'Gérer les connexions',
+                      value: '',
+                      showChevron: true,
+                      onTap: () async {
+                        await Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const ExchangesScreen()),
+                        );
+                        ref.invalidate(exchangeConnectionsProvider);
+                      },
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                const _Section(
+                  title: 'Paramètres',
+                  children: [
+                    _InfoTile(icon: Icons.translate_rounded, title: 'Langue', value: 'Français'),
+                    _InfoTile(icon: Icons.light_mode_outlined, title: 'Thème', value: 'Clair'),
+                    _InfoTile(icon: Icons.help_outline_rounded, title: 'Aide et support', value: ''),
+                  ],
+                ),
+                const SizedBox(height: 32),
+                ElevatedButton.icon(
+                  onPressed: () => _confirmLogout(context, ref),
+                  icon: const Icon(Icons.logout_rounded),
+                  label: const Text('Déconnexion'),
+                ),
+              ],
+            ),
+          );
+        },
       ),
     );
   }
@@ -123,7 +126,7 @@ class ProfileScreen extends StatelessWidget {
 class _ProfileHeader extends StatelessWidget {
   const _ProfileHeader({required this.user});
 
-  final UserProfile user;
+  final User user;
 
   @override
   Widget build(BuildContext context) {
@@ -152,7 +155,7 @@ class _ProfileHeader extends StatelessWidget {
         ),
         const SizedBox(height: 16),
         Text(
-          user.fullName,
+          user.displayName,
           textAlign: TextAlign.center,
           style: Theme.of(context).textTheme.displayMedium,
         ),
