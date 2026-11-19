@@ -1,31 +1,23 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../app_theme.dart';
+import '../../core/models/performance.dart';
 import '../../shared/utils/formatters.dart';
 import '../../shared/widgets/widgets.dart';
 import '../backtest/backtest_screen.dart';
 import '../exchanges/exchanges_screen.dart';
 import '../learn/learn_screen.dart';
 import '../portfolio/widgets/position_card.dart';
-import 'dashboard_mock_data.dart';
-import 'models/chart_data.dart';
+import 'dashboard_providers.dart';
 import 'models/dashboard_data.dart';
-import 'models/performance.dart';
 import 'widgets/market_chart_card.dart';
 import 'widgets/quick_actions.dart';
 
 /// Tableau de bord : KPIs de performance, graphique de marché, aperçu des positions.
-class DashboardScreen extends StatelessWidget {
-  const DashboardScreen({
-    super.key,
-    this.loader = loadMockDashboard,
-    this.chartLoader = loadMockChart,
-    this.onOpenPortfolio,
-  });
-
-  final DataLoader<DashboardData> loader;
-  final Future<ChartData> Function(String symbol) chartLoader;
+class DashboardScreen extends ConsumerWidget {
+  const DashboardScreen({super.key, this.onOpenPortfolio});
 
   /// Bascule vers l'onglet Portfolio (fourni par MainNavigation).
   final VoidCallback? onOpenPortfolio;
@@ -35,7 +27,7 @@ class DashboardScreen extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Tableau de bord'),
@@ -47,11 +39,12 @@ class DashboardScreen extends StatelessWidget {
           ),
         ],
       ),
-      body: AsyncView<DashboardData>(
-        load: loader,
+      body: AsyncValueView<DashboardData>(
+        value: ref.watch(dashboardProvider),
+        onRetry: () => invalidateDashboard(ref),
         loadingMessage: 'Chargement du tableau de bord…',
-        builder: (context, data, refresh) => RefreshIndicator(
-          onRefresh: refresh,
+        builder: (context, data) => RefreshIndicator(
+          onRefresh: () => refreshDashboard(ref),
           child: ListView(
             padding: const EdgeInsets.all(20),
             children: [
@@ -94,7 +87,7 @@ class DashboardScreen extends StatelessWidget {
               ],
               const SizedBox(height: 28),
               const SectionHeader(title: 'Marché', subtitle: 'Clôtures journalières et zones de support'),
-              MarketChartCard(loader: chartLoader),
+              const MarketChartCard(),
               const SizedBox(height: 28),
               SectionHeader(
                 title: 'Positions ouvertes',

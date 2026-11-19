@@ -1,27 +1,30 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../app_theme.dart';
+import '../../../core/models/chart_data.dart';
+import '../../../core/providers/providers.dart';
 import '../../../shared/utils/formatters.dart';
 import '../../../shared/widgets/widgets.dart';
-import '../models/chart_data.dart';
 
-/// Carte « Marché » : sélecteur d'actif, cours de clôture et zones de support.
-class MarketChartCard extends StatefulWidget {
+/// Carte « Marché » : sélecteur d'actif, cours de clôture et zones de support
+/// (`/execution/chart-data/`, 365 jours).
+class MarketChartCard extends ConsumerStatefulWidget {
   const MarketChartCard({
     super.key,
-    required this.loader,
     this.symbols = const ['BTC/USDT', 'ETH/USDT', 'SOL/USDT', 'BNB/USDT'],
+    this.days = 365,
   });
 
-  final Future<ChartData> Function(String symbol) loader;
   final List<String> symbols;
+  final int days;
 
   @override
-  State<MarketChartCard> createState() => _MarketChartCardState();
+  ConsumerState<MarketChartCard> createState() => _MarketChartCardState();
 }
 
-class _MarketChartCardState extends State<MarketChartCard> {
+class _MarketChartCardState extends ConsumerState<MarketChartCard> {
   late String _symbol = widget.symbols.first;
 
   @override
@@ -40,14 +43,19 @@ class _MarketChartCardState extends State<MarketChartCard> {
           const SizedBox(height: 16),
           SizedBox(
             height: 300,
-            child: AsyncView<ChartData>(
-              key: ValueKey(_symbol),
-              load: () => widget.loader(_symbol),
-              isEmpty: (d) => d.candles.isEmpty,
-              emptyIcon: Icons.show_chart_rounded,
-              emptyMessage: 'Pas encore d\'historique pour cet actif.',
-              embedded: true,
-              builder: (context, data, _) => _ChartBody(data: data),
+            child: Builder(
+              builder: (context) {
+                final query = (symbol: _symbol, days: widget.days);
+                return AsyncValueView<ChartData>(
+                  value: ref.watch(chartDataProvider(query)),
+                  onRetry: () => ref.invalidate(chartDataProvider(query)),
+                  isEmpty: (d) => d.candles.isEmpty,
+                  emptyIcon: Icons.show_chart_rounded,
+                  emptyMessage: 'Pas encore d\'historique pour cet actif.',
+                  embedded: true,
+                  builder: (context, data) => _ChartBody(data: data),
+                );
+              },
             ),
           ),
         ],

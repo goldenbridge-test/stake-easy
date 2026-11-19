@@ -1,5 +1,5 @@
-import '../../portfolio/models/position.dart';
-import 'performance.dart';
+import '../../../core/models/performance.dart';
+import '../../../core/models/position.dart';
 
 /// Contenu principal du Tableau de bord.
 class DashboardData {
