@@ -1,23 +1,28 @@
 import 'package:flutter/material.dart';
-import '../../core/services/auth_service.dart';
-import '../../main_navigation.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../core/api/api_exception.dart';
+import '../../core/providers/auth_providers.dart';
 import 'signup_screen.dart';
 import 'wallet_connection_screen.dart';
+import 'widgets/form_error_banner.dart';
 
-class LoginScreen extends StatefulWidget {
+/// Connexion par nom d'utilisateur. En cas de succès, la session Riverpod est
+/// ouverte et l'AuthGate (premier écran de la pile) affiche la navigation.
+class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  ConsumerState<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   // Django (SimpleJWT) authentifie par nom d'utilisateur : POST /api/accounts/login/ {username, password}.
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _authService = AuthService();
   bool _isLoading = false;
+  String? _error;
   bool _obscurePassword = true;
 
   @override
@@ -29,18 +34,20 @@ class _LoginScreenState extends State<LoginScreen> {
 
   void _handleLogin() async {
     if (!_formKey.currentState!.validate()) return;
-    setState(() => _isLoading = true);
+    FocusScope.of(context).unfocus();
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
     try {
-      // TODO(intégration) : AuthService.login attend encore (email, password) ;
-      // l'intégration passera {username, password} à /api/accounts/login/.
-      await _authService.login(_usernameController.text.trim(), _passwordController.text);
-      if (mounted) {
-        Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const MainNavigation()));
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
-      }
+      await ref
+          .read(authStateProvider.notifier)
+          .login(_usernameController.text.trim(), _passwordController.text);
+      if (mounted) Navigator.of(context).popUntil((route) => route.isFirst);
+    } on ApiException catch (e) {
+      if (mounted) setState(() => _error = e.message);
+    } catch (_) {
+      if (mounted) setState(() => _error = 'La connexion a échoué. Réessayez.');
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -105,6 +112,10 @@ class _LoginScreenState extends State<LoginScreen> {
                   child: TextButton(onPressed: () {}, child: const Text('Mot de passe oublié ?')),
                 ),
                 const SizedBox(height: 32),
+                if (_error != null) ...[
+                  FormErrorBanner(message: _error!),
+                  const SizedBox(height: 16),
+                ],
                 ElevatedButton(
                   onPressed: _isLoading ? null : _handleLogin,
                   child:

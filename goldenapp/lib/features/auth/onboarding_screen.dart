@@ -4,7 +4,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'login_screen.dart';
 
 class OnboardingScreen extends StatefulWidget {
-  const OnboardingScreen({Key? key}) : super(key: key);
+  const OnboardingScreen({super.key});
 
   @override
   State<OnboardingScreen> createState() => _OnboardingScreenState();
@@ -67,7 +67,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         curve: Curves.easeInOut,
                       );
                     } else {
-                      Navigator.pushReplacement(
+                      // push et non pushReplacement : l'AuthGate reste en bas de
+                      // la pile et bascule sur la navigation après connexion.
+                      Navigator.push(
                         context,
                         MaterialPageRoute(builder: (context) => const LoginScreen()),
                       );
@@ -103,10 +105,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: isDark ? AppColors.white.withOpacity(0.05) : AppColors.primaryBlue.withOpacity(0.05),
+              color: isDark ? AppColors.white.withValues(alpha: 0.05) : AppColors.primaryBlue.withValues(alpha: 0.05),
               borderRadius: BorderRadius.circular(24),
               border: Border.all(
-                color: (isDark ? AppColors.white : AppColors.primaryBlue).withOpacity(0.1),
+                color: (isDark ? AppColors.white : AppColors.primaryBlue).withValues(alpha: 0.1),
                 width: 1,
               ),
             ),
@@ -131,7 +133,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             item.description,
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                  color: AppColors.darkGrey.withOpacity(0.7),
+                  color: AppColors.darkGrey.withValues(alpha: 0.7),
                 ),
           ).animate(delay: 200.ms).slideY(begin: 0.2, duration: 400.ms).fadeIn(),
         ],
@@ -147,7 +149,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       height: 8,
       width: isActive ? 24 : 8,
       decoration: BoxDecoration(
-        color: isActive ? AppColors.gold : AppColors.primaryBlue.withOpacity(0.2),
+        color: isActive ? AppColors.gold : AppColors.primaryBlue.withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(4),
       ),
     );
