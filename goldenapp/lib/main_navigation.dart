@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:goldenapp/features/dashboard/dashboard_screen.dart';
 import 'package:goldenapp/features/staking/staking_screen.dart';
 import 'package:goldenapp/features/portfolio/portfolio_screen.dart';
-import 'package:goldenapp/features/settings/profile_screen.dart';
+import 'package:goldenapp/features/profile/profile_screen.dart';
 import 'package:goldenapp/features/rewards/rewards_screen.dart';
 import 'app_theme.dart';
 
 class MainNavigation extends StatefulWidget {
-  const MainNavigation({Key? key}) : super(key: key);
+  const MainNavigation({super.key});
 
   @override
   State<MainNavigation> createState() => _MainNavigationState();
@@ -35,7 +35,7 @@ class _MainNavigationState extends State<MainNavigation> {
         decoration: BoxDecoration(
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
+              color: Colors.black.withValues(alpha: 0.1),
               blurRadius: 20,
               offset: const Offset(0, -5),
             ),
