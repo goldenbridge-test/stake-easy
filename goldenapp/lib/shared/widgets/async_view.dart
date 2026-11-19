@@ -19,6 +19,7 @@ class AsyncView<T> extends StatefulWidget {
     this.emptyMessage = 'Rien à afficher pour le moment.',
     this.loadingMessage,
     this.errorMessage,
+    this.embedded = false,
   });
 
   final DataLoader<T> load;
@@ -30,6 +31,10 @@ class AsyncView<T> extends StatefulWidget {
 
   /// Transforme l'exception en message lisible (par défaut : message générique).
   final String Function(Object error)? errorMessage;
+
+  /// À true quand la vue est placée dans une liste déjà scrollable :
+  /// l'état vide n'est alors pas enveloppé dans un RefreshIndicator.
+  final bool embedded;
 
   @override
   State<AsyncView<T>> createState() => _AsyncViewState<T>();
@@ -72,13 +77,13 @@ class _AsyncViewState<T> extends State<AsyncView<T>> {
         }
         final data = snapshot.data as T;
         if (widget.isEmpty?.call(data) ?? false) {
+          final empty = EmptyView(icon: widget.emptyIcon, message: widget.emptyMessage);
+          if (widget.embedded) return empty;
           return RefreshIndicator(
             onRefresh: _refresh,
             child: ListView(
               physics: const AlwaysScrollableScrollPhysics(),
-              children: [
-                EmptyView(icon: widget.emptyIcon, message: widget.emptyMessage),
-              ],
+              children: [empty],
             ),
           );
         }
