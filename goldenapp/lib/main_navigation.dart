@@ -16,8 +16,10 @@ class MainNavigation extends StatefulWidget {
 class _MainNavigationState extends State<MainNavigation> {
   int _selectedIndex = 0;
 
-  final List<Widget> _screens = [
-    const DashboardScreen(),
+  static const int _portfolioIndex = 3;
+
+  late final List<Widget> _screens = [
+    DashboardScreen(onOpenPortfolio: () => setState(() => _selectedIndex = _portfolioIndex)),
     const StakingScreen(),
     const RewardsScreen(),
     const PortfolioScreen(),
