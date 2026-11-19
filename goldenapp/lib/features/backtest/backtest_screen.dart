@@ -1,44 +1,69 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../app_theme.dart';
+import '../../core/models/backtest.dart';
+import '../../core/providers/providers.dart';
+import '../../core/services/execution_service.dart';
 import '../../shared/utils/formatters.dart';
 import '../../shared/widgets/widgets.dart';
-import 'backtest_mock_data.dart';
-import 'models/backtest.dart';
+import 'backtest_polling.dart';
 import 'widgets/backtest_results_view.dart';
 
-/// Backtest : formulaire (BacktestRequestSerializer) et résultats.
-class BacktestScreen extends StatefulWidget {
-  const BacktestScreen({super.key, this.onRun = mockRunBacktest, this.historyLoader = loadMockBacktests});
+/// Backtest : formulaire (BacktestRequestSerializer), suivi de la tâche de fond
+/// et résultats.
+class BacktestScreen extends ConsumerStatefulWidget {
+  const BacktestScreen({super.key, this.pollInterval = const Duration(seconds: 3)});
 
-  /// Lance le backtest et renvoie son état (terminé, en cours ou échoué).
-  final Future<BacktestRequest> Function(BacktestDraft draft) onRun;
-
-  /// Backtests précédents de l'utilisateur.
-  final DataLoader<List<BacktestRequest>> historyLoader;
+  /// Intervalle d'interrogation tant que le backtest est en attente / en cours.
+  final Duration pollInterval;
 
   @override
-  State<BacktestScreen> createState() => _BacktestScreenState();
+  ConsumerState<BacktestScreen> createState() => _BacktestScreenState();
 }
 
-class _BacktestScreenState extends State<BacktestScreen> {
+class _BacktestScreenState extends ConsumerState<BacktestScreen> {
   final _formKey = GlobalKey<FormState>();
   final _capital = TextEditingController(text: '1000');
   final _discount = TextEditingController(text: '75');
-  String _symbol = backtestSymbols.first;
+  String _symbol = ExecutionService.availableSymbols.first;
   DateTime _startDate = DateTime(2020, 1, 1);
   bool _running = false;
   Object? _runError;
-  BacktestRequest? _current;
-  int _historyVersion = 0;
+  Backtest? _current;
+  StreamSubscription<Backtest>? _polling;
 
   @override
   void dispose() {
+    _polling?.cancel();
     _capital.dispose();
     _discount.dispose();
     super.dispose();
+  }
+
+  /// Affiche [bt] et, s'il n'est pas terminé, l'interroge jusqu'au résultat.
+  void _track(Backtest bt) {
+    _polling?.cancel();
+    setState(() {
+      _current = bt;
+      _runError = null;
+    });
+    if (!bt.isPending) return;
+    final service = ref.read(executionServiceProvider);
+    _polling = pollBacktest(bt, service.getBacktest, interval: widget.pollInterval).listen(
+      (update) {
+        if (!mounted) return;
+        setState(() => _current = update);
+        if (!update.isPending) ref.invalidate(backtestsProvider);
+      },
+      onError: (Object e) {
+        if (mounted) setState(() => _runError = e);
+      },
+    );
   }
 
   double? _parse(String raw) => double.tryParse(raw.replaceAll(',', '.').trim());
@@ -67,20 +92,17 @@ class _BacktestScreenState extends State<BacktestScreen> {
       _runError = null;
     });
     try {
-      final bt = await widget.onRun(
-        BacktestDraft(
-          symbol: _symbol,
-          capital: _parse(_capital.text)!,
-          startDate: _startDate,
-          discountPct: _parse(_discount.text)!,
-        ),
-      );
-      setState(() {
-        _current = bt;
-        _historyVersion++;
-      });
+      final bt = await ref.read(executionServiceProvider).createBacktest(
+            symbol: _symbol,
+            capital: _parse(_capital.text)!,
+            startDate: _startDate,
+            discountPct: _parse(_discount.text)!,
+          );
+      if (!mounted) return;
+      ref.invalidate(backtestsProvider);
+      _track(bt);
     } catch (e) {
-      setState(() => _runError = e);
+      if (mounted) setState(() => _runError = e);
     } finally {
       if (mounted) setState(() => _running = false);
     }
@@ -102,15 +124,15 @@ class _BacktestScreenState extends State<BacktestScreen> {
           _buildResult(),
           const SizedBox(height: 28),
           const SectionHeader(title: 'Backtests récents'),
-          AsyncView<List<BacktestRequest>>(
-            key: ValueKey(_historyVersion),
-            load: widget.historyLoader,
+          AsyncValueView<List<Backtest>>(
+            value: ref.watch(backtestsProvider),
+            onRetry: () => ref.invalidate(backtestsProvider),
             embedded: true,
             isEmpty: (list) => list.isEmpty,
             emptyIcon: Icons.history_rounded,
             emptyMessage: 'Aucun backtest lancé pour le moment.',
             builder:
-                (context, list, _) => AppCard(
+                (context, list) => AppCard(
                   padding: EdgeInsets.zero,
                   child: Column(
                     children: [
@@ -120,7 +142,7 @@ class _BacktestScreenState extends State<BacktestScreen> {
                         _HistoryTile(
                           backtest: list[i],
                           selected: list[i].id == _current?.id,
-                          onTap: () => setState(() => _current = list[i]),
+                          onTap: () => _track(list[i]),
                         ),
                       ],
                     ],
@@ -145,7 +167,9 @@ class _BacktestScreenState extends State<BacktestScreen> {
                 labelText: 'Actif',
                 prefixIcon: Icon(Icons.currency_bitcoin_rounded),
               ),
-              items: [for (final s in backtestSymbols) DropdownMenuItem(value: s, child: Text(s))],
+              items: [
+                for (final s in ExecutionService.availableSymbols) DropdownMenuItem(value: s, child: Text(s)),
+              ],
               onChanged: (s) => setState(() => _symbol = s ?? _symbol),
             ),
             const SizedBox(height: 12),
@@ -216,12 +240,19 @@ class _BacktestScreenState extends State<BacktestScreen> {
         child: LoadingView(message: 'Analyse de l\'historique… cela peut prendre une minute.'),
       );
     }
-    if (_runError != null) {
+    final error = _runError;
+    if (error != null) {
+      final pending = _current;
       return AppCard(
         child: ErrorView(
           title: 'Backtest impossible',
-          message: 'Le serveur n\'a pas pu lancer la simulation. Vérifiez les paramètres puis réessayez.',
-          onRetry: _run,
+          message: switch (error) {
+            StateError(:final message) => message,
+            _ when pending != null && pending.isPending => errorMessageOf(error),
+            _ => '${errorMessageOf(error)}\nVérifiez les paramètres puis réessayez.',
+          },
+          // Suivi interrompu : on reprend l'interrogation du même backtest.
+          onRetry: pending != null && pending.isPending ? () => _track(pending) : _run,
         ),
       );
     }
@@ -234,12 +265,15 @@ class _BacktestScreenState extends State<BacktestScreen> {
         ),
       );
     }
-    if (bt.status.isInProgress) {
+    if (bt.isPending) {
       return AppCard(
-        child: LoadingView(message: 'Backtest ${bt.symbol} : ${bt.status.label.toLowerCase()}…'),
+        child: LoadingView(
+          message: 'Backtest ${bt.symbol} : ${bt.statusLabel.toLowerCase()}…\n'
+              'Analyse de l\'historique, cela peut prendre une minute.',
+        ),
       );
     }
-    if (bt.status == BacktestStatus.failed || bt.results == null) {
+    if (bt.isFailed || bt.results == null) {
       return AppCard(
         child: ErrorView(
           title: 'Backtest ${bt.symbol} échoué',
@@ -254,15 +288,15 @@ class _BacktestScreenState extends State<BacktestScreen> {
 class _HistoryTile extends StatelessWidget {
   const _HistoryTile({required this.backtest, required this.selected, required this.onTap});
 
-  final BacktestRequest backtest;
+  final Backtest backtest;
   final bool selected;
   final VoidCallback onTap;
 
-  Color get _statusColor => switch (backtest.status) {
-    BacktestStatus.completed => AppColors.success,
-    BacktestStatus.failed => AppColors.danger,
-    _ => AppColors.warning,
-  };
+  Color get _statusColor => backtest.isCompleted
+      ? AppColors.success
+      : backtest.isFailed
+          ? AppColors.danger
+          : AppColors.warning;
 
   @override
   Widget build(BuildContext context) {
@@ -283,7 +317,7 @@ class _HistoryTile extends StatelessWidget {
       trailing:
           r != null
               ? PnlText(r.totalPnlPct, percent: true)
-              : StatusBadge(label: backtest.status.label, color: _statusColor),
+              : StatusBadge(label: backtest.statusLabel, color: _statusColor),
     );
   }
 }

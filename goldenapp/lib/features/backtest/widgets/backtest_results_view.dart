@@ -4,19 +4,19 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../app_theme.dart';
 import '../../../shared/utils/formatters.dart';
 import '../../../shared/widgets/widgets.dart';
-import '../models/backtest.dart';
+import '../../../core/models/backtest.dart';
 
 /// Résultats d'un backtest terminé : P&L, CAGR, courbe de capital, métriques.
 class BacktestResultsView extends StatelessWidget {
   const BacktestResultsView({super.key, required this.backtest});
 
-  final BacktestRequest backtest;
+  final Backtest backtest;
 
   @override
   Widget build(BuildContext context) {
     final r = backtest.results!;
     final labels = [
-      for (final d in r.equityDates) formatDate(DateTime.tryParse(d)),
+      for (final d in r.equityDates) formatDate(d),
     ];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
