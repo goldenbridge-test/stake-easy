@@ -1,96 +1,102 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../app_theme.dart';
 import '../../shared/utils/formatters.dart';
 import '../../shared/widgets/widgets.dart';
+import '../staking/widgets/no_wallet_view.dart';
 import 'models/rewards_overview.dart';
-import 'rewards_mock_data.dart';
+import 'rewards_providers.dart';
 
-/// Rewards : solde GoldenToken, prochaine distribution, historique.
-class RewardsScreen extends StatelessWidget {
-  const RewardsScreen({super.key, this.loader = loadMockRewards});
-
-  final DataLoader<RewardsOverview> loader;
+/// Rewards : solde GoldenToken, prochaine distribution, offre (lectures on-chain).
+class RewardsScreen extends ConsumerWidget {
+  const RewardsScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
       appBar: AppBar(title: const Text('Récompenses')),
-      body: AsyncView<RewardsOverview>(
-        load: loader,
+      body: AsyncValueView<RewardsOverview>(
+        value: ref.watch(rewardsOverviewProvider),
+        onRetry: () => ref.invalidate(rewardsOverviewProvider),
         loadingMessage: 'Chargement des récompenses…',
-        builder: (context, r, refresh) => RefreshIndicator(
-          onRefresh: refresh,
-          child: ListView(
-            padding: const EdgeInsets.all(20),
-            children: [
-              HeroBalanceCard(
-                label: 'Solde Golden Token',
-                value: formatAmount(r.goldenTokenBalance, r.tokenSymbol),
-                caption: 'Total reçu en distributions : ${formatAmount(r.totalReceivedGld, r.tokenSymbol)}',
-                icon: Icons.workspace_premium_rounded,
-              ),
-              const SizedBox(height: 24),
-              StatGrid(
+        builder: (context, r) => !r.hasWallet
+            ? const NoWalletView(message: 'Connectez votre wallet pour suivre vos GLD et vos distributions.')
+            : RefreshIndicator(
+              onRefresh: () => refreshQuietly(ref, rewardsOverviewProvider.future),
+              child: ListView(
+                padding: const EdgeInsets.all(20),
                 children: [
-                  StatCard(
-                    label: 'Prochaine distribution',
-                    value: '≈ ${formatAmount(r.estimatedNextIssuance, r.tokenSymbol, decimals: 4)}',
-                    icon: Icons.schedule_rounded,
-                    accent: AppColors.gold,
-                    caption: 'Selon votre valeur stakée',
+                  HeroBalanceCard(
+                    label: 'Solde Golden Token',
+                    value: formatAmount(r.goldenTokenBalance, r.tokenSymbol),
+                    caption: r.history.isEmpty
+                        ? '${shortenAddress(r.walletAddress!)} · ${r.networkName}'
+                        : 'Total reçu en distributions : ${formatAmount(r.totalReceivedGld, r.tokenSymbol)}',
+                    icon: Icons.workspace_premium_rounded,
                   ),
-                  StatCard(
-                    label: 'Retours de prêts en attente',
-                    value: formatAmount(r.pendingReturns, r.nativeSymbol, decimals: 4),
-                    icon: Icons.savings_outlined,
-                    accent: AppColors.success,
-                  ),
-                  StatCard(
-                    label: 'Offre en circulation',
-                    value: _compact(r.circulatingSupply),
-                    icon: Icons.donut_large_rounded,
-                    accent: AppColors.secondaryBlue,
-                    caption: 'sur ${_compact(r.maxSupply)} max',
-                  ),
-                  StatCard(
-                    label: 'Votre part de l\'offre',
-                    value: formatPercent(
-                      r.circulatingSupply == 0 ? 0 : r.goldenTokenBalance / r.circulatingSupply * 100,
-                      signed: false,
-                    ),
-                    icon: Icons.pie_chart_outline_rounded,
-                    accent: AppColors.violet,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 24),
-              const _HowItWorks(),
-              const SizedBox(height: 28),
-              const SectionHeader(title: 'Historique'),
-              if (r.history.isEmpty)
-                const EmptyView(
-                  icon: Icons.card_giftcard_outlined,
-                  title: 'Aucune récompense pour le moment',
-                  message: 'Stakez des tokens pour recevoir des GLD à chaque distribution.',
-                )
-              else
-                AppCard(
-                  padding: EdgeInsets.zero,
-                  child: Column(
+                  const SizedBox(height: 24),
+                  StatGrid(
                     children: [
-                      for (var i = 0; i < r.history.length; i++) ...[
-                        if (i > 0)
-                          const Divider(height: 1, indent: 16, endIndent: 16, color: AppColors.border),
-                        _RewardTile(event: r.history[i]),
-                      ],
+                      StatCard(
+                        label: 'Prochaine distribution',
+                        value: '≈ ${formatAmount(r.estimatedNextIssuance, r.tokenSymbol, decimals: 4)}',
+                        icon: Icons.schedule_rounded,
+                        accent: AppColors.gold,
+                        caption: 'Selon votre valeur stakée',
+                      ),
+                      StatCard(
+                        label: 'Offre restante',
+                        value: _compact(r.remainingSupply),
+                        icon: Icons.savings_outlined,
+                        accent: AppColors.success,
+                        caption: 'GLD encore distribuables',
+                      ),
+                      StatCard(
+                        label: 'Offre en circulation',
+                        value: _compact(r.circulatingSupply),
+                        icon: Icons.donut_large_rounded,
+                        accent: AppColors.secondaryBlue,
+                        caption: 'sur ${_compact(r.maxSupply)} max',
+                      ),
+                      StatCard(
+                        label: 'Votre part de l\'offre',
+                        value: formatPercent(
+                          r.circulatingSupply == 0 ? 0 : r.goldenTokenBalance / r.circulatingSupply * 100,
+                          signed: false,
+                        ),
+                        icon: Icons.pie_chart_outline_rounded,
+                        accent: AppColors.violet,
+                      ),
                     ],
                   ),
-                ),
-            ],
-          ),
-        ),
+                  const SizedBox(height: 24),
+                  const _HowItWorks(),
+                  const SizedBox(height: 28),
+                  const SectionHeader(title: 'Historique'),
+                  if (r.history.isEmpty)
+                    const EmptyView(
+                      icon: Icons.card_giftcard_outlined,
+                      title: 'Historique bientôt disponible',
+                      message: 'Les distributions reçues seront listées ici. Stakez des tokens pour recevoir des GLD.',
+                    )
+                  else
+                    AppCard(
+                      padding: EdgeInsets.zero,
+                      child: Column(
+                        children: [
+                          for (var i = 0; i < r.history.length; i++) ...[
+                            if (i > 0)
+                              const Divider(height: 1, indent: 16, endIndent: 16, color: AppColors.border),
+                            _RewardTile(event: r.history[i]),
+                          ],
+                        ],
+                      ),
+                    ),
+                ],
+              ),
+            ),
       ),
     );
   }

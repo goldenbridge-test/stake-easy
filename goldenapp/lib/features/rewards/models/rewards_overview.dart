@@ -1,5 +1,5 @@
 // Modèles d'affichage des récompenses (GoldenToken + TokenFarm).
-// Montants déjà convertis depuis le wei par la couche d'intégration.
+// Montants convertis depuis le wei par rewards_providers.dart.
 
 enum RewardType {
   /// GLD reçus via TokenFarm.issueTokens (Transfer GoldenToken depuis TokenFarm).
@@ -32,15 +32,19 @@ class RewardEvent {
 /// Vue d'ensemble des récompenses de l'utilisateur.
 class RewardsOverview {
   const RewardsOverview({
+    required this.walletAddress,
+    required this.networkName,
     required this.goldenTokenBalance,
     required this.circulatingSupply,
     required this.maxSupply,
     required this.estimatedNextIssuance,
-    required this.pendingReturns,
-    required this.history,
+    this.history = const [],
     this.tokenSymbol = 'GLD',
-    this.nativeSymbol = 'ETH',
   });
+
+  /// Adresse consultée, null sans wallet.
+  final String? walletAddress;
+  final String networkName;
 
   /// GoldenToken.balanceOf(user).
   final double goldenTokenBalance;
@@ -53,11 +57,12 @@ class RewardsOverview {
   /// TokenFarm.getUserTotalValue(user) : GLD versés au prochain issueTokens.
   final double estimatedNextIssuance;
 
-  /// TokenFarm.pendingReturns(user), en monnaie native.
-  final double pendingReturns;
-  final String nativeSymbol;
-
+  /// Événements on-chain : pas encore lus par l'application (liste vide).
   final List<RewardEvent> history;
+
+  bool get hasWallet => walletAddress != null && walletAddress!.isNotEmpty;
+
+  double get remainingSupply => (maxSupply - circulatingSupply).clamp(0, double.infinity).toDouble();
 
   double get totalReceivedGld => history
       .where((e) => e.type == RewardType.issuance)
