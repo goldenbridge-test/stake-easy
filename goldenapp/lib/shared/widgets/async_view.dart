@@ -69,25 +69,45 @@ class _AsyncViewState<T> extends State<AsyncView<T>> {
         }
         if (snapshot.hasError) {
           final error = snapshot.error!;
-          return ErrorView(
-            message: widget.errorMessage?.call(error) ??
-                'Impossible de charger les données. Vérifiez votre connexion puis réessayez.',
-            onRetry: _refresh,
+          return _FitOrScroll(
+            child: ErrorView(
+              message:
+                  widget.errorMessage?.call(error) ??
+                  'Impossible de charger les données. Vérifiez votre connexion puis réessayez.',
+              onRetry: _refresh,
+            ),
           );
         }
         final data = snapshot.data as T;
         if (widget.isEmpty?.call(data) ?? false) {
           final empty = EmptyView(icon: widget.emptyIcon, message: widget.emptyMessage);
-          if (widget.embedded) return empty;
+          if (widget.embedded) return _FitOrScroll(child: empty);
           return RefreshIndicator(
             onRefresh: _refresh,
-            child: ListView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              children: [empty],
-            ),
+            child: ListView(physics: const AlwaysScrollableScrollPhysics(), children: [empty]),
           );
         }
         return widget.builder(context, data, _refresh);
+      },
+    );
+  }
+}
+
+/// Centre l'enfant dans l'espace disponible, et le rend scrollable
+/// s'il est plus haut que cet espace (cartes à hauteur fixe).
+class _FitOrScroll extends StatelessWidget {
+  const _FitOrScroll({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (!constraints.hasBoundedHeight) return child;
+        return SingleChildScrollView(
+          child: ConstrainedBox(constraints: BoxConstraints(minHeight: constraints.maxHeight), child: child),
+        );
       },
     );
   }
