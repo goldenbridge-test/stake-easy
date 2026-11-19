@@ -217,6 +217,7 @@ void main() {
         },
         'nb_years': 3.33,
         'final_capital': 1340.2,
+        'risk_free_rate': 0.03,
       },
     });
     expect(done.isCompleted, isTrue);
@@ -224,6 +225,7 @@ void main() {
     expect(done.results!.equityCurve, [1000.0, 1010.5, 1340.2]);
     expect(done.results!.cagr.cagrPct, 9.6);
     expect(done.results!.finalCapital, 1340.2);
+    expect(done.results!.riskFreeRate, 0.03);
   });
 
   test('Backtest.createJson respecte le serializer', () {

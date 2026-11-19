@@ -26,6 +26,7 @@ class BacktestResults {
     required this.cagr,
     required this.nbYears,
     required this.finalCapital,
+    this.riskFreeRate = 0.04,
   });
 
   /// JSON brut, pour les clés non modélisées.
@@ -51,6 +52,9 @@ class BacktestResults {
   final Cagr cagr;
   final double nbYears;
   final double finalCapital;
+
+  /// Taux sans risque annuel utilisé pour le Sharpe (0.04 = 4 %).
+  final double riskFreeRate;
 
   factory BacktestResults.fromJson(Map<String, dynamic> json) {
     final curve = json['equity_curve'];
@@ -79,6 +83,7 @@ class BacktestResults {
       cagr: Cagr.fromJson(json['cagr']),
       nbYears: toDouble(json['nb_years']),
       finalCapital: toDouble(json['final_capital']),
+      riskFreeRate: toDouble(json['risk_free_rate'], 0.04),
     );
   }
 }
