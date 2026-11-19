@@ -1,30 +1,23 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:goldenapp/main_navigation.dart';
 
-import 'package:goldenapp/main.dart';
+import 'helpers.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  setUpAll(disableFontFetching);
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+  testWidgets('La navigation affiche les 5 onglets et change d\'écran', (tester) async {
+    await pumpApp(tester, const MainNavigation());
+    await settle(tester);
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+    for (final label in ['Tableau', 'Staking', 'Rewards', 'Portfolio', 'Profil']) {
+      expect(find.text(label), findsWidgets);
+    }
+    expect(find.text('Tableau de bord'), findsOneWidget);
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    await tester.tap(find.byIcon(Icons.pie_chart_outline));
+    await tester.pumpAndSettle();
+    expect(find.text('Historique'), findsOneWidget);
   });
 }
