@@ -236,13 +236,17 @@ class _StakingContentState extends State<_StakingContent> {
               // La clé resynchronise le champ quand on choisit un token via sa carte.
               key: ValueKey('token-${t.address}'),
               initialValue: t.address,
+              isExpanded: true,
               decoration: const InputDecoration(
                 labelText: 'Token',
                 prefixIcon: Icon(Icons.token_outlined),
               ),
               items: [
                 for (final token in widget.overview.tokens)
-                  DropdownMenuItem(value: token.address, child: Text('${token.symbol} · ${token.name}')),
+                  DropdownMenuItem(
+                    value: token.address,
+                    child: Text('${token.symbol} · ${token.name}', overflow: TextOverflow.ellipsis),
+                  ),
               ],
               onChanged: (address) => setState(
                 () => _token = widget.overview.tokens.firstWhere((x) => x.address == address),

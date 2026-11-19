@@ -128,9 +128,12 @@ class _ChartBody extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 6),
-            Text(
-              '${zones.length} zone${zones.length > 1 ? 's' : ''} de support active${zones.length > 1 ? 's' : ''}',
-              style: GoogleFonts.openSans(fontSize: 12, color: AppColors.mutedText),
+            Expanded(
+              child: Text(
+                '${zones.length} zone${zones.length > 1 ? 's' : ''} de support active${zones.length > 1 ? 's' : ''}',
+                overflow: TextOverflow.ellipsis,
+                style: GoogleFonts.openSans(fontSize: 12, color: AppColors.mutedText),
+              ),
             ),
           ],
         ),
