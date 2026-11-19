@@ -240,8 +240,9 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                         : const Text('S\'inscrire'),
                   ),
                   const SizedBox(height: 32),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                  Wrap(
+                    alignment: WrapAlignment.center,
+                    crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
                       const Text('Déjà un compte ?'),
                       TextButton(

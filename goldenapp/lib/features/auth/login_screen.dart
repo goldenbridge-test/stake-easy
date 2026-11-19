@@ -150,8 +150,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   label: const Text('Utiliser un Wallet'),
                 ),
                 const SizedBox(height: 32),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                Wrap(
+                  alignment: WrapAlignment.center,
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
                     const Text('Pas encore de compte ?'),
                     TextButton(
