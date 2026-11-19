@@ -44,6 +44,14 @@ class AuthGate extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Déconnexion ou session expirée : on ferme les écrans ouverts par-dessus
+    // (Exchanges, Backtest…) pour revenir à l'onboarding.
+    ref.listen(authStateProvider, (previous, next) {
+      final wasLoggedIn = previous?.valueOrNull != null;
+      if (wasLoggedIn && next.hasValue && next.value == null) {
+        Navigator.of(context).popUntil((route) => route.isFirst);
+      }
+    });
     final session = ref.watch(authStateProvider);
     return session.when(
       skipLoadingOnRefresh: false,

@@ -105,4 +105,30 @@ void main() {
 
     expect(find.text('onboarding'), findsOneWidget);
   });
+
+  testWidgets('déconnexion : ferme les écrans ouverts par-dessus', (tester) async {
+    await tester.pumpWidget(
+      gate(
+        MemoryTokenStorage(access: 'A', refresh: 'R'),
+        MockClient(
+          (_) async => http.Response('{"id":1,"username":"alice"}', 200),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final context = tester.element(find.text('accueil'));
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => const Text('exchanges')),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('exchanges'), findsOneWidget);
+
+    await ProviderScope.containerOf(
+      context,
+    ).read(authStateProvider.notifier).logout();
+    await tester.pumpAndSettle();
+
+    expect(find.text('exchanges'), findsNothing);
+    expect(find.text('onboarding'), findsOneWidget);
+  });
 }
