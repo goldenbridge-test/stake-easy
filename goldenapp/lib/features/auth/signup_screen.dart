@@ -1,16 +1,20 @@
 import 'package:flutter/material.dart';
-import '../../app_theme.dart';
-import '../../core/services/auth_service.dart';
-import '../../main_navigation.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class SignupScreen extends StatefulWidget {
+import '../../app_theme.dart';
+import '../../core/api/api_exception.dart';
+import '../../core/providers/auth_providers.dart';
+import 'widgets/form_error_banner.dart';
+
+/// Inscription (POST /accounts/register/) puis ouverture de la session.
+class SignupScreen extends ConsumerStatefulWidget {
   const SignupScreen({super.key});
 
   @override
-  State<SignupScreen> createState() => _SignupScreenState();
+  ConsumerState<SignupScreen> createState() => _SignupScreenState();
 }
 
-class _SignupScreenState extends State<SignupScreen> {
+class _SignupScreenState extends ConsumerState<SignupScreen> {
   final _formKey = GlobalKey<FormState>();
   // Champs de RegisterSerializer : username, email, password, first_name, last_name.
   final _usernameController = TextEditingController();
@@ -18,8 +22,24 @@ class _SignupScreenState extends State<SignupScreen> {
   final _lastNameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _authService = AuthService();
   bool _isLoading = false;
+  String? _error;
+
+  /// Erreurs de validation renvoyées par Django, par champ.
+  Map<String, List<String>> _fieldErrors = const {};
+
+  static const _formFields = {'username', 'first_name', 'last_name', 'email', 'password'};
+
+  String? _serverError(String field) {
+    final errors = _fieldErrors[field];
+    return errors == null || errors.isEmpty ? null : errors.join(' ');
+  }
+
+  /// Une erreur serveur bloque la validation du champ : on l'efface dès la saisie.
+  void _clearServerError(String field) {
+    if (!_fieldErrors.containsKey(field)) return;
+    setState(() => _fieldErrors = Map.of(_fieldErrors)..remove(field));
+  }
   bool _obscurePassword = true;
   bool _acceptedTerms = false;
 
@@ -43,22 +63,30 @@ class _SignupScreenState extends State<SignupScreen> {
       );
       return;
     }
-    setState(() => _isLoading = true);
+    FocusScope.of(context).unfocus();
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
     try {
-      // TODO(intégration) : AuthService.signup n'envoie encore que (email, password) ;
-      // POST /api/accounts/register/ attend {username, email, password, first_name, last_name}
-      // (valeurs disponibles dans les contrôleurs ci-dessus).
-      await _authService.signup(_emailController.text.trim(), _passwordController.text);
-      if (mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const MainNavigation()),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
-      }
+      await ref.read(authStateProvider.notifier).register(
+            username: _usernameController.text.trim(),
+            password: _passwordController.text,
+            email: _emailController.text.trim(),
+            firstName: _firstNameController.text.trim(),
+            lastName: _lastNameController.text.trim(),
+          );
+      if (mounted) Navigator.of(context).popUntil((route) => route.isFirst);
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      // Les erreurs rattachées à un champ s'affichent sous ce champ.
+      final onlyFieldErrors = e.fieldErrors.isNotEmpty && e.fieldErrors.keys.every(_formFields.contains);
+      setState(() {
+        _fieldErrors = e.fieldErrors;
+        _error = onlyFieldErrors ? null : e.message;
+      });
+    } catch (_) {
+      if (mounted) setState(() => _error = 'L\'inscription a échoué. Réessayez.');
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -92,6 +120,8 @@ class _SignupScreenState extends State<SignupScreen> {
                     autocorrect: false,
                     textInputAction: TextInputAction.next,
                     autofillHints: const [AutofillHints.newUsername],
+                    forceErrorText: _serverError('username'),
+                    onChanged: (_) => _clearServerError('username'),
                     validator: (v) => _required(v, 'Choisissez un nom d\'utilisateur'),
                     decoration: const InputDecoration(
                       hintText: 'Nom d\'utilisateur',
@@ -108,6 +138,8 @@ class _SignupScreenState extends State<SignupScreen> {
                           textCapitalization: TextCapitalization.words,
                           textInputAction: TextInputAction.next,
                           autofillHints: const [AutofillHints.givenName],
+                          forceErrorText: _serverError('first_name'),
+                          onChanged: (_) => _clearServerError('first_name'),
                           validator: (v) => _required(v, 'Requis'),
                           decoration: const InputDecoration(
                             hintText: 'Prénom',
@@ -122,6 +154,8 @@ class _SignupScreenState extends State<SignupScreen> {
                           textCapitalization: TextCapitalization.words,
                           textInputAction: TextInputAction.next,
                           autofillHints: const [AutofillHints.familyName],
+                          forceErrorText: _serverError('last_name'),
+                          onChanged: (_) => _clearServerError('last_name'),
                           validator: (v) => _required(v, 'Requis'),
                           decoration: const InputDecoration(hintText: 'Nom'),
                         ),
@@ -135,6 +169,8 @@ class _SignupScreenState extends State<SignupScreen> {
                     autocorrect: false,
                     textInputAction: TextInputAction.next,
                     autofillHints: const [AutofillHints.email],
+                    forceErrorText: _serverError('email'),
+                    onChanged: (_) => _clearServerError('email'),
                     validator: (v) {
                       final value = v?.trim() ?? '';
                       if (value.isEmpty) return 'Saisissez votre email';
@@ -154,6 +190,8 @@ class _SignupScreenState extends State<SignupScreen> {
                     obscureText: _obscurePassword,
                     textInputAction: TextInputAction.done,
                     autofillHints: const [AutofillHints.newPassword],
+                    forceErrorText: _serverError('password'),
+                    onChanged: (_) => _clearServerError('password'),
                     validator: (v) =>
                         (v == null || v.length < 8) ? 'Au moins 8 caractères' : null,
                     decoration: InputDecoration(
@@ -187,6 +225,10 @@ class _SignupScreenState extends State<SignupScreen> {
                     ],
                   ),
                   const SizedBox(height: 32),
+                  if (_error != null) ...[
+                    FormErrorBanner(message: _error!),
+                    const SizedBox(height: 16),
+                  ],
                   ElevatedButton(
                     onPressed: _isLoading ? null : _handleSignup,
                     child: _isLoading
