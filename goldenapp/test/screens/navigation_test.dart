@@ -2,13 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:goldenapp/main_navigation.dart';
 
+import '../fake_backend.dart';
 import '../helpers.dart';
 
 void main() {
   setUpAll(disableFontFetching);
 
   testWidgets('La navigation affiche les 5 onglets et change d\'écran', (tester) async {
-    await pumpApp(tester, const MainNavigation());
+    await pumpWithBackend(tester, const MainNavigation(), fullBackend());
     await settle(tester);
 
     for (final label in ['Tableau', 'Staking', 'Rewards', 'Portfolio', 'Profil']) {
