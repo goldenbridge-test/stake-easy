@@ -9,12 +9,38 @@ class AppColors {
   static const Color white = Color(0xFFFFFFFF); // Background / Negative space
   static const Color gold = Color(0xFFFACC15); // Touche premium
 
+  // Couleurs fonctionnelles (reprises de learn.dart / homepage.dart)
+  static const Color violet = Color(0xFF7C3AED); // Fin du dégradé futuriste
+  static const Color success = Color(0xFF16A34A); // Gains, statut OK
+  static const Color danger = Color(0xFFDC2626); // Pertes, erreurs
+  static const Color warning = Color(0xFFF59E0B); // En attente
+  static const Color mutedText = Color(0xFF64748B); // Texte secondaire
+  static const Color border = Color(0xFFE2E8F0); // Bordures de cartes
+  static const Color surfaceMuted = Color(0xFFF1F5F9); // Puces, fonds discrets
+  static const Color inputFill = Color(0xFFF3F4F6); // Champs de saisie
+
   // Dégradés
   static const LinearGradient futuristicGradient = LinearGradient(
-    colors: [primaryBlue, Color(0xFF7C3AED)], // Bleu -> Violet
+    colors: [primaryBlue, violet], // Bleu -> Violet
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
+
+  // Dégradé or pour les éléments premium (récompenses)
+  static const LinearGradient goldGradient = LinearGradient(
+    colors: [Color(0xFFFDE68A), gold],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
+
+  // Ombre douce commune aux cartes
+  static List<BoxShadow> get cardShadow => [
+        BoxShadow(
+          color: Colors.black.withValues(alpha: 0.06),
+          blurRadius: 16,
+          offset: const Offset(0, 6),
+        ),
+      ];
 }
 
 class AppTheme {
@@ -66,7 +92,7 @@ class AppTheme {
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: const Color(0xFFF3F4F6),
+        fillColor: AppColors.inputFill,
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
@@ -97,9 +123,17 @@ class AppTheme {
           elevation: 0,
         ),
       ),
-      // The outlinedButtonTheme is removed as per the instruction to use ElevatedButtons instead.
-      // Any OutlinedButton in the app should now be replaced with an ElevatedButton,
-      // which will automatically pick up the 'gold theme' from the elevatedButtonTheme.
+      // Pas d'outlinedButtonTheme : les actions principales utilisent ElevatedButton (thème or).
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          foregroundColor: AppColors.secondaryBlue,
+          textStyle: GoogleFonts.openSans(fontWeight: FontWeight.w600),
+        ),
+      ),
+      snackBarTheme: const SnackBarThemeData(
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: AppColors.darkGrey,
+      ),
     );
   }
 
