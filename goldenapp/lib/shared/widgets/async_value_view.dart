@@ -45,7 +45,8 @@ class AsyncValueView<T> extends StatelessWidget {
   final String? emptyTitle;
   final String? loadingMessage;
 
-  /// À true quand la vue est placée dans une liste déjà scrollable.
+  /// À true quand la vue est placée dans une zone déjà scrollable ou de
+  /// hauteur fixe : l'état vide n'est pas enveloppé dans un RefreshIndicator.
   final bool embedded;
 
   @override
@@ -53,7 +54,6 @@ class AsyncValueView<T> extends StatelessWidget {
     final v = value;
     if (v.hasError && !v.isLoading) {
       return _FitOrScroll(
-        enabled: !embedded,
         child: ErrorView(message: errorMessageOf(v.error!), onRetry: onRetry),
       );
     }
@@ -67,7 +67,7 @@ class AsyncValueView<T> extends StatelessWidget {
         title: emptyTitle,
         message: emptyMessage,
       );
-      if (embedded) return empty;
+      if (embedded) return _FitOrScroll(child: empty);
       final refresh = onRefresh;
       if (refresh == null) return _FitOrScroll(child: empty);
       return RefreshIndicator(
@@ -97,14 +97,12 @@ Future<void> refreshQuietly<T>(
 /// Centre l'enfant dans l'espace disponible et le rend scrollable s'il est
 /// plus haut que cet espace.
 class _FitOrScroll extends StatelessWidget {
-  const _FitOrScroll({required this.child, this.enabled = true});
+  const _FitOrScroll({required this.child});
 
   final Widget child;
-  final bool enabled;
 
   @override
   Widget build(BuildContext context) {
-    if (!enabled) return child;
     return LayoutBuilder(
       builder: (context, constraints) {
         if (!constraints.hasBoundedHeight) return child;
