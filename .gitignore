@@ -7,3 +7,7 @@ node_modules
 front_end_again
 .env
 yarn-error.log
+
+# Backend + algos récupérés de la branche Dave (copie locale, non versionnée)
+backend_dave/
+backend_golden_dave/
