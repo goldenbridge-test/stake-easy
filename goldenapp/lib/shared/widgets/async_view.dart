@@ -1,0 +1,89 @@
+import 'package:flutter/material.dart';
+
+import 'state_views.dart';
+
+/// Source de données d'un écran : une seule fonction à remplacer par l'appel API.
+typedef DataLoader<T> = Future<T> Function();
+
+/// Charge une donnée et affiche chargement / erreur / vide / contenu.
+///
+/// [builder] reçoit la donnée et une fonction `refresh` (utile pour
+/// RefreshIndicator ou après une action).
+class AsyncView<T> extends StatefulWidget {
+  const AsyncView({
+    super.key,
+    required this.load,
+    required this.builder,
+    this.isEmpty,
+    this.emptyIcon = Icons.inbox_outlined,
+    this.emptyMessage = 'Rien à afficher pour le moment.',
+    this.loadingMessage,
+    this.errorMessage,
+  });
+
+  final DataLoader<T> load;
+  final Widget Function(BuildContext context, T data, Future<void> Function() refresh) builder;
+  final bool Function(T data)? isEmpty;
+  final IconData emptyIcon;
+  final String emptyMessage;
+  final String? loadingMessage;
+
+  /// Transforme l'exception en message lisible (par défaut : message générique).
+  final String Function(Object error)? errorMessage;
+
+  @override
+  State<AsyncView<T>> createState() => _AsyncViewState<T>();
+}
+
+class _AsyncViewState<T> extends State<AsyncView<T>> {
+  late Future<T> _future;
+
+  @override
+  void initState() {
+    super.initState();
+    _future = widget.load();
+  }
+
+  Future<void> _refresh() async {
+    final next = widget.load();
+    setState(() => _future = next);
+    try {
+      await next;
+    } catch (_) {
+      // L'erreur est affichée par le FutureBuilder.
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<T>(
+      future: _future,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return LoadingView(message: widget.loadingMessage);
+        }
+        if (snapshot.hasError) {
+          final error = snapshot.error!;
+          return ErrorView(
+            message: widget.errorMessage?.call(error) ??
+                'Impossible de charger les données. Vérifiez votre connexion puis réessayez.',
+            onRetry: _refresh,
+          );
+        }
+        final data = snapshot.data as T;
+        if (widget.isEmpty?.call(data) ?? false) {
+          return RefreshIndicator(
+            onRefresh: _refresh,
+            child: ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              children: [
+                EmptyView(icon: widget.emptyIcon, message: widget.emptyMessage),
+              ],
+            ),
+          );
+        }
+        return widget.builder(context, data, _refresh);
+      },
+    );
+  }
+}
