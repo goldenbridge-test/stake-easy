@@ -4,7 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../app_theme.dart';
 import '../../../shared/utils/formatters.dart';
 import '../../../shared/widgets/widgets.dart';
-import '../models/position.dart';
+import '../../../core/models/position.dart';
 
 Color positionStatusColor(PositionStatus status) => switch (status) {
       PositionStatus.open => AppColors.secondaryBlue,

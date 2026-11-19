@@ -1,23 +1,23 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../app_theme.dart';
+import '../../core/providers/providers.dart';
 import '../../shared/utils/formatters.dart';
 import '../../shared/widgets/widgets.dart';
 import 'models/portfolio_data.dart';
-import 'portfolio_mock_data.dart';
+import 'portfolio_providers.dart';
 import 'widgets/position_card.dart';
 import 'widgets/trade_tile.dart';
 
 /// Portfolio : positions (ouvertes / clôturées) et historique des trades.
-class PortfolioScreen extends StatelessWidget {
-  const PortfolioScreen({super.key, this.loader = loadMockPortfolio});
-
-  /// Source des données (mock par défaut, API à brancher).
-  final DataLoader<PortfolioData> loader;
+class PortfolioScreen extends ConsumerWidget {
+  const PortfolioScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    Future<void> refresh() => refreshPortfolio(ref);
     return DefaultTabController(
       length: 2,
       child: Scaffold(
@@ -35,10 +35,14 @@ class PortfolioScreen extends StatelessWidget {
             ],
           ),
         ),
-        body: AsyncView<PortfolioData>(
-          load: loader,
+        body: AsyncValueView<PortfolioData>(
+          value: ref.watch(portfolioProvider),
+          onRetry: () {
+            ref.invalidate(positionsProvider);
+            ref.invalidate(tradesProvider);
+          },
           loadingMessage: 'Chargement du portfolio…',
-          builder: (context, data, refresh) => TabBarView(
+          builder: (context, data) => TabBarView(
             children: [
               _PositionsTab(data: data, onRefresh: refresh),
               _TradesTab(data: data, onRefresh: refresh),
@@ -153,7 +157,7 @@ class _TradesTab extends StatelessWidget {
                 children: [
                   for (var i = 0; i < trades.length; i++) ...[
                     if (i > 0) const Divider(height: 1, indent: 16, endIndent: 16, color: AppColors.border),
-                    TradeTile(trade: trades[i]),
+                    TradeTile(trade: trades[i], symbol: data.symbolOf(trades[i])),
                   ],
                 ],
               ),

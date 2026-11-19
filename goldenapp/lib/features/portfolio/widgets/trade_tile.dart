@@ -3,19 +3,23 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../../app_theme.dart';
 import '../../../shared/utils/formatters.dart';
-import '../models/trade.dart';
+import '../../../core/models/trade.dart';
 
 /// Ligne d'historique : sens (achat/vente), prix, montants, date.
 class TradeTile extends StatelessWidget {
-  const TradeTile({super.key, required this.trade});
+  const TradeTile({super.key, required this.trade, this.symbol});
 
   final Trade trade;
+
+  /// Actif (`BTC/USDT`), absent de TradeSerializer : déduit de la position.
+  final String? symbol;
 
   @override
   Widget build(BuildContext context) {
     final t = trade;
     final color = t.isBuy ? AppColors.success : AppColors.danger;
-    final base = t.symbol?.split('/').first ?? '';
+    final symbol = this.symbol;
+    final base = symbol?.split('/').first ?? '';
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
       child: Row(
@@ -38,7 +42,7 @@ class TradeTile extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '${t.isBuy ? 'Achat' : 'Vente'}${t.symbol != null ? ' · ${t.symbol}' : ''}',
+                  '${t.sideLabel}${symbol != null ? ' · $symbol' : ''}',
                   style: GoogleFonts.openSans(
                     fontWeight: FontWeight.w700,
                     color: AppColors.darkGrey,
